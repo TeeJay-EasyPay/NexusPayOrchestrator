@@ -23,12 +23,25 @@ function shorten(value: string | null) {
   return `${value.slice(0, 8)}...${value.slice(-8)}`;
 }
 
+function formatLastRefresh() {
+  return new Date().toLocaleString([], {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
 export default function HomeScreen() {
   const router = useRouter();
 
   const [fxRates, setFxRates] = useState<FxRate[]>([]);
   const [corridorHealth, setCorridorHealth] = useState<CorridorHealth[]>([]);
   const [loadingFx, setLoadingFx] = useState(true);
+  const [lastRefreshTime, setLastRefreshTime] = useState("");
 
   const {
     gbpBalance,
@@ -64,6 +77,8 @@ export default function HomeScreen() {
 
       const health = buildCorridorHealth(rates);
       setCorridorHealth(health);
+
+      setLastRefreshTime(formatLastRefresh());
     } catch (error) {
       console.log("Failed to load corridor intelligence", error);
       setFxRates([]);
@@ -225,6 +240,10 @@ export default function HomeScreen() {
                 Live Corridor FX
               </AppText>
 
+              <AppText variant="caption" color={colors.textDarkSecondary}>
+                Last refreshed: {lastRefreshTime || "Loading..."}
+              </AppText>
+
               {loadingFx ? (
                 <AppText variant="body" color={colors.textDarkSecondary}>
                   Loading live FX data...
@@ -281,7 +300,7 @@ export default function HomeScreen() {
                       </AppText>
 
                       <AppText variant="caption" color={colors.textDarkMuted}>
-                        Last updated: {item.date}
+                        Rate date: {item.date}
                       </AppText>
                     </View>
                   ))}
