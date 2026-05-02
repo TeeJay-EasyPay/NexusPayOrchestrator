@@ -160,8 +160,9 @@ export default function RoutesScreen() {
                 <Pressable key={route.id} onPress={() => handleSelectRoute(route)}>
                   <AppCard
                     style={{
-                      borderWidth: 2,
-                      borderColor: isSelected ? "#2563EB" : "transparent",
+                      borderWidth: 1,
+                      borderColor: isSelected ? "#D6A84F" : "transparent",
+                      backgroundColor: isSelected ? "#FFF8E1" : "#FFFFFF",
                     }}
                   >
                     <View style={{ gap: 10 }}>
