@@ -6,101 +6,27 @@ import { AppButton } from "../src/components/ui/AppButton";
 import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
 import { Screen } from "../src/components/ui/Screen";
+import { buildOrchestratedRouteQuotes } from "../src/lib/settlementOrchestrator";
 import { useTransfer } from "../src/state/TransferContext";
-import { RouteQuote } from "../src/types/transfer";
+import { useWallet } from "../src/state/WalletContext";
+import { Currency, RouteQuote } from "../src/types/transfer";
 
-function buildRouteQuotes(amount: number, currency: string): RouteQuote[] {
-  const baseFxRates: Record<string, number> = {
-    PHP: 70.25,
-    MYR: 5.85,
-    AED: 4.65,
-  };
-
-  const fxRate = baseFxRates[currency] ?? 1;
-
-  const routes = [
-    {
-      id: "fast-fiat",
-      rail: "FIAT" as const,
-      provider: "FastTrack Banking Rail",
-      fee: Math.max(1.99, amount * 0.021),
-      estimatedTime: "8-15 mins",
-      reliability: 96,
-      speedScore: 92,
-      costScore: 82,
-      steps: [
-        "GBP funds reserved from sender wallet",
-        "Compliance and payout checks completed",
-        "Banking rail selected for recipient country",
-        "Funds released to recipient bank or wallet",
-        "Transfer completed",
-      ],
-    },
-    {
-      id: "partner-liquidity",
-      rail: "FIAT" as const,
-      provider: "Partner Liquidity Route",
-      fee: Math.max(1.49, amount * 0.0175),
-      estimatedTime: "15-30 mins",
-      reliability: 94,
-      speedScore: 78,
-      costScore: 90,
-      steps: [
-        "GBP funds reserved from sender wallet",
-        "NexusPay checks available liquidity partners",
-        "Best payout partner selected",
-        "Recipient payout instruction submitted",
-        "Transfer completed",
-      ],
-    },
-    {
-      id: "xrpl-ready",
-      rail: "HYBRID" as const,
-      provider: "XRPL-Ready Hybrid Route",
-      fee: Math.max(0.89, amount * 0.011),
-      estimatedTime: "2-5 mins",
-      reliability: 89,
-      speedScore: 98,
-      costScore: 96,
-      steps: [
-        "GBP funds reserved from sender wallet",
-        "Liquidity route prepared for digital settlement",
-        "XRPL testnet rail available for future execution",
-        "Local payout partner receives settlement instruction",
-        "Recipient fiat payout completed",
-      ],
-    },
-  ];
-
-  return routes
-    .map((route) => {
-      const fee = Number(route.fee.toFixed(2));
-      const receiveAmount = Number(((amount - fee) * fxRate).toFixed(2));
-
-      const score = Math.round(
-        route.reliability * 0.45 +
-          route.speedScore * 0.3 +
-          route.costScore * 0.25
-      );
-
-      return {
-        id: route.id,
-        rail: route.rail,
-        provider: route.provider,
-        sendAmount: amount,
-        receiveAmount,
-        fxRate,
-        fee,
-        estimatedTime: route.estimatedTime,
-        score,
-        steps: route.steps,
-      };
-    })
-    .sort((a, b) => b.score - a.score);
+function buildRouteQuotes(
+  amount: number,
+  currency: Currency,
+  simulatedRlusdBalance: number
+): RouteQuote[] {
+  return buildOrchestratedRouteQuotes({
+    amount,
+    currency,
+    simulatedRlusdBalance,
+  });
 }
 
 export default function RoutesScreen() {
   const { transfer, setRoutes, selectRoute } = useTransfer();
+  const { simulatedRlusdBalance } = useWallet();
+
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
 
   const generatedRoutes = useMemo(() => {
@@ -110,9 +36,14 @@ export default function RoutesScreen() {
 
     return buildRouteQuotes(
       transfer.senderAmount,
-      transfer.recipient.currency
+      transfer.recipient.currency,
+      simulatedRlusdBalance
     );
-  }, [transfer?.senderAmount, transfer?.recipient?.currency]);
+  }, [
+    transfer?.senderAmount,
+    transfer?.recipient?.currency,
+    simulatedRlusdBalance,
+  ]);
 
   useEffect(() => {
     if (!transfer) return;
@@ -161,6 +92,7 @@ export default function RoutesScreen() {
   }
 
   const recipient = transfer.recipient;
+
   const payoutLabel =
     recipient.payoutMethod === "BANK"
       ? `${recipient.bankName} bank account`
@@ -195,6 +127,15 @@ export default function RoutesScreen() {
               </AppText>
 
               <AppText variant="body">Payout: {payoutLabel}</AppText>
+
+              <AppText variant="caption">
+                Simulated RLUSD liquidity:{" "}
+                {simulatedRlusdBalance.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}{" "}
+                RLUSD
+              </AppText>
 
               {recipient.accountNumber ? (
                 <AppText variant="caption">
@@ -294,6 +235,30 @@ export default function RoutesScreen() {
                           })}{" "}
                           {recipient.currency}
                         </AppText>
+
+                        {route.bridgeAsset ? (
+                          <>
+                            <AppText variant="body">
+                              Bridge asset: {route.bridgeAsset}
+                            </AppText>
+
+                            <AppText variant="body">
+                              Liquidity required:{" "}
+                              {(route.liquidityRequiredRlusd ?? 0).toFixed(2)}{" "}
+                              RLUSD
+                            </AppText>
+
+                            <AppText variant="body">
+                              Liquidity status: {route.liquidityStatus}
+                            </AppText>
+                          </>
+                        ) : null}
+
+                        {route.orchestrationReason ? (
+                          <AppText variant="caption">
+                            {route.orchestrationReason}
+                          </AppText>
+                        ) : null}
                       </View>
 
                       {isSelected ? (

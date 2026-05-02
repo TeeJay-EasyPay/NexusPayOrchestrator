@@ -30,6 +30,24 @@ export interface RouteQuote {
   estimatedTime: string;
   score: number;
 
+  bridgeAsset?: Currency;
+
+  liquidityRequiredRlusd?: number;
+
+  liquidityAvailable?: boolean;
+
+  liquidityStatus?:
+    | "AVAILABLE"
+    | "LOW"
+    | "INSUFFICIENT"
+    | "NOT_REQUIRED";
+
+  orchestrationReason?: string;
+
+  settlementStages?: string[];
+
+  routeConfidence?: number;
+
   steps: string[];
 }
 

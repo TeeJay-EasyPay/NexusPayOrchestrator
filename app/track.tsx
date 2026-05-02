@@ -7,8 +7,8 @@ import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
 import { Screen } from "../src/components/ui/Screen";
 import {
-    executeXrplTestnetSettlement,
-    XrplSettlementResult,
+  executeXrplTestnetSettlement,
+  XrplSettlementResult,
 } from "../src/lib/xrplSettlement";
 import { useTransfer } from "../src/state/TransferContext";
 import { useWallet } from "../src/state/WalletContext";
@@ -94,7 +94,9 @@ export default function TrackScreen() {
   const selectedRoute = transfer?.selectedRoute;
 
   const timelineSteps = useMemo(() => {
-    return buildTimelineSteps(selectedRoute?.steps ?? []);
+    return buildTimelineSteps(
+      selectedRoute?.settlementStages ?? selectedRoute?.steps ?? []
+    );
   }, [selectedRoute?.id]);
 
   useEffect(() => {
@@ -267,6 +269,29 @@ export default function TrackScreen() {
                 Fee £{(selectedRoute.fee ?? 0).toFixed(2)} • Score{" "}
                 {selectedRoute.score ?? 0}/100
               </AppText>
+
+              {selectedRoute.bridgeAsset ? (
+                <>
+                  <AppText variant="caption">
+                    Bridge asset: {selectedRoute.bridgeAsset}
+                  </AppText>
+
+                  <AppText variant="caption">
+                    Liquidity required:{" "}
+                    {(selectedRoute.liquidityRequiredRlusd ?? 0).toFixed(2)} RLUSD
+                  </AppText>
+
+                  <AppText variant="caption">
+                    Liquidity status: {selectedRoute.liquidityStatus}
+                  </AppText>
+                </>
+              ) : null}
+
+              {selectedRoute.orchestrationReason ? (
+                <AppText variant="caption">
+                  {selectedRoute.orchestrationReason}
+                </AppText>
+              ) : null}
             </View>
           </AppCard>
 
