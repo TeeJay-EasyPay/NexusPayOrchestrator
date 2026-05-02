@@ -1,41 +1,34 @@
 import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { ScrollView, View } from "react-native";
 
 import { AppButton } from "../src/components/ui/AppButton";
 import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
 import { Screen } from "../src/components/ui/Screen";
+
+import {
+  buildCorridorHealth,
+  CorridorHealth,
+} from "../src/lib/corridorHealth";
+import { fetchCorridorFxRates, FxRate } from "../src/lib/fxFeed";
+
 import { useTransfer } from "../src/state/TransferContext";
 import { useWallet } from "../src/state/WalletContext";
 import { colors, spacing } from "../src/theme";
 
-const fxRates = [
-  {
-    corridor: "GBP → Philippines",
-    currency: "PHP",
-    rate: 70.25,
-    fee: "from £0.89",
-    speed: "2–15 mins",
-  },
-  {
-    corridor: "GBP → Malaysia",
-    currency: "MYR",
-    rate: 5.85,
-    fee: "from £0.89",
-    speed: "2–30 mins",
-  },
-];
-
 function shorten(value: string | null) {
   if (!value) return "Not available";
-
   return `${value.slice(0, 8)}...${value.slice(-8)}`;
 }
 
 export default function HomeScreen() {
   const router = useRouter();
+
+  const [fxRates, setFxRates] = useState<FxRate[]>([]);
+  const [corridorHealth, setCorridorHealth] = useState<CorridorHealth[]>([]);
+  const [loadingFx, setLoadingFx] = useState(true);
 
   const {
     gbpBalance,
@@ -53,6 +46,32 @@ export default function HomeScreen() {
   } = useWallet();
 
   const { completedTransfers } = useTransfer();
+
+  useEffect(() => {
+    loadCorridorData();
+
+    const interval = setInterval(() => {
+      loadCorridorData();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  async function loadCorridorData() {
+    try {
+      const rates = await fetchCorridorFxRates();
+      setFxRates(rates);
+
+      const health = buildCorridorHealth(rates);
+      setCorridorHealth(health);
+    } catch (error) {
+      console.log("Failed to load corridor intelligence", error);
+      setFxRates([]);
+      setCorridorHealth([]);
+    } finally {
+      setLoadingFx(false);
+    }
+  }
 
   return (
     <Screen>
@@ -197,100 +216,223 @@ export default function HomeScreen() {
                 onPress={setupRlusdTrustline}
                 disabled={isSettingRlusdTrustline}
               />
-
-              <AppText variant="caption" color={colors.textDarkSecondary}>
-                After enabling the trustline, fund this address with test RLUSD
-                using the RLUSD testnet faucet, then refresh balances.
-              </AppText>
             </View>
           </AppCard>
 
           <AppCard>
             <View style={{ gap: 12 }}>
               <AppText variant="subheading" color={colors.textDarkPrimary}>
-                Corridor FX snapshot
+                Live Corridor FX
               </AppText>
 
-              <View
-                style={{
-                  borderRadius: 16,
-                  overflow: "hidden",
-                  borderWidth: 1,
-                  borderColor: "#E5E7EB",
-                }}
-              >
-                <View
-                  style={{
-                    flexDirection: "row",
-                    backgroundColor: "#111827",
-                    paddingVertical: 10,
-                    paddingHorizontal: 10,
-                  }}
-                >
-                  <AppText
-                    variant="caption"
-                    style={{ flex: 1.5, color: "#FFFFFF", fontWeight: "700" }}
-                  >
-                    Corridor
-                  </AppText>
-
-                  <AppText
-                    variant="caption"
-                    style={{ flex: 1, color: "#FFFFFF", fontWeight: "700" }}
-                  >
-                    FX
-                  </AppText>
-
-                  <AppText
-                    variant="caption"
-                    style={{ flex: 1, color: "#FFFFFF", fontWeight: "700" }}
-                  >
-                    Fee
-                  </AppText>
-
-                  <AppText
-                    variant="caption"
-                    style={{ flex: 1, color: "#FFFFFF", fontWeight: "700" }}
-                  >
-                    Speed
-                  </AppText>
-                </View>
-
-                {fxRates.map((item, index) => (
-                  <View
-                    key={item.corridor}
-                    style={{
-                      flexDirection: "row",
-                      paddingVertical: 12,
-                      paddingHorizontal: 10,
-                      backgroundColor: index % 2 === 0 ? "#FFFFFF" : "#F9FAFB",
-                    }}
-                  >
-                    <AppText
-                      variant="caption"
-                      style={{ flex: 1.5, fontWeight: "700" }}
+              {loadingFx ? (
+                <AppText variant="body" color={colors.textDarkSecondary}>
+                  Loading live FX data...
+                </AppText>
+              ) : fxRates.length === 0 ? (
+                <AppText variant="body" color={colors.textDarkSecondary}>
+                  No FX rates available yet.
+                </AppText>
+              ) : (
+                <View style={{ gap: 10 }}>
+                  {fxRates.map((item) => (
+                    <View
+                      key={`${item.from}-${item.to}`}
+                      style={{
+                        padding: 14,
+                        borderRadius: 16,
+                        backgroundColor: "#F9FAFB",
+                        borderWidth: 1,
+                        borderColor: "#E5E7EB",
+                        gap: 6,
+                      }}
                     >
-                      {item.corridor}
-                    </AppText>
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          justifyContent: "space-between",
+                          gap: 12,
+                        }}
+                      >
+                        <AppText
+                          variant="body"
+                          color={colors.textDarkPrimary}
+                          style={{ fontWeight: "700" }}
+                        >
+                          {item.from} → {item.to}
+                        </AppText>
 
-                    <AppText variant="caption" style={{ flex: 1 }}>
-                      {item.rate.toFixed(2)} {item.currency}
-                    </AppText>
+                        <AppText
+                          variant="body"
+                          color={colors.gold}
+                          style={{ fontWeight: "700" }}
+                        >
+                          {item.rate.toFixed(2)}
+                        </AppText>
+                      </View>
 
-                    <AppText variant="caption" style={{ flex: 1 }}>
-                      {item.fee}
-                    </AppText>
+                      <AppText variant="caption" color={colors.textDarkSecondary}>
+                        Feed: {item.provider ?? "Unknown"} • {item.source}
+                      </AppText>
 
-                    <AppText variant="caption" style={{ flex: 1 }}>
-                      {item.speed}
-                    </AppText>
-                  </View>
-                ))}
-              </View>
+                      <AppText variant="caption" color={colors.textDarkSecondary}>
+                        Status:{" "}
+                        {item.providerStatus ?? "Provider status unavailable"}
+                      </AppText>
 
-              <AppText variant="caption" color={colors.textDarkSecondary}>
-                Indicative demo rates used by the routing engine.
+                      <AppText variant="caption" color={colors.textDarkMuted}>
+                        Last updated: {item.date}
+                      </AppText>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          </AppCard>
+
+          <AppCard>
+            <View style={{ gap: 12 }}>
+              <AppText variant="subheading" color={colors.textDarkPrimary}>
+                Corridor Health Intelligence
               </AppText>
+
+              {loadingFx ? (
+                <AppText variant="body" color={colors.textDarkSecondary}>
+                  Building route intelligence...
+                </AppText>
+              ) : corridorHealth.length === 0 ? (
+                <AppText variant="body" color={colors.textDarkSecondary}>
+                  No corridor health data available yet.
+                </AppText>
+              ) : (
+                <View style={{ gap: 12 }}>
+                  {corridorHealth.map((item) => (
+                    <View
+                      key={item.corridor}
+                      style={{
+                        padding: 14,
+                        borderRadius: 16,
+                        backgroundColor: "#F9FAFB",
+                        borderWidth: 1,
+                        borderColor: "#E5E7EB",
+                        gap: 10,
+                      }}
+                    >
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
+                        <AppText
+                          variant="body"
+                          color={colors.textDarkPrimary}
+                          style={{ fontWeight: "700" }}
+                        >
+                          {item.corridor}
+                        </AppText>
+
+                        <View
+                          style={{
+                            backgroundColor:
+                              item.status === "Excellent"
+                                ? "#16A34A"
+                                : item.status === "Healthy"
+                                ? "#0EA5E9"
+                                : item.status === "Watch"
+                                ? "#F59E0B"
+                                : "#DC2626",
+                            paddingHorizontal: 10,
+                            paddingVertical: 4,
+                            borderRadius: 999,
+                          }}
+                        >
+                          <AppText
+                            variant="caption"
+                            style={{
+                              color: "#FFFFFF",
+                              fontWeight: "700",
+                            }}
+                          >
+                            {item.status}
+                          </AppText>
+                        </View>
+                      </View>
+
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        <View>
+                          <AppText variant="caption" color={colors.textDarkMuted}>
+                            FX
+                          </AppText>
+
+                          <AppText
+                            variant="body"
+                            color={colors.textDarkPrimary}
+                            style={{ fontWeight: "700" }}
+                          >
+                            {item.fxRate.toFixed(2)}
+                          </AppText>
+                        </View>
+
+                        <View>
+                          <AppText variant="caption" color={colors.textDarkMuted}>
+                            Liquidity
+                          </AppText>
+
+                          <AppText
+                            variant="body"
+                            style={{
+                              fontWeight: "700",
+                              color: "#0F766E",
+                            }}
+                          >
+                            {item.liquidityScore}%
+                          </AppText>
+                        </View>
+
+                        <View>
+                          <AppText variant="caption" color={colors.textDarkMuted}>
+                            Route Score
+                          </AppText>
+
+                          <AppText
+                            variant="body"
+                            style={{
+                              fontWeight: "700",
+                              color: colors.gold,
+                            }}
+                          >
+                            {item.overallScore}
+                          </AppText>
+                        </View>
+                      </View>
+
+                      <View
+                        style={{
+                          height: 8,
+                          backgroundColor: "#E5E7EB",
+                          borderRadius: 999,
+                          overflow: "hidden",
+                        }}
+                      >
+                        <View
+                          style={{
+                            width: `${item.overallScore}%`,
+                            height: "100%",
+                            backgroundColor: colors.gold,
+                          }}
+                        />
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
             </View>
           </AppCard>
 
@@ -329,19 +471,24 @@ export default function HomeScreen() {
                             gap: 12,
                           }}
                         >
-                          <AppText variant="body" style={{ fontWeight: "700" }}>
+                          <AppText
+                            variant="body"
+                            color={colors.textDarkPrimary}
+                            style={{ fontWeight: "700" }}
+                          >
                             {recipient.name || "Recipient"}
                           </AppText>
 
                           <AppText
                             variant="caption"
+                            color={colors.textDarkPrimary}
                             style={{ fontWeight: "700" }}
                           >
                             COMPLETED
                           </AppText>
                         </View>
 
-                        <AppText variant="caption">
+                        <AppText variant="caption" color={colors.textDarkSecondary}>
                           £{item.senderAmount.toFixed(2)} GBP →{" "}
                           {route
                             ? `${route.receiveAmount.toLocaleString(undefined, {
@@ -351,11 +498,11 @@ export default function HomeScreen() {
                             : recipient.currency}
                         </AppText>
 
-                        <AppText variant="caption">
+                        <AppText variant="caption" color={colors.textDarkSecondary}>
                           {recipient.country} • {route?.provider ?? "Route"}
                         </AppText>
 
-                        <AppText variant="caption">
+                        <AppText variant="caption" color={colors.textDarkSecondary}>
                           Ref: NPX-{item.id.slice(-6)}
                         </AppText>
                       </View>
