@@ -4,6 +4,25 @@ export type RailType = "FIAT" | "CRYPTO" | "HYBRID";
 
 export type PayoutMethod = "BANK" | "MOBILE_WALLET";
 
+export type LiquidityStatus =
+  | "AVAILABLE"
+  | "LOW"
+  | "INSUFFICIENT"
+  | "NOT_REQUIRED";
+
+export type PartnerHealth =
+  | "EXCELLENT"
+  | "GOOD"
+  | "WATCH"
+  | "DEGRADED";
+
+export type RouteFamily =
+  | "FASTEST"
+  | "LOWEST_COST"
+  | "BEST_LIQUIDITY"
+  | "DIGITAL_BRIDGE"
+  | "BACKUP";
+
 export interface Recipient {
   name: string;
   country: string;
@@ -36,11 +55,25 @@ export interface RouteQuote {
 
   liquidityAvailable?: boolean;
 
-  liquidityStatus?:
-    | "AVAILABLE"
-    | "LOW"
-    | "INSUFFICIENT"
-    | "NOT_REQUIRED";
+  liquidityStatus?: LiquidityStatus;
+
+  routeFamily?: RouteFamily;
+
+  routeRankLabel?: string;
+
+  evaluatedRoutesCount?: number;
+
+  partnerHealth?: PartnerHealth;
+
+  partnerUptime?: number;
+
+  speedScore?: number;
+
+  costScore?: number;
+
+  liquidityScore?: number;
+
+  reliabilityScore?: number;
 
   orchestrationReason?: string;
 

@@ -9,6 +9,7 @@ import { Screen } from "../src/components/ui/Screen";
 import { buildOrchestratedRouteQuotes } from "../src/lib/settlementOrchestrator";
 import { useTransfer } from "../src/state/TransferContext";
 import { useWallet } from "../src/state/WalletContext";
+import { colors } from "../src/theme";
 import { Currency, RouteQuote } from "../src/types/transfer";
 
 function buildRouteQuotes(
@@ -46,12 +47,12 @@ export default function RoutesScreen() {
   ]);
 
   useEffect(() => {
-    if (!transfer) return;
+  if (!transfer) return;
 
-    if (generatedRoutes.length > 0 && transfer.routes.length === 0) {
-      setRoutes(generatedRoutes);
-    }
-  }, [generatedRoutes, setRoutes, transfer]);
+  if (generatedRoutes.length > 0) {
+    setRoutes(generatedRoutes);
+  }
+}, [generatedRoutes, setRoutes, transfer?.id]);
 
   const activeRoutes =
     transfer?.routes && transfer.routes.length > 0
@@ -76,7 +77,7 @@ export default function RoutesScreen() {
     return (
       <Screen>
         <View style={{ gap: 18 }}>
-          <AppText variant="title">No transfer found</AppText>
+          <AppText variant="title" color={colors.textPrimary}>No transfer found</AppText>
 
           <AppCard>
             <AppText variant="body">
@@ -103,10 +104,17 @@ export default function RoutesScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={{ gap: 18, paddingBottom: 40 }}>
           <View>
-            <AppText variant="title">Route Intelligence</AppText>
+            <AppText variant="title" color={colors.textPrimary}>Route Intelligence</AppText>
 
-            <AppText variant="caption">
+            <AppText variant="caption" color={colors.textSecondary}>
               NexusPay has scored available routes for this corridor.
+            </AppText>
+
+            <AppText
+              variant="caption"
+              style={{ marginTop: 6, color: "#0F766E" }}
+            >
+              {activeRoutes.length} routes evaluated by orchestration engine
             </AppText>
           </View>
 
@@ -278,6 +286,12 @@ export default function RoutesScreen() {
             title={selectedRoute ? "Continue to tracking" : "Select a route"}
             onPress={handleContinue}
             disabled={!selectedRoute}
+          />
+
+          <AppButton
+            title="Back Home"
+            variant="secondary"
+            onPress={() => router.push("/")}
           />
         </View>
       </ScrollView>

@@ -2,6 +2,7 @@ import { router } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Linking, Pressable, ScrollView, View } from "react-native";
 
+import { AnimatedCorridorMap } from "../src/components/transfer/AnimatedCorridorMap";
 import { AppButton } from "../src/components/ui/AppButton";
 import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
@@ -12,6 +13,7 @@ import {
 } from "../src/lib/xrplSettlement";
 import { useTransfer } from "../src/state/TransferContext";
 import { useWallet } from "../src/state/WalletContext";
+import { colors } from "../src/theme";
 
 type TimelineStep = {
   title: string;
@@ -219,12 +221,27 @@ export default function TrackScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={{ gap: 18, paddingBottom: 40 }}>
           <View>
-            <AppText variant="title">Track Transfer</AppText>
+            <AppText variant="title" color={colors.textPrimary}>Track Transfer</AppText>
 
-            <AppText variant="caption">
+            <AppText variant="caption" color={colors.textSecondary}>
               NexusPay is coordinating the selected route and payout journey.
             </AppText>
           </View>
+
+          <AnimatedCorridorMap
+            fromLabel="London"
+            toLabel={recipient?.country ?? "Destination"}
+            bridgeLabel={
+              selectedRoute.bridgeAsset
+                ? `XRPL / ${selectedRoute.bridgeAsset}`
+                : "Fiat Rail"
+            }
+            routeLabel={selectedRoute.routeRankLabel ?? "Live settlement corridor"}
+            activeStageLabel={
+              timelineSteps[activeStep]?.title ?? "Preparing transfer route"
+            }
+            isCompleted={isCompleted}
+          />
 
           <AppCard>
             <View style={{ gap: 10 }}>

@@ -1,11 +1,11 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
-    Alert,
-    Pressable,
-    ScrollView,
-    TextInput,
-    View,
+  Alert,
+  Pressable,
+  ScrollView,
+  TextInput,
+  View,
 } from "react-native";
 
 import { AppButton } from "../src/components/ui/AppButton";
@@ -19,6 +19,7 @@ import { PayoutMethod, Recipient } from "../src/types/transfer";
 
 import { useTransfer } from "../src/state/TransferContext";
 import { useWallet } from "../src/state/WalletContext";
+import { colors } from "../src/theme";
 
 export default function SendScreen() {
   const params = useLocalSearchParams();
@@ -252,11 +253,11 @@ export default function SendScreen() {
           }}
         >
           <View>
-            <AppText variant="title">
+            <AppText variant="title" color={colors.textPrimary}>
               Send Money
             </AppText>
 
-            <AppText variant="caption">
+            <AppText variant="caption" color={colors.textSecondary}>
               Build a transfer and let
               NexusPay find the best route.
             </AppText>
@@ -525,6 +526,11 @@ export default function SendScreen() {
           <AppButton
             title="Find best routes"
             onPress={handleFindRoutes}
+          />
+          <AppButton
+            title="Back Home"
+            variant="secondary"
+            onPress={() => router.push("/")}
           />
         </View>
       </ScrollView>
