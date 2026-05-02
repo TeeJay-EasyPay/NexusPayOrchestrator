@@ -43,6 +43,9 @@ export default function HomeScreen() {
     xrpBalance,
     rlusdBalance,
     rlusdIssuer,
+    simulatedRlusdBalance,
+    fundSimulatedRlusd,
+    resetRlusdSimulation,
     isRefreshingXrpBalance,
     isSettingRlusdTrustline,
     refreshAllXrplBalances,
@@ -89,6 +92,44 @@ export default function HomeScreen() {
           </AppCard>
 
           <AppCard>
+            <View style={{ gap: 12 }}>
+              <AppText variant="subheading" color={colors.textDarkPrimary}>
+                Simulated Route Liquidity
+              </AppText>
+
+              <AppText variant="caption" color={colors.textDarkMuted}>
+                Partner / market-maker liquidity simulation
+              </AppText>
+
+              <AppText variant="title" color={colors.textDarkPrimary}>
+                {simulatedRlusdBalance.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}{" "}
+                RLUSD
+              </AppText>
+
+              <AppText variant="body" color={colors.textDarkSecondary}>
+                Used by the orchestration engine to simulate bridge route
+                liquidity availability.
+              </AppText>
+
+              <View style={{ gap: 10 }}>
+                <AppButton
+                  title="Add 5,000 RLUSD Liquidity"
+                  onPress={() => fundSimulatedRlusd(5000)}
+                />
+
+                <AppButton
+                  title="Reset Simulated Liquidity"
+                  variant="secondary"
+                  onPress={resetRlusdSimulation}
+                />
+              </View>
+            </View>
+          </AppCard>
+
+          <AppCard>
             <View style={{ gap: 10 }}>
               <AppText variant="subheading" color={colors.textDarkPrimary}>
                 XRPL Testnet Wallet
@@ -127,9 +168,9 @@ export default function HomeScreen() {
                     alert("XRPL wallet address copied");
                   }
                 }}
->
-  Address: {xrplAddress}
-</AppText>
+              >
+                Address: {xrplAddress}
+              </AppText>
 
               <AppText variant="caption" color={colors.textDarkSecondary}>
                 RLUSD issuer: {shorten(rlusdIssuer)}
@@ -261,8 +302,7 @@ export default function HomeScreen() {
 
               {completedTransfers.length === 0 ? (
                 <AppText variant="body" color={colors.textDarkSecondary}>
-                  No completed transfers yet. Completed transfers will appear
-                  here with payout references.
+                  No completed transfers yet.
                 </AppText>
               ) : (
                 <View style={{ gap: 10 }}>
@@ -326,23 +366,15 @@ export default function HomeScreen() {
             </View>
           </AppCard>
 
-          <AppCard>
-            <AppText variant="subheading" color={colors.textDarkPrimary}>
-              MVP Demo
-            </AppText>
-
-            <AppText variant="body" color={colors.textDarkSecondary}>
-              Check route intelligence first, or start a transfer with recipient
-              details.
-            </AppText>
-          </AppCard>
-
-          <AppButton title="Start Transfer" onPress={() => router.push("/send")} />
+          <AppButton
+            title="Start Transfer"
+            onPress={() => router.push("/send")}
+          />
 
           <AppButton
             title="View Route Intelligence"
             variant="secondary"
-            onPress={() => router.push("/quote")}
+            onPress={() => router.push("/routes")}
           />
 
           <AppButton
