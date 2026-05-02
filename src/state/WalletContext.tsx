@@ -18,7 +18,7 @@ import {
   addSimulatedRlusd,
   getSimulatedRlusdBalance,
   resetSimulatedRlusdBalance,
-} from "../lib/simulatedRlusdWallet";
+} from "../lib/simulatedRLusdWallet";
 
 type WalletContextType = {
   gbpBalance: number;
