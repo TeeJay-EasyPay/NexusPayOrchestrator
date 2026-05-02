@@ -1,0 +1,43 @@
+import { RouteOption } from "../types";
+
+export const mockRoutes: RouteOption[] = [
+  {
+    id: "thunes-fiat",
+    title: "Thunes Fiat Rail",
+    type: "fiat",
+    path: "GBP → Thunes → PHP Bank",
+    feeGbp: 4.2,
+    etaMinutes: 3,
+    reliabilityPercent: 98,
+    recipientReceivesPhp: 35100,
+    fxRate: 70.2,
+    riskLevel: "Low",
+    reason: "Fastest route with very high delivery confidence.",
+  },
+  {
+    id: "nium-fiat",
+    title: "Nium Fiat Rail",
+    type: "fiat",
+    path: "GBP → Nium → PHP Wallet",
+    feeGbp: 3.8,
+    etaMinutes: 10,
+    reliabilityPercent: 96,
+    recipientReceivesPhp: 35180,
+    fxRate: 70.36,
+    riskLevel: "Low",
+    reason: "Strong balance of cost, payout value, and reliability.",
+  },
+  {
+    id: "xrp-rail",
+    title: "XRP Smart Rail",
+    type: "xrp",
+    path: "GBP → XRP → XRPL → PHP Off-ramp",
+    feeGbp: 2.9,
+    etaMinutes: 6,
+    reliabilityPercent: 91,
+    recipientReceivesPhp: 35240,
+    fxRate: 70.48,
+    riskLevel: "Medium",
+    reason: "Lowest fee and highest recipient payout, with slightly higher route risk.",
+  },
+];
