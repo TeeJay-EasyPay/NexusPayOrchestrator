@@ -89,6 +89,18 @@ export default function AuthScreen() {
     Alert.alert("Welcome back", "NexusPay secure session established.");
   }
 
+  async function handleDemoAccess() {
+    setLoading(true);
+
+    const error = await enableDemoAccess();
+
+    setLoading(false);
+
+    if (error) {
+      Alert.alert("Demo Access Failed", error);
+    }
+  }
+
   return (
     <Screen>
       <KeyboardAvoidingView
@@ -189,9 +201,10 @@ export default function AuthScreen() {
               />
 
               <AppButton
-                title="Developer Demo Access"
+                title="Enter Demo Platform"
                 variant="secondary"
-                onPress={enableDemoAccess}
+                onPress={handleDemoAccess}
+                disabled={loading}
               />
 
               <Pressable
