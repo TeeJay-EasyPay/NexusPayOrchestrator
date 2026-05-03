@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import { useState } from "react";
 import {
   Alert,
@@ -43,11 +44,20 @@ export default function AuthScreen() {
       return;
     }
 
+    if (mode === "signup") {
+      router.push({
+        pathname: "/check-email",
+        params: {
+          email: email.trim(),
+        },
+      });
+
+      return;
+    }
+
     Alert.alert(
-      mode === "signin" ? "Welcome back" : "Account created",
-      mode === "signin"
-        ? "NexusPay secure session established."
-        : "Your NexusPay account is ready."
+      "Welcome back",
+      "NexusPay secure session established."
     );
   }
 
