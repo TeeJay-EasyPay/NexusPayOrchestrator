@@ -1,4 +1,5 @@
 import { Session } from "@supabase/supabase-js";
+import * as Linking from "expo-linking";
 import { router } from "expo-router";
 import React, {
   createContext,
@@ -101,9 +102,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return getSupabaseConfigError();
       }
 
+      const emailRedirectTo = Linking.createURL("account-created", {
+        scheme: "nexuspayorchestrator",
+      });
+
       const { error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo,
+        },
       });
 
       if (error) {
@@ -114,6 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         eventType: "SIGNUP",
         metadata: {
           email,
+          emailRedirectTo,
         },
       });
 
