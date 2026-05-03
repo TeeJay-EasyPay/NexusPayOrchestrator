@@ -16,11 +16,14 @@ import {
 } from "../lib/supabase";
 import { writeAuditLog } from "../services/auditLog";
 
+const DEMO_EMAIL = process.env.EXPO_PUBLIC_DEMO_EMAIL;
+const DEMO_PASSWORD = process.env.EXPO_PUBLIC_DEMO_PASSWORD;
+
 interface AuthContextType {
   session: Session | null;
   loading: boolean;
   demoAccessEnabled: boolean;
-  enableDemoAccess: () => void;
+  enableDemoAccess: () => Promise<string | null>;
   disableDemoAccess: () => void;
   signIn: (email: string, password: string) => Promise<string | null>;
   signUp: (email: string, password: string) => Promise<string | null>;
@@ -60,9 +63,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (session) {
-        setDemoAccessEnabled(false);
         router.replace("/");
-      } else if (!demoAccessEnabled) {
+      } else {
+        setDemoAccessEnabled(false);
         router.replace("/auth");
       }
     });
@@ -70,11 +73,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       subscription.unsubscribe();
     };
-  }, [demoAccessEnabled]);
+  }, []);
 
-  function enableDemoAccess() {
+  async function enableDemoAccess() {
+    if (!DEMO_EMAIL || !DEMO_PASSWORD) {
+      return "Demo access is not configured. Add EXPO_PUBLIC_DEMO_EMAIL and EXPO_PUBLIC_DEMO_PASSWORD to your .env file.";
+    }
+
+    const error = await signIn(DEMO_EMAIL, DEMO_PASSWORD);
+
+    if (error) {
+      setDemoAccessEnabled(false);
+      return error;
+    }
+
     setDemoAccessEnabled(true);
-    router.replace("/");
+
+    await writeAuditLog({
+      eventType: "LOGIN",
+      metadata: {
+        email: DEMO_EMAIL,
+        mode: "DEMO_PLATFORM_ACCESS",
+      },
+    });
+
+    return null;
   }
 
   function disableDemoAccess() {
@@ -96,7 +119,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return error.message;
       }
 
-      setDemoAccessEnabled(false);
+      if (email !== DEMO_EMAIL) {
+        setDemoAccessEnabled(false);
+      }
 
       await writeAuditLog({
         eventType: "LOGIN",
