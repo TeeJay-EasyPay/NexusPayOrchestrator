@@ -40,6 +40,24 @@ export default function AuthScreen() {
     setLoading(false);
 
     if (error) {
+      if (error.toLowerCase().includes("password should be at least")) {
+        Alert.alert(
+          "Password Strength Requirement",
+          "Passwords must contain at least 6 characters."
+        );
+
+        return;
+      }
+
+      if (error.toLowerCase().includes("email not confirmed")) {
+        Alert.alert(
+          "Email Confirmation Required",
+          "Please confirm your email address using the link sent to your inbox before signing in."
+        );
+
+        return;
+      }
+
       Alert.alert("Authentication failed", error);
       return;
     }
