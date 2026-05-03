@@ -19,6 +19,9 @@ import { writeAuditLog } from "../services/auditLog";
 interface AuthContextType {
   session: Session | null;
   loading: boolean;
+  demoAccessEnabled: boolean;
+  enableDemoAccess: () => void;
+  disableDemoAccess: () => void;
   signIn: (email: string, password: string) => Promise<string | null>;
   signUp: (email: string, password: string) => Promise<string | null>;
   signOut: () => Promise<void>;
@@ -29,6 +32,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [demoAccessEnabled, setDemoAccessEnabled] = useState(false);
 
   useEffect(() => {
     if (!isSupabaseConfigured) {
@@ -56,8 +60,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (session) {
+        setDemoAccessEnabled(false);
         router.replace("/");
-      } else {
+      } else if (!demoAccessEnabled) {
         router.replace("/auth");
       }
     });
@@ -65,7 +70,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [demoAccessEnabled]);
+
+  function enableDemoAccess() {
+    setDemoAccessEnabled(true);
+    router.replace("/");
+  }
+
+  function disableDemoAccess() {
+    setDemoAccessEnabled(false);
+  }
 
   async function signIn(email: string, password: string) {
     try {
@@ -81,6 +95,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) {
         return error.message;
       }
+
+      setDemoAccessEnabled(false);
 
       await writeAuditLog({
         eventType: "LOGIN",
@@ -132,6 +148,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function signOut() {
+    setDemoAccessEnabled(false);
     await supabase.auth.signOut();
   }
 
@@ -139,11 +156,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     () => ({
       session,
       loading,
+      demoAccessEnabled,
+      enableDemoAccess,
+      disableDemoAccess,
       signIn,
       signUp,
       signOut,
     }),
-    [session, loading]
+    [session, loading, demoAccessEnabled]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
