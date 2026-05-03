@@ -24,6 +24,228 @@ function buildRouteQuotes(
   });
 }
 
+function formatMoney(value: number) {
+  return value.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function scoreColor(score: number) {
+  if (score >= 90) return "#16A34A";
+  if (score >= 80) return colors.gold;
+  if (score >= 70) return "#F59E0B";
+  return "#DC2626";
+}
+
+function ScoreBar({ value }: { value: number }) {
+  const safeValue = Math.max(0, Math.min(100, value));
+
+  return (
+    <View
+      style={{
+        height: 8,
+        borderRadius: 999,
+        backgroundColor: "#E5E7EB",
+        overflow: "hidden",
+      }}
+    >
+      <View
+        style={{
+          width: `${safeValue}%`,
+          height: "100%",
+          backgroundColor: scoreColor(value),
+        }}
+      />
+    </View>
+  );
+}
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <View
+      style={{
+        flex: 1,
+        padding: 11,
+        borderRadius: 16,
+        backgroundColor: "#F8FAFC",
+        borderWidth: 1,
+        borderColor: "#E2E8F0",
+        gap: 4,
+      }}
+    >
+      <AppText variant="caption" color={colors.textDarkMuted}>
+        {label}
+      </AppText>
+
+      <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
+        {value}
+      </AppText>
+    </View>
+  );
+}
+
+function RouteBadge({ label, tone = "neutral" }: { label: string; tone?: "gold" | "green" | "neutral" }) {
+  const backgroundColor =
+    tone === "green" ? "#DCFCE7" : tone === "gold" ? colors.goldSoft : "#F1F5F9";
+
+  const textColor =
+    tone === "green" ? "#166534" : tone === "gold" ? "#8A6218" : colors.textDarkSecondary;
+
+  return (
+    <View
+      style={{
+        alignSelf: "flex-start",
+        paddingVertical: 6,
+        paddingHorizontal: 10,
+        borderRadius: 999,
+        backgroundColor,
+      }}
+    >
+      <AppText variant="caption" style={{ color: textColor, fontWeight: "900" }}>
+        {label}
+      </AppText>
+    </View>
+  );
+}
+
+function RouteOptionCard({
+  route,
+  index,
+  recipientCurrency,
+  isSelected,
+  onPress,
+}: {
+  route: RouteQuote;
+  index: number;
+  recipientCurrency: Currency;
+  isSelected: boolean;
+  onPress: () => void;
+}) {
+  const isRecommended = index === 0;
+  const borderColor = isSelected ? colors.gold : isRecommended ? "#BFE7D0" : "#E2E8F0";
+  const backgroundColor = isSelected ? "#FFF8E1" : "#FFFFFF";
+
+  return (
+    <Pressable onPress={onPress}>
+      <AppCard
+        style={{
+          borderWidth: 1,
+          borderColor,
+          backgroundColor,
+        }}
+      >
+        <View style={{ gap: 14 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              gap: 12,
+              alignItems: "flex-start",
+            }}
+          >
+            <View style={{ flex: 1, gap: 6 }}>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+                {isRecommended ? <RouteBadge label="Recommended" tone="green" /> : null}
+                {isSelected ? <RouteBadge label="Selected" tone="gold" /> : null}
+                <RouteBadge label={`Rank #${index + 1}`} />
+              </View>
+
+              <AppText variant="subheading" color={colors.textDarkPrimary}>
+                {route.provider}
+              </AppText>
+
+              <AppText variant="caption" color={colors.textDarkSecondary}>
+                {route.rail} rail • ETA {route.estimatedTime}
+              </AppText>
+            </View>
+
+            <View style={{ alignItems: "flex-end", gap: 3 }}>
+              <AppText variant="title" style={{ color: scoreColor(route.score) }}>
+                {route.score}
+              </AppText>
+
+              <AppText variant="caption" color={colors.textDarkMuted}>
+                /100 score
+              </AppText>
+            </View>
+          </View>
+
+          <ScoreBar value={route.score} />
+
+          <View
+            style={{
+              padding: 15,
+              borderRadius: 20,
+              backgroundColor: "#0B3F4A",
+              gap: 8,
+            }}
+          >
+            <AppText variant="caption" color="#BFEAF1">
+              Recipient receives
+            </AppText>
+
+            <AppText variant="title" color="#FFFFFF">
+              {formatMoney(route.receiveAmount)} {recipientCurrency}
+            </AppText>
+
+            <AppText variant="caption" color="#BFEAF1">
+              FX: 1 GBP ≈ {route.fxRate.toFixed(2)} {recipientCurrency} • Fee £{route.fee.toFixed(2)}
+            </AppText>
+          </View>
+
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <MiniStat label="Speed" value={route.estimatedTime} />
+            <MiniStat label="Fee" value={`£${route.fee.toFixed(2)}`} />
+            <MiniStat label="Rail" value={route.rail} />
+          </View>
+
+          {route.bridgeAsset ? (
+            <View
+              style={{
+                padding: 13,
+                borderRadius: 18,
+                backgroundColor: "#F8FAFC",
+                borderWidth: 1,
+                borderColor: "#E2E8F0",
+                gap: 7,
+              }}
+            >
+              <AppText variant="caption" color={colors.textDarkMuted}>
+                Bridge settlement intelligence
+              </AppText>
+
+              <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
+                {route.bridgeAsset} bridge • {route.liquidityStatus}
+              </AppText>
+
+              <AppText variant="caption" color={colors.textDarkSecondary}>
+                Liquidity required: {(route.liquidityRequiredRlusd ?? 0).toFixed(2)} RLUSD
+              </AppText>
+            </View>
+          ) : null}
+
+          {route.orchestrationReason ? (
+            <View
+              style={{
+                padding: 13,
+                borderRadius: 18,
+                backgroundColor: isSelected ? "#FFFFFF" : "#F8FAFC",
+                borderWidth: 1,
+                borderColor: "#E2E8F0",
+              }}
+            >
+              <AppText variant="caption" color={colors.textDarkSecondary}>
+                {route.orchestrationReason}
+              </AppText>
+            </View>
+          ) : null}
+        </View>
+      </AppCard>
+    </Pressable>
+  );
+}
+
 export default function RoutesScreen() {
   const { transfer, setRoutes, selectRoute } = useTransfer();
   const { simulatedRlusdBalance } = useWallet();
@@ -40,28 +262,21 @@ export default function RoutesScreen() {
       transfer.recipient.currency,
       simulatedRlusdBalance
     );
-  }, [
-    transfer?.senderAmount,
-    transfer?.recipient?.currency,
-    simulatedRlusdBalance,
-  ]);
+  }, [transfer?.senderAmount, transfer?.recipient?.currency, simulatedRlusdBalance]);
 
   useEffect(() => {
-  if (!transfer) return;
+    if (!transfer) return;
 
-  if (generatedRoutes.length > 0) {
-    setRoutes(generatedRoutes);
-  }
-}, [generatedRoutes, setRoutes, transfer?.id]);
+    if (generatedRoutes.length > 0) {
+      setRoutes(generatedRoutes);
+    }
+  }, [generatedRoutes, setRoutes, transfer?.id]);
 
   const activeRoutes =
-    transfer?.routes && transfer.routes.length > 0
-      ? transfer.routes
-      : generatedRoutes;
+    transfer?.routes && transfer.routes.length > 0 ? transfer.routes : generatedRoutes;
 
-  const selectedRoute = activeRoutes.find(
-    (route) => route.id === selectedRouteId
-  );
+  const selectedRoute = activeRoutes.find((route) => route.id === selectedRouteId);
+  const recommendedRoute = activeRoutes[0];
 
   const handleSelectRoute = (route: RouteQuote) => {
     setSelectedRouteId(route.id);
@@ -77,12 +292,19 @@ export default function RoutesScreen() {
     return (
       <Screen>
         <View style={{ gap: 18 }}>
-          <AppText variant="title" color={colors.textPrimary}>No transfer found</AppText>
+          <View style={{ gap: 6 }}>
+            <AppText variant="caption" color={colors.gold}>
+              Route intelligence
+            </AppText>
+
+            <AppText variant="title" color={colors.textPrimary}>
+              No transfer found
+            </AppText>
+          </View>
 
           <AppCard>
-            <AppText variant="body">
-              Start a transfer first so NexusPay can calculate live route
-              options.
+            <AppText variant="body" color={colors.textDarkSecondary}>
+              Start a transfer first so NexusPay can calculate live route options.
             </AppText>
           </AppCard>
 
@@ -103,198 +325,180 @@ export default function RoutesScreen() {
     <Screen>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={{ gap: 18, paddingBottom: 40 }}>
-          <View>
-            <AppText variant="title" color={colors.textPrimary}>Route Intelligence</AppText>
-
-            <AppText variant="caption" color={colors.textSecondary}>
-              NexusPay has scored available routes for this corridor.
+          <View style={{ gap: 6 }}>
+            <AppText variant="caption" color={colors.gold}>
+              NexusPay route intelligence
             </AppText>
 
-            <AppText
-              variant="caption"
-              style={{ marginTop: 6, color: "#0F766E" }}
-            >
-              {activeRoutes.length} routes evaluated by orchestration engine
+            <AppText variant="title" color={colors.textPrimary}>
+              Route Intelligence
+            </AppText>
+
+            <AppText variant="body" color={colors.textSecondary}>
+              NexusPay has ranked available rails by cost, speed, liquidity and confidence.
             </AppText>
           </View>
 
-          <AppCard>
-            <View style={{ gap: 8 }}>
-              <AppText variant="subheading">Transfer summary</AppText>
-
-              <AppText variant="body">
-                Sending £{transfer.senderAmount.toFixed(2)} GBP
-              </AppText>
-
-              <AppText variant="body">
-                Recipient: {recipient.name || "Not provided"}
-              </AppText>
-
-              <AppText variant="body">
-                Destination: {recipient.country} / {recipient.currency}
-              </AppText>
-
-              <AppText variant="body">Payout: {payoutLabel}</AppText>
-
-              <AppText variant="caption">
-                Simulated RLUSD liquidity:{" "}
-                {simulatedRlusdBalance.toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}{" "}
-                RLUSD
-              </AppText>
-
-              {recipient.accountNumber ? (
-                <AppText variant="caption">
-                  Account ending: {recipient.accountNumber.slice(-4)}
+          <View
+            style={{
+              padding: 18,
+              borderRadius: 26,
+              backgroundColor: "#0B3F4A",
+              borderWidth: 1,
+              borderColor: "rgba(255,255,255,0.14)",
+              gap: 14,
+            }}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                gap: 12,
+                alignItems: "flex-start",
+              }}
+            >
+              <View style={{ flex: 1 }}>
+                <AppText variant="caption" color="#BFEAF1">
+                  Transfer corridor
                 </AppText>
-              ) : null}
 
-              {recipient.mobileNumber ? (
-                <AppText variant="caption">
-                  Mobile ending: {recipient.mobileNumber.slice(-4)}
+                <AppText variant="title" color="#FFFFFF">
+                  GBP → {recipient.currency}
+                </AppText>
+              </View>
+
+              <View
+                style={{
+                  paddingHorizontal: 11,
+                  paddingVertical: 6,
+                  borderRadius: 999,
+                  backgroundColor: "rgba(214,168,79,0.22)",
+                }}
+              >
+                <AppText variant="caption" color={colors.gold} style={{ fontWeight: "900" }}>
+                  {activeRoutes.length} ROUTES
+                </AppText>
+              </View>
+            </View>
+
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <PreviewStat label="Sending" value={`£${transfer.senderAmount.toFixed(2)}`} />
+              <PreviewStat label="Best score" value={recommendedRoute ? `${recommendedRoute.score}/100` : "..."} />
+            </View>
+
+            <View
+              style={{
+                padding: 13,
+                borderRadius: 18,
+                backgroundColor: "rgba(255,255,255,0.10)",
+                gap: 4,
+              }}
+            >
+              <AppText variant="caption" color="#BFEAF1">
+                Recipient
+              </AppText>
+
+              <AppText variant="body" color="#FFFFFF" style={{ fontWeight: "900" }}>
+                {recipient.name || "Not provided"} • {recipient.country}
+              </AppText>
+
+              <AppText variant="caption" color="#BFEAF1">
+                {payoutLabel}
+              </AppText>
+            </View>
+          </View>
+
+          <AppCard>
+            <View style={{ gap: 12 }}>
+              <AppText variant="subheading" color={colors.textDarkPrimary}>
+                Orchestration summary
+              </AppText>
+
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <MiniStat
+                  label="RLUSD liquidity"
+                  value={`${formatMoney(simulatedRlusdBalance)} RLUSD`}
+                />
+                <MiniStat label="Destination" value={recipient.country} />
+              </View>
+
+              {(recipient.accountNumber || recipient.mobileNumber) ? (
+                <AppText variant="caption" color={colors.textDarkSecondary}>
+                  {recipient.accountNumber
+                    ? `Account ending: ${recipient.accountNumber.slice(-4)}`
+                    : `Mobile ending: ${recipient.mobileNumber?.slice(-4)}`}
                 </AppText>
               ) : null}
             </View>
           </AppCard>
 
           <View style={{ gap: 12 }}>
-            {activeRoutes.map((route, index) => {
-              const isSelected = selectedRouteId === route.id;
-              const isRecommended = index === 0;
-
-              return (
-                <Pressable key={route.id} onPress={() => handleSelectRoute(route)}>
-                  <AppCard
-                    style={{
-                      borderWidth: 1,
-                      borderColor: isSelected ? "#D6A84F" : "transparent",
-                      backgroundColor: isSelected ? "#FFF8E1" : "#FFFFFF",
-                    }}
-                  >
-                    <View style={{ gap: 10 }}>
-                      <View
-                        style={{
-                          flexDirection: "row",
-                          justifyContent: "space-between",
-                          gap: 12,
-                        }}
-                      >
-                        <View style={{ flex: 1 }}>
-                          <AppText variant="subheading">
-                            {route.provider}
-                          </AppText>
-
-                          <AppText variant="caption">
-                            {route.rail} rail • ETA {route.estimatedTime}
-                          </AppText>
-                        </View>
-
-                        <View style={{ alignItems: "flex-end" }}>
-                          <AppText variant="subheading">
-                            {route.score}/100
-                          </AppText>
-
-                          <AppText variant="caption">Score</AppText>
-                        </View>
-                      </View>
-
-                      {isRecommended ? (
-                        <View
-                          style={{
-                            alignSelf: "flex-start",
-                            paddingVertical: 6,
-                            paddingHorizontal: 10,
-                            borderRadius: 999,
-                            backgroundColor: "#DCFCE7",
-                          }}
-                        >
-                          <AppText
-                            variant="caption"
-                            style={{ fontWeight: "700", color: "#166534" }}
-                          >
-                            Recommended route
-                          </AppText>
-                        </View>
-                      ) : null}
-
-                      <View
-                        style={{
-                          height: 1,
-                          backgroundColor: "#E5E7EB",
-                        }}
-                      />
-
-                      <View style={{ gap: 6 }}>
-                        <AppText variant="body">
-                          Fee: £{route.fee.toFixed(2)}
-                        </AppText>
-
-                        <AppText variant="body">
-                          FX rate: 1 GBP ≈ {route.fxRate.toFixed(2)}{" "}
-                          {recipient.currency}
-                        </AppText>
-
-                        <AppText variant="body">
-                          Recipient receives:{" "}
-                          {route.receiveAmount.toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}{" "}
-                          {recipient.currency}
-                        </AppText>
-
-                        {route.bridgeAsset ? (
-                          <>
-                            <AppText variant="body">
-                              Bridge asset: {route.bridgeAsset}
-                            </AppText>
-
-                            <AppText variant="body">
-                              Liquidity required:{" "}
-                              {(route.liquidityRequiredRlusd ?? 0).toFixed(2)}{" "}
-                              RLUSD
-                            </AppText>
-
-                            <AppText variant="body">
-                              Liquidity status: {route.liquidityStatus}
-                            </AppText>
-                          </>
-                        ) : null}
-
-                        {route.orchestrationReason ? (
-                          <AppText variant="caption">
-                            {route.orchestrationReason}
-                          </AppText>
-                        ) : null}
-                      </View>
-
-                      {isSelected ? (
-                        <AppText variant="caption">
-                          Selected for transfer tracking
-                        </AppText>
-                      ) : null}
-                    </View>
-                  </AppCard>
-                </Pressable>
-              );
-            })}
+            {activeRoutes.map((route, index) => (
+              <RouteOptionCard
+                key={route.id}
+                route={route}
+                index={index}
+                recipientCurrency={recipient.currency}
+                isSelected={selectedRouteId === route.id}
+                onPress={() => handleSelectRoute(route)}
+              />
+            ))}
           </View>
 
-          <AppButton
-            title={selectedRoute ? "Continue to tracking" : "Select a route"}
-            onPress={handleContinue}
-            disabled={!selectedRoute}
-          />
+          <View
+            style={{
+              padding: 16,
+              borderRadius: 24,
+              backgroundColor: "#F8FAFC",
+              borderWidth: 1,
+              borderColor: "#E2E8F0",
+              gap: 12,
+            }}
+          >
+            <View style={{ gap: 4 }}>
+              <AppText variant="subheading" color={colors.textDarkPrimary}>
+                {selectedRoute ? "Route selected" : "Choose a route"}
+              </AppText>
 
-          <AppButton
-            title="Back Home"
-            variant="secondary"
-            onPress={() => router.push("/")}
-          />
+              <AppText variant="caption" color={colors.textDarkSecondary}>
+                {selectedRoute
+                  ? `${selectedRoute.provider} is ready for transfer tracking.`
+                  : "Select one of the ranked route options to continue."}
+              </AppText>
+            </View>
+
+            <AppButton
+              title={selectedRoute ? "Continue to tracking" : "Select a route"}
+              onPress={handleContinue}
+              disabled={!selectedRoute}
+            />
+
+            <AppButton title="Back Home" variant="secondary" onPress={() => router.push("/")} />
+          </View>
         </View>
       </ScrollView>
     </Screen>
+  );
+}
+
+function PreviewStat({ label, value }: { label: string; value: string }) {
+  return (
+    <View
+      style={{
+        flex: 1,
+        padding: 11,
+        borderRadius: 16,
+        backgroundColor: "rgba(255,255,255,0.10)",
+        gap: 4,
+      }}
+    >
+      <AppText variant="caption" color="#BFEAF1">
+        {label}
+      </AppText>
+
+      <AppText variant="body" color="#FFFFFF" style={{ fontWeight: "900" }}>
+        {value}
+      </AppText>
+    </View>
   );
 }
