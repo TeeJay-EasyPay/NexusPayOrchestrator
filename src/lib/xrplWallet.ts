@@ -18,6 +18,10 @@ function isValidXrplAddress(address: string) {
   return xrpl.isValidClassicAddress(address);
 }
 
+function logXrplWarning(message: string, error?: unknown) {
+  console.warn(message, error);
+}
+
 export async function getOrCreateWallet() {
   const existingSeed = await SecureStore.getItemAsync(WALLET_KEY);
 
@@ -52,7 +56,7 @@ export async function getXrplTestnetXrpBalance(address: string): Promise<number>
 
     return Number(xrpl.dropsToXrp(drops));
   } catch (error) {
-    console.error("Failed to fetch XRPL XRP balance", error);
+    logXrplWarning("Failed to fetch XRPL XRP balance", error);
     return 0;
   }
 }
@@ -65,7 +69,7 @@ export async function getXrplTestnetRlusdBalance(
   }
 
   if (!isValidXrplAddress(RLUSD_TESTNET_ISSUER)) {
-    console.error("Invalid RLUSD issuer address", RLUSD_TESTNET_ISSUER);
+    logXrplWarning("Invalid RLUSD issuer address", RLUSD_TESTNET_ISSUER);
     return 0;
   }
 
@@ -91,7 +95,7 @@ export async function getXrplTestnetRlusdBalance(
 
     return Number(rlusdLine.balance ?? 0);
   } catch (error) {
-    console.error("Failed to fetch XRPL RLUSD balance", error);
+    logXrplWarning("Failed to fetch XRPL RLUSD balance", error);
     return 0;
   }
 }
