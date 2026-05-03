@@ -8,7 +8,11 @@ import React, {
   useState,
 } from "react";
 
-import { supabase } from "../lib/supabase";
+import {
+  getSupabaseConfigError,
+  isSupabaseConfigured,
+  supabase,
+} from "../lib/supabase";
 import { writeAuditLog } from "../services/auditLog";
 
 interface AuthContextType {
@@ -26,6 +30,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!isSupabaseConfigured) {
+      console.error(getSupabaseConfigError());
+      setLoading(false);
+      return;
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setLoading(false);
@@ -57,43 +67,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   async function signIn(email: string, password: string) {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      if (!isSupabaseConfigured) {
+        return getSupabaseConfigError();
+      }
 
-    if (error) {
-      return error.message;
-    }
-
-    await writeAuditLog({
-      eventType: "LOGIN",
-      metadata: {
+      const { error } = await supabase.auth.signInWithPassword({
         email,
-      },
-    });
+        password,
+      });
 
-    return null;
+      if (error) {
+        return error.message;
+      }
+
+      await writeAuditLog({
+        eventType: "LOGIN",
+        metadata: {
+          email,
+        },
+      });
+
+      return null;
+    } catch (error) {
+      console.error("Sign in failed", error);
+      return "Unable to reach Supabase. Check your internet connection and Supabase URL.";
+    }
   }
 
   async function signUp(email: string, password: string) {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
+    try {
+      if (!isSupabaseConfigured) {
+        return getSupabaseConfigError();
+      }
 
-    if (error) {
-      return error.message;
-    }
-
-    await writeAuditLog({
-      eventType: "SIGNUP",
-      metadata: {
+      const { error } = await supabase.auth.signUp({
         email,
-      },
-    });
+        password,
+      });
 
-    return null;
+      if (error) {
+        return error.message;
+      }
+
+      await writeAuditLog({
+        eventType: "SIGNUP",
+        metadata: {
+          email,
+        },
+      });
+
+      return null;
+    } catch (error) {
+      console.error("Sign up failed", error);
+      return "Unable to reach Supabase. Check your internet connection and Supabase configuration.";
+    }
   }
 
   async function signOut() {
