@@ -408,30 +408,6 @@ export default function RoutesScreen() {
             </View>
           </View>
 
-          <AppCard>
-            <View style={{ gap: 12 }}>
-              <AppText variant="subheading" color={colors.textDarkPrimary}>
-                Orchestration summary
-              </AppText>
-
-              <View style={{ flexDirection: "row", gap: 8 }}>
-                <MiniStat
-                  label="RLUSD liquidity"
-                  value={`${formatMoney(simulatedRlusdBalance)} RLUSD`}
-                />
-                <MiniStat label="Destination" value={recipient.country} />
-              </View>
-
-              {(recipient.accountNumber || recipient.mobileNumber) ? (
-                <AppText variant="caption" color={colors.textDarkSecondary}>
-                  {recipient.accountNumber
-                    ? `Account ending: ${recipient.accountNumber.slice(-4)}`
-                    : `Mobile ending: ${recipient.mobileNumber?.slice(-4)}`}
-                </AppText>
-              ) : null}
-            </View>
-          </AppCard>
-
           <View style={{ gap: 12 }}>
             {activeRoutes.map((route, index) => (
               <RouteOptionCard
