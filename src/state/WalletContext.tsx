@@ -6,6 +6,7 @@ import React, {
   useState,
 } from "react";
 
+import { supabase } from "../lib/supabase";
 import {
   ensureRlusdTrustline,
   getOrCreateWallet,
@@ -64,6 +65,14 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const refreshAllXrplBalances = useCallback(async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session) {
+      return;
+    }
+
     setIsRefreshingXrpBalance(true);
 
     try {
@@ -82,7 +91,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       setRlusdBalance(liveRlusdBalance);
       setSimulatedRlusdBalanceState(simulatedBalance);
     } catch (error) {
-      console.error("Failed to refresh XRPL wallet balances", error);
+      console.warn("XRPL wallet refresh skipped", error);
       setXrpBalance(0);
       setRlusdBalance(0);
     } finally {
@@ -105,7 +114,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       await ensureRlusdTrustline(wallet);
       await refreshAllXrplBalances();
     } catch (error) {
-      console.error("Failed to set RLUSD trustline", error);
+      console.warn("Failed to set RLUSD trustline", error);
     } finally {
       setIsSettingRlusdTrustline(false);
     }
