@@ -13,27 +13,22 @@ const PUBLIC_ROUTES = new Set([
 ]);
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
-  const { session, loading } = useAuth() as any;
+  const { session, loading, demoAccessEnabled } = useAuth();
   const pathname = usePathname();
   const isPublicRoute = PUBLIC_ROUTES.has(pathname);
-
-  const adminBypassEnabled =
-    typeof (useAuth() as any).adminBypassEnabled === "boolean"
-      ? (useAuth() as any).adminBypassEnabled
-      : false;
 
   useEffect(() => {
     if (loading) return;
 
-    if (!session && !adminBypassEnabled && !isPublicRoute) {
+    if (!session && !demoAccessEnabled && !isPublicRoute) {
       router.replace("/auth");
       return;
     }
 
-    if ((session || adminBypassEnabled) && pathname === "/auth") {
+    if ((session || demoAccessEnabled) && pathname === "/auth") {
       router.replace("/");
     }
-  }, [session, loading, pathname, isPublicRoute, adminBypassEnabled]);
+  }, [session, loading, pathname, isPublicRoute, demoAccessEnabled]);
 
   if (loading) {
     return (
@@ -55,7 +50,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!session && !adminBypassEnabled && !isPublicRoute) {
+  if (!session && !demoAccessEnabled && !isPublicRoute) {
     return (
       <View
         style={{
