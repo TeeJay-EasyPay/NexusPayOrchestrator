@@ -241,8 +241,23 @@ export default function TrackScreen() {
     return (
       <Screen>
         <View style={{ gap: 18 }}>
-          <AppText variant="title">No active transfer</AppText>
+          <View style={{ gap: 6 }}>
+            <AppText variant="caption" color={colors.gold}>
+              Transfer execution
+            </AppText>
+            <AppText variant="title" color={colors.textPrimary}>
+              No active transfer
+            </AppText>
+          </View>
+
+          <AppCard>
+            <AppText variant="body" color={colors.textDarkSecondary}>
+              Select a route first so NexusPay can begin tracking the transfer.
+            </AppText>
+          </AppCard>
+
           <AppButton title="Go to routes" onPress={() => router.push("/routes")} />
+          <AppButton title="Back home" variant="secondary" onPress={() => router.push("/")} />
         </View>
       </Screen>
     );
@@ -283,7 +298,7 @@ export default function TrackScreen() {
               gap: 14,
             }}
           >
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
               <View style={{ flex: 1 }}>
                 <AppText variant="caption" color="#BFEAF1">Execution status</AppText>
                 <AppText variant="title" color="#FFFFFF">
@@ -337,6 +352,288 @@ export default function TrackScreen() {
               </AppText>
             </View>
           </View>
+
+          <AppCard>
+            <View style={{ gap: 14 }}>
+              <View style={{ gap: 4 }}>
+                <AppText variant="subheading" color={colors.textDarkPrimary}>
+                  Transfer execution summary
+                </AppText>
+
+                <AppText variant="caption" color={colors.textDarkSecondary}>
+                  Delivery route and recipient payout details.
+                </AppText>
+              </View>
+
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <DetailMetric label="Route score" value={`${selectedRoute.score ?? 0}/100`} />
+                <DetailMetric label="Rail" value={selectedRoute.rail} />
+                <DetailMetric label="ETA" value={selectedRoute.estimatedTime ?? "Live"} />
+              </View>
+
+              <View
+                style={{
+                  padding: 14,
+                  borderRadius: 18,
+                  backgroundColor: "#F8FAFC",
+                  borderWidth: 1,
+                  borderColor: "#E2E8F0",
+                  gap: 6,
+                }}
+              >
+                <AppText variant="caption" color={colors.textDarkMuted}>
+                  Recipient payout
+                </AppText>
+
+                <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
+                  {recipient?.name ?? "Recipient"} • {recipient?.country ?? "Destination"}
+                </AppText>
+
+                <AppText variant="caption" color={colors.textDarkSecondary}>
+                  {payoutLabel}
+                </AppText>
+
+                {completedAt ? (
+                  <AppText variant="caption" color="#16A34A">
+                    Completed at {completedAt}
+                  </AppText>
+                ) : null}
+              </View>
+            </View>
+          </AppCard>
+
+          <AppCard>
+            <View style={{ gap: 14 }}>
+              <AppText variant="subheading" color={colors.textDarkPrimary}>
+                Transfer timeline
+              </AppText>
+
+              {timelineSteps.map((step, index) => {
+                const isActive = index === activeStep;
+                const isDone = index < activeStep;
+                const isFuture = index > activeStep;
+
+                return (
+                  <View
+                    key={`${step.title}-${index}`}
+                    style={{
+                      flexDirection: "row",
+                      gap: 12,
+                      opacity: isFuture ? 0.45 : 1,
+                    }}
+                  >
+                    <View style={{ alignItems: "center" }}>
+                      <View
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 16,
+                          alignItems: "center",
+                          justifyContent: "center",
+                          backgroundColor: isDone
+                            ? "#16A34A"
+                            : isActive
+                            ? colors.gold
+                            : "#E5E7EB",
+                        }}
+                      >
+                        <AppText
+                          variant="caption"
+                          style={{
+                            color: isFuture ? colors.textDarkPrimary : "#FFFFFF",
+                            fontWeight: "900",
+                          }}
+                        >
+                          {isDone ? "✓" : index + 1}
+                        </AppText>
+                      </View>
+
+                      {index < timelineSteps.length - 1 ? (
+                        <View
+                          style={{
+                            width: 2,
+                            height: 38,
+                            backgroundColor: isDone ? "#16A34A" : "#E5E7EB",
+                          }}
+                        />
+                      ) : null}
+                    </View>
+
+                    <View style={{ flex: 1, gap: 4, paddingBottom: 12 }}>
+                      <AppText
+                        variant="body"
+                        color={colors.textDarkPrimary}
+                        style={{ fontWeight: isActive ? "900" : "700" }}
+                      >
+                        {step.title}
+                      </AppText>
+
+                      <AppText variant="caption" color={colors.textDarkSecondary}>
+                        {step.description}
+                      </AppText>
+
+                      {isActive && !isCompleted ? (
+                        <View
+                          style={{
+                            alignSelf: "flex-start",
+                            paddingHorizontal: 9,
+                            paddingVertical: 4,
+                            borderRadius: 999,
+                            backgroundColor: colors.goldSoft,
+                          }}
+                        >
+                          <AppText
+                            variant="caption"
+                            style={{ color: "#8A6218", fontWeight: "900" }}
+                          >
+                            Processing now
+                          </AppText>
+                        </View>
+                      ) : null}
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          </AppCard>
+
+          <AppCard>
+            <View style={{ gap: 12 }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  alignItems: "center",
+                }}
+              >
+                <View style={{ flex: 1 }}>
+                  <AppText variant="subheading" color={colors.textDarkPrimary}>
+                    Settlement proof
+                  </AppText>
+
+                  <AppText variant="caption" color={colors.textDarkSecondary}>
+                    Transfer reference and XRPL testnet proof where applicable.
+                  </AppText>
+                </View>
+
+                <View
+                  style={{
+                    paddingHorizontal: 10,
+                    paddingVertical: 5,
+                    borderRadius: 999,
+                    backgroundColor: `${statusColor(xrplStatus)}22`,
+                  }}
+                >
+                  <AppText
+                    variant="caption"
+                    style={{ color: statusColor(xrplStatus), fontWeight: "900" }}
+                  >
+                    {isHybridRoute ? xrplStatus : "FIAT"}
+                  </AppText>
+                </View>
+              </View>
+
+              <View
+                style={{
+                  padding: 14,
+                  borderRadius: 18,
+                  backgroundColor: "#F8FAFC",
+                  borderWidth: 1,
+                  borderColor: "#E2E8F0",
+                  gap: 7,
+                }}
+              >
+                <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
+                  Fiat payout reference: NPX-{transfer.id.slice(-6)}
+                </AppText>
+
+                <AppText variant="caption" color={colors.textDarkSecondary}>
+                  Fee £{(selectedRoute.fee ?? 0).toFixed(2)} • Recipient receives {formatCurrency(selectedRoute.receiveAmount, recipientCurrency)}
+                </AppText>
+
+                {selectedRoute.bridgeAsset ? (
+                  <AppText variant="caption" color={colors.textDarkSecondary}>
+                    Bridge asset: {selectedRoute.bridgeAsset} • Liquidity required {(selectedRoute.liquidityRequiredRlusd ?? 0).toFixed(2)} RLUSD
+                  </AppText>
+                ) : null}
+              </View>
+
+              {isHybridRoute ? (
+                <View style={{ gap: 8 }}>
+                  <AppText variant="caption" color={colors.textDarkSecondary}>
+                    XRPL status:{" "}
+                    {xrplStatus === "PENDING"
+                      ? "Submitting calculated testnet settlement..."
+                      : xrplStatus === "COMPLETED"
+                      ? "Validated on XRPL Testnet"
+                      : xrplStatus === "FAILED"
+                      ? "XRPL settlement failed"
+                      : "Not started"}
+                  </AppText>
+
+                  {xrplProof ? (
+                    <View style={{ gap: 8 }}>
+                      <View style={{ flexDirection: "row", gap: 8 }}>
+                        <DetailMetric label="XRP settled" value={`${xrplProof?.xrpAmount ?? "0"} XRP`} />
+                        <DetailMetric
+                          label="Rate"
+                          value={(xrplProof?.settlementRate ?? 0).toFixed(4)}
+                        />
+                      </View>
+
+                      <AppText variant="caption" color={colors.textDarkSecondary}>
+                        TX hash: {shorten(xrplProof?.txHash)}
+                      </AppText>
+
+                      {xrplProof.txHash ? (
+                        <Pressable
+                          onPress={() =>
+                            Linking.openURL(getXrplTestnetTransactionUrl(xrplProof.txHash))
+                          }
+                          style={{
+                            padding: 12,
+                            borderRadius: 16,
+                            backgroundColor: "#EAF3FF",
+                            borderWidth: 1,
+                            borderColor: "#B8D9FF",
+                            gap: 4,
+                          }}
+                        >
+                          <AppText
+                            variant="caption"
+                            style={{ fontWeight: "900", color: "#0B63CE" }}
+                          >
+                            View on XRPL Testnet Explorer
+                          </AppText>
+
+                          <AppText variant="caption" style={{ color: "#24527A" }}>
+                            {shorten(xrplProof.txHash)}
+                          </AppText>
+                        </Pressable>
+                      ) : null}
+
+                      <AppText variant="caption" color={colors.textDarkSecondary}>
+                        From: {shorten(xrplProof?.sourceAddress)}
+                      </AppText>
+
+                      <AppText variant="caption" color={colors.textDarkSecondary}>
+                        To: {shorten(xrplProof?.destinationAddress)}
+                      </AppText>
+                    </View>
+                  ) : null}
+                </View>
+              ) : (
+                <AppText variant="caption" color={colors.textDarkSecondary}>
+                  This route uses simulated fiat settlement. XRPL proof is only generated for HYBRID routes.
+                </AppText>
+              )}
+            </View>
+          </AppCard>
+
+          {isCompleted ? (
+            <AppButton title="Back home" onPress={() => router.push("/")} />
+          ) : null}
         </View>
       </ScrollView>
     </Screen>
