@@ -102,9 +102,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return getSupabaseConfigError();
       }
 
-      const emailRedirectTo = Linking.createURL("account-created", {
-        scheme: "nexuspayorchestrator",
-      });
+      const emailRedirectTo = Linking.createURL("/account-created");
 
       const { error } = await supabase.auth.signUp({
         email,
