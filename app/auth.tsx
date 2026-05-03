@@ -40,7 +40,9 @@ export default function AuthScreen() {
     setLoading(false);
 
     if (error) {
-      if (error.toLowerCase().includes("password should be at least")) {
+      const normalizedError = error.toLowerCase();
+
+      if (normalizedError.includes("password should be at least")) {
         Alert.alert(
           "Password Strength Requirement",
           "Passwords must contain at least 6 characters."
@@ -49,10 +51,19 @@ export default function AuthScreen() {
         return;
       }
 
-      if (error.toLowerCase().includes("email not confirmed")) {
+      if (normalizedError.includes("email not confirmed")) {
         Alert.alert(
           "Email Confirmation Required",
           "Please confirm your email address using the link sent to your inbox before signing in."
+        );
+
+        return;
+      }
+
+      if (normalizedError.includes("email rate limit exceeded")) {
+        Alert.alert(
+          "Email Limit Reached",
+          "Too many confirmation emails have been requested in a short period. Please wait a few minutes before trying again."
         );
 
         return;
