@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
@@ -22,6 +23,7 @@ export default function AuthScreen() {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit() {
@@ -84,10 +86,7 @@ export default function AuthScreen() {
       return;
     }
 
-    Alert.alert(
-      "Welcome back",
-      "NexusPay secure session established."
-    );
+    Alert.alert("Welcome back", "NexusPay secure session established.");
   }
 
   return (
@@ -131,22 +130,57 @@ export default function AuthScreen() {
                 }}
               />
 
-              <TextInput
-                value={password}
-                onChangeText={setPassword}
-                placeholder="Password"
-                placeholderTextColor="#8CA0AE"
-                secureTextEntry
+              <View
                 style={{
                   borderWidth: 1,
                   borderColor: "#DDE6EE",
                   borderRadius: 18,
-                  padding: 16,
                   backgroundColor: "#F8FAFC",
-                  fontSize: 16,
-                  color: colors.textDarkPrimary,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  paddingLeft: 16,
+                  paddingRight: 8,
                 }}
-              />
+              >
+                <TextInput
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="Password"
+                  placeholderTextColor="#8CA0AE"
+                  secureTextEntry={!isPasswordVisible}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 16,
+                    paddingRight: 10,
+                    fontSize: 16,
+                    color: colors.textDarkPrimary,
+                  }}
+                />
+
+                <Pressable
+                  onPress={() => setIsPasswordVisible((current) => !current)}
+                  hitSlop={12}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    isPasswordVisible ? "Hide password" : "Show password"
+                  }
+                  style={{
+                    width: 42,
+                    height: 42,
+                    borderRadius: 21,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Ionicons
+                    name={isPasswordVisible ? "eye-off-outline" : "eye-outline"}
+                    size={22}
+                    color={colors.textDarkSecondary}
+                  />
+                </Pressable>
+              </View>
 
               <AppButton
                 title={loading ? "Connecting..." : mode === "signin" ? "Sign In" : "Create Account"}
