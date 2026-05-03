@@ -25,11 +25,15 @@ export type RouteFamily =
 
 export interface Recipient {
   name: string;
+  firstName?: string;
+  middleName?: string;
+  surname?: string;
   country: string;
   currency: Currency;
   payoutMethod: PayoutMethod;
 
   bankName?: string;
+  bankCode?: string;
   accountNumber?: string;
 
   mobileWalletProvider?: string;
