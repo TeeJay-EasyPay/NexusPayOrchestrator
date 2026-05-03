@@ -18,7 +18,7 @@ import { useAuth } from "../src/state/AuthContext";
 import { colors } from "../src/theme/colors";
 
 export default function AuthScreen() {
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, enableDemoAccess } = useAuth();
 
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
@@ -186,6 +186,12 @@ export default function AuthScreen() {
                 title={loading ? "Connecting..." : mode === "signin" ? "Sign In" : "Create Account"}
                 onPress={handleSubmit}
                 disabled={loading}
+              />
+
+              <AppButton
+                title="Developer Demo Access"
+                variant="secondary"
+                onPress={enableDemoAccess}
               />
 
               <Pressable
