@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { loadCompletedTransfers, saveCompletedTransfer } from "../services/transferService";
 import { Recipient, RouteQuote, Transfer } from "../types/transfer";
 
 interface TransferContextType {
@@ -21,6 +22,18 @@ const TransferContext = createContext<TransferContextType | undefined>(
 export function TransferProvider({ children }: { children: React.ReactNode }) {
   const [transfer, setTransfer] = useState<Transfer | null>(null);
   const [completedTransfers, setCompletedTransfers] = useState<Transfer[]>([]);
+
+  useEffect(() => {
+    hydrateTransfers();
+  }, []);
+
+  async function hydrateTransfers() {
+    const persistedTransfers = await loadCompletedTransfers();
+
+    if (persistedTransfers.length > 0) {
+      setCompletedTransfers(persistedTransfers);
+    }
+  }
 
   const createTransfer = (amount: number) => {
     setTransfer({
@@ -89,6 +102,8 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
         status: "COMPLETED",
       };
 
+      saveCompletedTransfer(completedTransfer);
+
       setCompletedTransfers((existingTransfers) => {
         const alreadyExists = existingTransfers.some(
           (item) => item.id === completedTransfer.id
@@ -96,7 +111,7 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
 
         if (alreadyExists) return existingTransfers;
 
-        return [completedTransfer, ...existingTransfers].slice(0, 5);
+        return [completedTransfer, ...existingTransfers].slice(0, 25);
       });
 
       return completedTransfer;
