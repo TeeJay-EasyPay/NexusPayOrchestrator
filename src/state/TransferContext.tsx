@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { createTransferId } from "../lib/id";
 import { loadCompletedTransfers, saveCompletedTransfer } from "../services/transferService";
 import { Recipient, RouteQuote, Transfer } from "../types/transfer";
 
@@ -37,7 +38,7 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
 
   const createTransfer = (amount: number) => {
     setTransfer({
-      id: Date.now().toString(),
+      id: createTransferId(),
       senderCurrency: "GBP",
       senderAmount: amount,
       recipient: {} as Recipient,
