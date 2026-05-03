@@ -415,6 +415,158 @@ export default function HomeScreen() {
           <AppCard>
             <View style={{ gap: 12 }}>
               <AppText variant="subheading" color={colors.textDarkPrimary}>
+                Exchange Rates
+              </AppText>
+
+              <AppText variant="caption" color={colors.textDarkSecondary}>
+                Provider-aware live rates with automatic fallback protection.
+              </AppText>
+
+              {loadingFx ? (
+                <AppText variant="body" color={colors.textDarkSecondary}>
+                  Loading live FX data...
+                </AppText>
+              ) : fxRates.length === 0 ? (
+                <AppText variant="body" color={colors.textDarkSecondary}>
+                  No FX rates available yet.
+                </AppText>
+              ) : (
+                <View style={{ gap: 10 }}>
+                  {fxRates.map((item) => (
+                    <View
+                      key={`${item.from}-${item.to}`}
+                      style={{
+                        padding: 14,
+                        borderRadius: 16,
+                        backgroundColor: "#F9FAFB",
+                        borderWidth: 1,
+                        borderColor: "#E5E7EB",
+                        gap: 6,
+                      }}
+                    >
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          justifyContent: "space-between",
+                          gap: 12,
+                        }}
+                      >
+                        <AppText
+                          variant="body"
+                          color={colors.textDarkPrimary}
+                          style={{ fontWeight: "700" }}
+                        >
+                          {item.from} → {item.to}
+                        </AppText>
+
+                        <AppText
+                          variant="body"
+                          color={colors.gold}
+                          style={{ fontWeight: "700" }}
+                        >
+                          {item.rate.toFixed(2)}
+                        </AppText>
+                      </View>
+
+                      <AppText variant="caption" color={colors.textDarkSecondary}>
+                        Feed: {item.provider ?? "Unknown"} • {item.source}
+                      </AppText>
+
+                      <AppText variant="caption" color={colors.textDarkSecondary}>
+                        Status:{" "}
+                        {item.providerStatus ?? "Provider status unavailable"}
+                      </AppText>
+
+                      <AppText variant="caption" color={colors.textDarkMuted}>
+                        Rate date: {item.date}
+                      </AppText>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          </AppCard>
+
+          <AppCard>
+            <View style={{ gap: 12 }}>
+              <AppText variant="subheading" color={colors.textDarkPrimary}>
+                Recent transaction history
+              </AppText>
+
+              {completedTransfers.length === 0 ? (
+                <AppText variant="body" color={colors.textDarkSecondary}>
+                  No completed transfers yet.
+                </AppText>
+              ) : (
+                <View style={{ gap: 10 }}>
+                  {completedTransfers.map((item) => {
+                    const route = item.selectedRoute;
+                    const recipient = item.recipient;
+
+                    return (
+                      <View
+                        key={item.id}
+                        style={{
+                          padding: 12,
+                          borderRadius: 16,
+                          backgroundColor: "#F9FAFB",
+                          borderWidth: 1,
+                          borderColor: "#E5E7EB",
+                          gap: 4,
+                        }}
+                      >
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            justifyContent: "space-between",
+                            gap: 12,
+                          }}
+                        >
+                          <AppText
+                            variant="body"
+                            color={colors.textDarkPrimary}
+                            style={{ fontWeight: "700" }}
+                          >
+                            {recipient.name || "Recipient"}
+                          </AppText>
+
+                          <AppText
+                            variant="caption"
+                            color={colors.textDarkPrimary}
+                            style={{ fontWeight: "700" }}
+                          >
+                            COMPLETED
+                          </AppText>
+                        </View>
+
+                        <AppText variant="caption" color={colors.textDarkSecondary}>
+                          £{item.senderAmount.toFixed(2)} GBP →{" "}
+                          {route
+                            ? `${route.receiveAmount.toLocaleString(undefined, {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })} ${recipient.currency}`
+                            : recipient.currency}
+                        </AppText>
+
+                        <AppText variant="caption" color={colors.textDarkSecondary}>
+                          {recipient.country} • {route?.provider ?? "Route"}
+                        </AppText>
+
+                        <AppText variant="caption" color={colors.textDarkSecondary}>
+                          Ref: NPX-{item.id.slice(-6)}
+                        </AppText>
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
+            </View>
+          </AppCard>
+
+          <AppCard>
+            <View style={{ gap: 12 }}>
+              <AppText variant="subheading" color={colors.textDarkPrimary}>
                 Corridor Command Centre
               </AppText>
 
@@ -654,158 +806,6 @@ export default function HomeScreen() {
                 onPress={setupRlusdTrustline}
                 disabled={isSettingRlusdTrustline}
               />
-            </View>
-          </AppCard>
-
-          <AppCard>
-            <View style={{ gap: 12 }}>
-              <AppText variant="subheading" color={colors.textDarkPrimary}>
-                Live Corridor FX
-              </AppText>
-
-              <AppText variant="caption" color={colors.textDarkSecondary}>
-                Provider-aware live rates with automatic fallback protection.
-              </AppText>
-
-              {loadingFx ? (
-                <AppText variant="body" color={colors.textDarkSecondary}>
-                  Loading live FX data...
-                </AppText>
-              ) : fxRates.length === 0 ? (
-                <AppText variant="body" color={colors.textDarkSecondary}>
-                  No FX rates available yet.
-                </AppText>
-              ) : (
-                <View style={{ gap: 10 }}>
-                  {fxRates.map((item) => (
-                    <View
-                      key={`${item.from}-${item.to}`}
-                      style={{
-                        padding: 14,
-                        borderRadius: 16,
-                        backgroundColor: "#F9FAFB",
-                        borderWidth: 1,
-                        borderColor: "#E5E7EB",
-                        gap: 6,
-                      }}
-                    >
-                      <View
-                        style={{
-                          flexDirection: "row",
-                          justifyContent: "space-between",
-                          gap: 12,
-                        }}
-                      >
-                        <AppText
-                          variant="body"
-                          color={colors.textDarkPrimary}
-                          style={{ fontWeight: "700" }}
-                        >
-                          {item.from} → {item.to}
-                        </AppText>
-
-                        <AppText
-                          variant="body"
-                          color={colors.gold}
-                          style={{ fontWeight: "700" }}
-                        >
-                          {item.rate.toFixed(2)}
-                        </AppText>
-                      </View>
-
-                      <AppText variant="caption" color={colors.textDarkSecondary}>
-                        Feed: {item.provider ?? "Unknown"} • {item.source}
-                      </AppText>
-
-                      <AppText variant="caption" color={colors.textDarkSecondary}>
-                        Status:{" "}
-                        {item.providerStatus ?? "Provider status unavailable"}
-                      </AppText>
-
-                      <AppText variant="caption" color={colors.textDarkMuted}>
-                        Rate date: {item.date}
-                      </AppText>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
-          </AppCard>
-
-          <AppCard>
-            <View style={{ gap: 12 }}>
-              <AppText variant="subheading" color={colors.textDarkPrimary}>
-                Recent transaction history
-              </AppText>
-
-              {completedTransfers.length === 0 ? (
-                <AppText variant="body" color={colors.textDarkSecondary}>
-                  No completed transfers yet.
-                </AppText>
-              ) : (
-                <View style={{ gap: 10 }}>
-                  {completedTransfers.map((item) => {
-                    const route = item.selectedRoute;
-                    const recipient = item.recipient;
-
-                    return (
-                      <View
-                        key={item.id}
-                        style={{
-                          padding: 12,
-                          borderRadius: 16,
-                          backgroundColor: "#F9FAFB",
-                          borderWidth: 1,
-                          borderColor: "#E5E7EB",
-                          gap: 4,
-                        }}
-                      >
-                        <View
-                          style={{
-                            flexDirection: "row",
-                            justifyContent: "space-between",
-                            gap: 12,
-                          }}
-                        >
-                          <AppText
-                            variant="body"
-                            color={colors.textDarkPrimary}
-                            style={{ fontWeight: "700" }}
-                          >
-                            {recipient.name || "Recipient"}
-                          </AppText>
-
-                          <AppText
-                            variant="caption"
-                            color={colors.textDarkPrimary}
-                            style={{ fontWeight: "700" }}
-                          >
-                            COMPLETED
-                          </AppText>
-                        </View>
-
-                        <AppText variant="caption" color={colors.textDarkSecondary}>
-                          £{item.senderAmount.toFixed(2)} GBP →{" "}
-                          {route
-                            ? `${route.receiveAmount.toLocaleString(undefined, {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              })} ${recipient.currency}`
-                            : recipient.currency}
-                        </AppText>
-
-                        <AppText variant="caption" color={colors.textDarkSecondary}>
-                          {recipient.country} • {route?.provider ?? "Route"}
-                        </AppText>
-
-                        <AppText variant="caption" color={colors.textDarkSecondary}>
-                          Ref: NPX-{item.id.slice(-6)}
-                        </AppText>
-                      </View>
-                    );
-                  })}
-                </View>
-              )}
             </View>
           </AppCard>
 
