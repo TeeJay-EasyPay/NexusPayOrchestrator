@@ -6,15 +6,35 @@ import { createClient } from "@supabase/supabase-js";
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn(
-    "Supabase environment variables are missing. Check EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY in .env."
-  );
+export const isSupabaseConfigured = Boolean(
+  supabaseUrl &&
+    supabaseAnonKey &&
+    supabaseUrl.startsWith("https://") &&
+    supabaseUrl.includes(".supabase.co")
+);
+
+export function getSupabaseConfigError() {
+  if (!supabaseUrl) {
+    return "Missing EXPO_PUBLIC_SUPABASE_URL in your .env file.";
+  }
+
+  if (!supabaseAnonKey) {
+    return "Missing EXPO_PUBLIC_SUPABASE_ANON_KEY in your .env file.";
+  }
+
+  if (!supabaseUrl.startsWith("https://") || !supabaseUrl.includes(".supabase.co")) {
+    return "EXPO_PUBLIC_SUPABASE_URL must look like https://your-project-ref.supabase.co";
+  }
+
+  return null;
 }
 
+const fallbackSupabaseUrl = "https://example.supabase.co";
+const fallbackSupabaseAnonKey = "fallback-anon-key";
+
 export const supabase = createClient(
-  supabaseUrl ?? "",
-  supabaseAnonKey ?? "",
+  supabaseUrl || fallbackSupabaseUrl,
+  supabaseAnonKey || fallbackSupabaseAnonKey,
   {
     auth: {
       storage: AsyncStorage,
