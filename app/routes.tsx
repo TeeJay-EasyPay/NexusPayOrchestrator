@@ -262,15 +262,17 @@ export default function RoutesScreen() {
       transfer.recipient.currency,
       simulatedRlusdBalance
     );
-  }, [transfer?.senderAmount, transfer?.recipient?.currency, simulatedRlusdBalance]);
+  }, [transfer?.id, transfer?.senderAmount, transfer?.recipient?.currency, simulatedRlusdBalance]);
+
+  const shouldStoreGeneratedRoutes =
+    Boolean(transfer) &&
+    generatedRoutes.length > 0 &&
+    (!transfer?.routes || transfer.routes.length === 0);
 
   useEffect(() => {
-    if (!transfer) return;
-
-    if (generatedRoutes.length > 0) {
-      setRoutes(generatedRoutes);
-    }
-  }, [generatedRoutes, setRoutes, transfer?.id]);
+    if (!shouldStoreGeneratedRoutes) return;
+    setRoutes(generatedRoutes);
+  }, [shouldStoreGeneratedRoutes, generatedRoutes, setRoutes]);
 
   const activeRoutes =
     transfer?.routes && transfer.routes.length > 0 ? transfer.routes : generatedRoutes;
