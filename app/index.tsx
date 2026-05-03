@@ -138,6 +138,224 @@ function ProgressBar({ value, color }: { value: number; color: string }) {
   );
 }
 
+function TopologyNode({
+  title,
+  subtitle,
+  badge,
+  tone = "light",
+}: {
+  title: string;
+  subtitle: string;
+  badge: string;
+  tone?: "light" | "dark";
+}) {
+  const isDark = tone === "dark";
+
+  return (
+    <View
+      style={{
+        padding: 13,
+        borderRadius: 18,
+        backgroundColor: isDark ? "#0B3F4A" : "#FFFFFF",
+        borderWidth: 1,
+        borderColor: isDark ? "rgba(255,255,255,0.16)" : "#E8EEF3",
+        gap: 6,
+      }}
+    >
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 10,
+        }}
+      >
+        <AppText
+          variant="body"
+          style={{
+            color: isDark ? "#FFFFFF" : colors.textDarkPrimary,
+            fontWeight: "900",
+          }}
+        >
+          {title}
+        </AppText>
+
+        <View
+          style={{
+            paddingHorizontal: 8,
+            paddingVertical: 3,
+            borderRadius: 999,
+            backgroundColor: isDark ? "rgba(214,168,79,0.22)" : colors.goldSoft,
+          }}
+        >
+          <AppText
+            variant="caption"
+            style={{ color: isDark ? colors.gold : "#8A6218", fontWeight: "900" }}
+          >
+            {badge}
+          </AppText>
+        </View>
+      </View>
+
+      <AppText
+        variant="caption"
+        color={isDark ? "#BFEAF1" : colors.textDarkSecondary}
+      >
+        {subtitle}
+      </AppText>
+    </View>
+  );
+}
+
+function TopologyConnector({ label }: { label: string }) {
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        paddingHorizontal: 4,
+      }}
+    >
+      <View style={{ flex: 1, height: 1, backgroundColor: "#D7DEE8" }} />
+      <View
+        style={{
+          paddingHorizontal: 10,
+          paddingVertical: 4,
+          borderRadius: 999,
+          backgroundColor: "#F8FAFC",
+          borderWidth: 1,
+          borderColor: "#E2E8F0",
+        }}
+      >
+        <AppText variant="caption" color={colors.textDarkMuted}>
+          {label}
+        </AppText>
+      </View>
+      <View style={{ flex: 1, height: 1, backgroundColor: "#D7DEE8" }} />
+    </View>
+  );
+}
+
+function LiveRouteTopologyMap({
+  bestCorridor,
+  confidence,
+  liveRails,
+  fallbackRails,
+}: {
+  bestCorridor: string;
+  confidence: number;
+  liveRails: number;
+  fallbackRails: number;
+}) {
+  const corridorLabel = bestCorridor === "Pending" ? "GBP → PHP / MYR" : bestCorridor;
+
+  return (
+    <AppCard>
+      <View style={{ gap: 14 }}>
+        <View style={{ gap: 4 }}>
+          <AppText variant="subheading" color={colors.textDarkPrimary}>
+            Live Route Topology
+          </AppText>
+
+          <AppText variant="caption" color={colors.textDarkSecondary}>
+            Network view of how NexusPay currently expects value to move.
+          </AppText>
+        </View>
+
+        <View
+          style={{
+            padding: 16,
+            borderRadius: 24,
+            backgroundColor: "#F8FAFC",
+            borderWidth: 1,
+            borderColor: "#E2E8F0",
+            gap: 10,
+          }}
+        >
+          <TopologyNode
+            title="Sender GBP"
+            subtitle="Customer balance and open banking source rail"
+            badge="Source"
+          />
+
+          <TopologyConnector label="quote + validate" />
+
+          <TopologyNode
+            title="FX Provider Mesh"
+            subtitle="Live provider selection with automatic fallback protection"
+            badge={`${liveRails} live`}
+          />
+
+          <TopologyConnector label="price + route" />
+
+          <TopologyNode
+            title="NexusPay Orchestrator"
+            subtitle="Scores liquidity, partner health, volatility and delivery confidence"
+            badge={formatPercent(confidence)}
+            tone="dark"
+          />
+
+          <TopologyConnector label="bridge + settle" />
+
+          <TopologyNode
+            title="XRPL / RLUSD Bridge"
+            subtitle="Simulated bridge liquidity and settlement proof layer"
+            badge="Bridge"
+          />
+
+          <TopologyConnector label="payout instruction" />
+
+          <TopologyNode
+            title="Recipient Payout Rail"
+            subtitle={`${corridorLabel} via active payout partner with fallback monitoring`}
+            badge={fallbackRails > 0 ? `${fallbackRails} fallback` : "Ready"}
+          />
+        </View>
+
+        <View
+          style={{
+            padding: 13,
+            borderRadius: 18,
+            backgroundColor: "#0B3F4A",
+            gap: 8,
+          }}
+        >
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              gap: 12,
+            }}
+          >
+            <View style={{ flex: 1 }}>
+              <AppText variant="caption" color="#BFEAF1">
+                Preferred topology
+              </AppText>
+
+              <AppText variant="body" color="#FFFFFF" style={{ fontWeight: "900" }}>
+                {corridorLabel}
+              </AppText>
+            </View>
+
+            <View style={{ alignItems: "flex-end" }}>
+              <AppText variant="caption" color="#BFEAF1">
+                Network confidence
+              </AppText>
+
+              <AppText variant="body" color={colors.gold} style={{ fontWeight: "900" }}>
+                {formatPercent(confidence)}
+              </AppText>
+            </View>
+          </View>
+
+          <ProgressBar value={confidence} color={colors.gold} />
+        </View>
+      </View>
+    </AppCard>
+  );
+}
+
 function CorridorCommandCard({
   item,
   matchedFxRate,
@@ -699,6 +917,13 @@ export default function HomeScreen() {
               )}
             </View>
           </AppCard>
+
+          <LiveRouteTopologyMap
+            bestCorridor={corridorSummary.bestCorridor}
+            confidence={corridorSummary.averageScore}
+            liveRails={corridorSummary.liveRails}
+            fallbackRails={corridorSummary.fallbackRails}
+          />
 
           <AppCard>
             <View style={{ gap: 12 }}>
