@@ -59,19 +59,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  async function initialiseSecureEntry() {
+  function initialiseSecureEntry() {
     if (!isSupabaseConfigured) {
       console.error(getSupabaseConfigError());
-      setLoading(false);
-      router.replace("/auth");
-      return;
     }
 
-    await supabase.auth.signOut();
     setSession(null);
     setDemoAccessEnabled(false);
     setLoading(false);
     router.replace("/auth");
+
+    if (isSupabaseConfigured) {
+      supabase.auth.signOut().catch((error) => {
+        console.warn("Startup session clear skipped", error);
+      });
+    }
   }
 
   async function enableDemoAccess() {
