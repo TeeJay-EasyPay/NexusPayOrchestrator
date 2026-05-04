@@ -7,13 +7,16 @@ export async function createPayout(request: CreatePayoutRequest) {
 
   console.log("Payout partner selection:", selection);
 
-  // For now fallback to mock provider (until credentials added)
+  // For now we still execute through mock until real sandbox credentials are configured.
   const result = await mockPayoutProvider.createPayout(request);
 
   return {
     ...result,
+    providerId: selection.selectedProviderId,
+    providerName: selection.selectedProviderName,
     routingReason: selection.reason,
     fallbackUsed: true,
+    providerMessage: `Selected ${selection.selectedProviderName} by payout routing engine. Executed through mock sandbox fallback until credentials are configured.`,
   };
 }
 
