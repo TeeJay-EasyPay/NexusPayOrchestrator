@@ -446,7 +446,7 @@ export default function RoutesScreen() {
             </View>
 
             <AppButton
-              title={selectedRoute ? "Continue to tracking" : "Select a route"}
+              title={selectedRoute ? "Send" : "Select a route"}
               onPress={handleContinue}
               disabled={!selectedRoute}
             />
