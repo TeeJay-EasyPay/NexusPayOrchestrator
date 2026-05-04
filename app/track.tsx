@@ -257,6 +257,10 @@ export default function TrackScreen() {
     const shouldStartPayout = activeStep >= Math.max(timelineSteps.length - 2, 0);
     if (!shouldStartPayout) return;
 
+    const payoutTransfer = transfer;
+    const payoutRoute = selectedRoute;
+    const payoutRecipient = recipient;
+
     hasStartedPayoutRef.current = true;
 
     async function runPayout() {
@@ -266,23 +270,23 @@ export default function TrackScreen() {
         await writeAuditLog({
           eventType: "PAYOUT_INITIATED",
           entityType: "transfer",
-          entityId: transfer.id,
+          entityId: payoutTransfer.id,
           metadata: {
             provider_mode: "mock_sandbox",
-            amount: selectedRoute.receiveAmount,
-            currency: recipient.currency,
-            country: recipient.country,
-            payout_method: recipient.payoutMethod,
+            amount: payoutRoute.receiveAmount,
+            currency: payoutRecipient.currency,
+            country: payoutRecipient.country,
+            payout_method: payoutRecipient.payoutMethod,
           },
         });
 
         const result = await createPayout({
-          transferId: transfer.id,
-          amount: selectedRoute.receiveAmount,
-          currency: recipient.currency,
-          country: recipient.country,
-          recipient,
-          payoutMethod: recipient.payoutMethod,
+          transferId: payoutTransfer.id,
+          amount: payoutRoute.receiveAmount,
+          currency: payoutRecipient.currency,
+          country: payoutRecipient.country,
+          recipient: payoutRecipient,
+          payoutMethod: payoutRecipient.payoutMethod,
         });
 
         setPayout(result);
@@ -291,7 +295,7 @@ export default function TrackScreen() {
         await writeAuditLog({
           eventType: "PAYOUT_PROCESSING",
           entityType: "transfer",
-          entityId: transfer.id,
+          entityId: payoutTransfer.id,
           metadata: {
             payout_reference: result.payoutReference,
             provider: result.providerName,
@@ -307,7 +311,7 @@ export default function TrackScreen() {
           await writeAuditLog({
             eventType: finalStatus === "PAID_OUT" ? "PAYOUT_COMPLETED" : "PAYOUT_FAILED",
             entityType: "transfer",
-            entityId: transfer.id,
+            entityId: payoutTransfer.id,
             metadata: {
               payout_reference: result.payoutReference,
               provider: result.providerName,
@@ -322,7 +326,7 @@ export default function TrackScreen() {
         await writeAuditLog({
           eventType: "PAYOUT_FAILED",
           entityType: "transfer",
-          entityId: transfer.id,
+          entityId: payoutTransfer.id,
           metadata: {
             provider_mode: "mock_sandbox",
             error: String(error),
