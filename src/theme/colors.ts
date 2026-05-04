@@ -1,6 +1,6 @@
 export const colors = {
-  background: "#0F4C5C",
-  backgroundSoft: "#155E75",
+  background: "#071A2F",
+  backgroundSoft: "#0B2A45",
 
   card: "#FFFFFF",
   cardSoft: "#F6F8FB",
@@ -10,8 +10,8 @@ export const colors = {
   goldSoft: "#FFF8E1",
 
   textPrimary: "#FFFFFF",
-  textSecondary: "#D7EEF3",
-  textMuted: "#A7CBD3",
+  textSecondary: "#DDEAF4",
+  textMuted: "#9DB6C8",
 
   textDarkPrimary: "#0A1A2F",
   textDarkSecondary: "#5A6B7C",
@@ -21,7 +21,7 @@ export const colors = {
   warning: "#F5C542",
   danger: "#FF5A5F",
 
-  border: "#2A6F7E",
+  border: "#12395A",
   white: "#FFFFFF",
   black: "#000000",
 };
