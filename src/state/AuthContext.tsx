@@ -38,16 +38,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [demoAccessEnabled, setDemoAccessEnabled] = useState(false);
 
   useEffect(() => {
-    if (!isSupabaseConfigured) {
-      console.error(getSupabaseConfigError());
-      setLoading(false);
-      return;
-    }
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
+    initialiseSecureEntry();
 
     const {
       data: { subscription },
@@ -61,19 +52,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           updated_at: new Date().toISOString(),
         });
       }
-
-      if (session) {
-        router.replace("/");
-      } else {
-        setDemoAccessEnabled(false);
-        router.replace("/auth");
-      }
     });
 
     return () => {
       subscription.unsubscribe();
     };
   }, []);
+
+  async function initialiseSecureEntry() {
+    if (!isSupabaseConfigured) {
+      console.error(getSupabaseConfigError());
+      setLoading(false);
+      router.replace("/auth");
+      return;
+    }
+
+    await supabase.auth.signOut();
+    setSession(null);
+    setDemoAccessEnabled(false);
+    setLoading(false);
+    router.replace("/auth");
+  }
 
   async function enableDemoAccess() {
     if (!DEMO_EMAIL || !DEMO_PASSWORD) {
@@ -97,6 +96,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
     });
 
+    router.replace("/");
+
     return null;
   }
 
@@ -110,7 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return getSupabaseConfigError();
       }
 
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -118,6 +119,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) {
         return error.message;
       }
+
+      setSession(data.session);
 
       if (email !== DEMO_EMAIL) {
         setDemoAccessEnabled(false);
@@ -129,6 +132,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email,
         },
       });
+
+      router.replace("/");
 
       return null;
     } catch (error) {
@@ -174,7 +179,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function signOut() {
     setDemoAccessEnabled(false);
+    setSession(null);
     await supabase.auth.signOut();
+    router.replace("/auth");
   }
 
   const value = useMemo(
