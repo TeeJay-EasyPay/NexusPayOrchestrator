@@ -14,6 +14,7 @@ export interface SavedRecipient {
   accountNumber?: string;
   mobileWalletProvider?: string;
   mobileNumber?: string;
+  isFavorite: boolean;
   lastUsedAt: number;
   createdAt: number;
 }
