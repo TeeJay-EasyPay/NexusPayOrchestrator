@@ -10,6 +10,9 @@ import {
   executeXrplTestnetSettlement,
   XrplSettlementResult,
 } from "../src/lib/xrplSettlement";
+import { writeAuditLog } from "../src/services/auditLog";
+import { createPayout, getPayoutStatus } from "../src/services/payout/payoutAdapter";
+import { PayoutResult, PayoutStatus } from "../src/services/payout/payoutTypes";
 import { useTransfer } from "../src/state/TransferContext";
 import { useWallet } from "../src/state/WalletContext";
 import { colors } from "../src/theme";
@@ -45,6 +48,10 @@ function buildTimelineSteps(routeSteps: string[]): TimelineStep[] {
       description: "Funds are moving through the selected route.",
     },
     {
+      title: "Payout submitted to partner",
+      description: "The final-leg payout request has been accepted by the payout adapter.",
+    },
+    {
       title: "Recipient payout processing",
       description: "The local payout partner is preparing recipient delivery.",
     },
@@ -78,6 +85,21 @@ function statusColor(status: "NOT_REQUIRED" | "PENDING" | "COMPLETED" | "FAILED"
   if (status === "PENDING") return colors.gold;
   if (status === "FAILED") return "#DC2626";
   return "#94A3B8";
+}
+
+function payoutStatusColor(status: PayoutStatus) {
+  if (status === "PAID_OUT") return "#16A34A";
+  if (status === "FAILED") return "#DC2626";
+  if (status === "PROCESSING" || status === "INITIATED") return colors.gold;
+  return "#94A3B8";
+}
+
+function payoutStatusLabel(status: PayoutStatus) {
+  if (status === "INITIATED") return "Payout initiated";
+  if (status === "PROCESSING") return "Processing payout";
+  if (status === "PAID_OUT") return "Paid into destination account";
+  if (status === "FAILED") return "Payout failed";
+  return "Not started";
 }
 
 function ProgressBar({ value }: { value: number }) {
@@ -157,14 +179,18 @@ export default function TrackScreen() {
   const [completedAt, setCompletedAt] = useState<string | null>(null);
   const [xrplStatus, setXrplStatus] = useState<"NOT_REQUIRED" | "PENDING" | "COMPLETED" | "FAILED">("NOT_REQUIRED");
   const [xrplProof, setXrplProof] = useState<XrplSettlementResult | null>(null);
+  const [payout, setPayout] = useState<PayoutResult | null>(null);
+  const [payoutStatus, setPayoutStatus] = useState<PayoutStatus>("NOT_STARTED");
 
   const hasStartedRef = useRef(false);
   const hasDebitedWalletRef = useRef(false);
   const hasCompletedRef = useRef(false);
   const hasStartedXrplRef = useRef(false);
+  const hasStartedPayoutRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const selectedRoute = transfer?.selectedRoute;
+  const recipient = transfer?.recipient;
 
   const timelineSteps = useMemo(() => {
     return buildTimelineSteps(selectedRoute?.settlementStages ?? selectedRoute?.steps ?? []);
@@ -225,6 +251,90 @@ export default function TrackScreen() {
   }, [transfer?.id, selectedRoute?.id, refreshXrpBalance]);
 
   useEffect(() => {
+    if (!transfer || !selectedRoute || !recipient) return;
+    if (hasStartedPayoutRef.current) return;
+
+    const shouldStartPayout = activeStep >= Math.max(timelineSteps.length - 2, 0);
+    if (!shouldStartPayout) return;
+
+    hasStartedPayoutRef.current = true;
+
+    async function runPayout() {
+      try {
+        setPayoutStatus("INITIATED");
+
+        await writeAuditLog({
+          eventType: "PAYOUT_INITIATED",
+          entityType: "transfer",
+          entityId: transfer.id,
+          metadata: {
+            provider_mode: "mock_sandbox",
+            amount: selectedRoute.receiveAmount,
+            currency: recipient.currency,
+            country: recipient.country,
+            payout_method: recipient.payoutMethod,
+          },
+        });
+
+        const result = await createPayout({
+          transferId: transfer.id,
+          amount: selectedRoute.receiveAmount,
+          currency: recipient.currency,
+          country: recipient.country,
+          recipient,
+          payoutMethod: recipient.payoutMethod,
+        });
+
+        setPayout(result);
+        setPayoutStatus("PROCESSING");
+
+        await writeAuditLog({
+          eventType: "PAYOUT_PROCESSING",
+          entityType: "transfer",
+          entityId: transfer.id,
+          metadata: {
+            payout_reference: result.payoutReference,
+            provider: result.providerName,
+            destination: result.destinationLabel,
+          },
+        });
+
+        const finalStatus = await getPayoutStatus(result.payoutReference);
+
+        setTimeout(async () => {
+          setPayoutStatus(finalStatus);
+
+          await writeAuditLog({
+            eventType: finalStatus === "PAID_OUT" ? "PAYOUT_COMPLETED" : "PAYOUT_FAILED",
+            entityType: "transfer",
+            entityId: transfer.id,
+            metadata: {
+              payout_reference: result.payoutReference,
+              provider: result.providerName,
+              final_status: finalStatus,
+            },
+          });
+        }, 1200);
+      } catch (error) {
+        console.error("Payout execution failed", error);
+        setPayoutStatus("FAILED");
+
+        await writeAuditLog({
+          eventType: "PAYOUT_FAILED",
+          entityType: "transfer",
+          entityId: transfer.id,
+          metadata: {
+            provider_mode: "mock_sandbox",
+            error: String(error),
+          },
+        });
+      }
+    }
+
+    runPayout();
+  }, [activeStep, timelineSteps.length, transfer?.id, selectedRoute?.id, recipient?.name]);
+
+  useEffect(() => {
     if (!transfer || !selectedRoute) return;
     if (hasCompletedRef.current) return;
 
@@ -263,12 +373,12 @@ export default function TrackScreen() {
     );
   }
 
-  const recipient = transfer.recipient;
-  const recipientCurrency = recipient?.currency ?? "PHP";
+  const safeRecipient = transfer.recipient;
+  const recipientCurrency = safeRecipient?.currency ?? "PHP";
 
-  const payoutLabel = recipient?.payoutMethod === "BANK"
-    ? `${recipient?.bankName ?? "Selected bank"} bank account`
-    : `${recipient?.mobileWalletProvider ?? "Selected wallet"} mobile wallet`;
+  const payoutLabel = safeRecipient?.payoutMethod === "BANK"
+    ? `${safeRecipient?.bankName ?? "Selected bank"} bank account`
+    : `${safeRecipient?.mobileWalletProvider ?? "Selected wallet"} mobile wallet`;
 
   const isCompleted = activeStep >= timelineSteps.length - 1;
   const isHybridRoute = selectedRoute.rail === "HYBRID";
@@ -386,7 +496,7 @@ export default function TrackScreen() {
                 </AppText>
 
                 <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
-                  {recipient?.name ?? "Recipient"} • {recipient?.country ?? "Destination"}
+                  {safeRecipient?.name ?? "Recipient"} • {safeRecipient?.country ?? "Destination"}
                 </AppText>
 
                 <AppText variant="caption" color={colors.textDarkSecondary}>
@@ -627,6 +737,88 @@ export default function TrackScreen() {
                 <AppText variant="caption" color={colors.textDarkSecondary}>
                   This route uses simulated fiat settlement. XRPL proof is only generated for HYBRID routes.
                 </AppText>
+              )}
+            </View>
+          </AppCard>
+
+          <AppCard>
+            <View style={{ gap: 12 }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: 12,
+                }}
+              >
+                <View style={{ flex: 1 }}>
+                  <AppText variant="subheading" color={colors.textDarkPrimary}>
+                    Payout execution
+                  </AppText>
+                  <AppText variant="caption" color={colors.textDarkSecondary}>
+                    Final-leg payout handled through the provider-agnostic adapter.
+                  </AppText>
+                </View>
+
+                <View
+                  style={{
+                    paddingHorizontal: 10,
+                    paddingVertical: 5,
+                    borderRadius: 999,
+                    backgroundColor: `${payoutStatusColor(payoutStatus)}22`,
+                  }}
+                >
+                  <AppText
+                    variant="caption"
+                    style={{ color: payoutStatusColor(payoutStatus), fontWeight: "900" }}
+                  >
+                    {payoutStatus}
+                  </AppText>
+                </View>
+              </View>
+
+              {!payout ? (
+                <View
+                  style={{
+                    padding: 14,
+                    borderRadius: 18,
+                    backgroundColor: "#F8FAFC",
+                    borderWidth: 1,
+                    borderColor: "#E2E8F0",
+                  }}
+                >
+                  <AppText variant="caption" color={colors.textDarkSecondary}>
+                    Waiting for final-leg payout trigger...
+                  </AppText>
+                </View>
+              ) : (
+                <View style={{ gap: 10 }}>
+                  <View style={{ flexDirection: "row", gap: 8 }}>
+                    <DetailMetric label="Provider" value={payout.providerName} />
+                    <DetailMetric label="ETA" value={payout.estimatedArrival} />
+                  </View>
+
+                  <View
+                    style={{
+                      padding: 14,
+                      borderRadius: 18,
+                      backgroundColor: payoutStatus === "PAID_OUT" ? "#DCFCE7" : "#FEF3C7",
+                      borderWidth: 1,
+                      borderColor: payoutStatus === "PAID_OUT" ? "#86EFAC" : "#F1D99B",
+                      gap: 6,
+                    }}
+                  >
+                    <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
+                      {payoutStatusLabel(payoutStatus)}
+                    </AppText>
+                    <AppText variant="caption" color={colors.textDarkSecondary}>
+                      Reference {payout.payoutReference} • {payout.destinationLabel}
+                    </AppText>
+                    <AppText variant="caption" color={colors.textDarkSecondary}>
+                      {payout.providerMessage}
+                    </AppText>
+                  </View>
+                </View>
               )}
             </View>
           </AppCard>
