@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { createTransferId } from "../lib/id";
 import { supabase } from "../lib/supabase";
 import { loadCompletedTransfers, saveCompletedTransfer } from "../services/transferService";
+import { saveRecipientFromTransfer } from "../services/recipientService";
 import { Recipient, RouteQuote, Transfer } from "../types/transfer";
 
 interface TransferContextType {
@@ -128,6 +129,8 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
       saveCompletedTransfer(completedTransfer).then(() => {
         hydrateTransfers();
       });
+
+      saveRecipientFromTransfer(completedTransfer);
 
       setCompletedTransfers((existingTransfers) => {
         const alreadyExists = existingTransfers.some(
