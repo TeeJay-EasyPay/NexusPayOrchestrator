@@ -4,7 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AppDropdownMenu } from "../navigation/AppDropdownMenu";
 import { AppMenu } from "../navigation/AppMenu";
-import { colors, spacing } from "../../theme";
+import { spacing } from "../../theme";
 
 type ScreenProps = {
   children: React.ReactNode;
@@ -26,7 +26,7 @@ export function Screen({ children, style }: ScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: "#020713",
     padding: spacing.md,
     gap: spacing.md,
   },
