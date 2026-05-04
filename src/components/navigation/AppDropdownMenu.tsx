@@ -4,6 +4,7 @@ import { Pressable, View } from "react-native";
 
 import { colors } from "../../theme";
 import { AppText } from "../ui/AppText";
+import { UserAccountBadge } from "../auth/UserAccountBadge";
 
 const MENU_ITEMS = [
   { label: "Home", description: "Dashboard and corridor intelligence", route: "/", match: "/" },
@@ -33,36 +34,40 @@ export function AppDropdownMenu() {
           gap: 12,
         }}
       >
-        <Pressable
-          onPress={() => setIsOpen((current) => !current)}
-          style={{
-            width: 46,
-            height: 46,
-            borderRadius: 18,
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: "rgba(255,255,255,0.96)",
-            borderWidth: 1,
-            borderColor: "#E2E8F0",
-          }}
-        >
-          <AppText
-            variant="subheading"
-            color={colors.textDarkPrimary}
-            style={{ fontWeight: "900", marginTop: -2 }}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <Pressable
+            onPress={() => setIsOpen((current) => !current)}
+            style={{
+              width: 46,
+              height: 46,
+              borderRadius: 18,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: "rgba(255,255,255,0.96)",
+              borderWidth: 1,
+              borderColor: "#E2E8F0",
+            }}
           >
-            ☰
-          </AppText>
-        </Pressable>
+            <AppText
+              variant="subheading"
+              color={colors.textDarkPrimary}
+              style={{ fontWeight: "900", marginTop: -2 }}
+            >
+              ☰
+            </AppText>
+          </Pressable>
 
-        <View style={{ flex: 1 }}>
-          <AppText variant="caption" color={colors.gold}>
-            NexusPay
-          </AppText>
-          <AppText variant="caption" color={colors.textSecondary}>
-            Intelligent payment orchestration
-          </AppText>
+          <View>
+            <AppText variant="caption" color={colors.gold}>
+              NexusPay
+            </AppText>
+            <AppText variant="caption" color={colors.textSecondary}>
+              Intelligent payment orchestration
+            </AppText>
+          </View>
         </View>
+
+        <UserAccountBadge />
       </View>
 
       {isOpen ? (
