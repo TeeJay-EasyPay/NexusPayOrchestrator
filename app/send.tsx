@@ -24,10 +24,10 @@ const cyan = "#27F5FF";
 const cyanDim = "rgba(39,245,255,0.18)";
 const deepSpace = "#020713";
 const deepNavy = "#041426";
-const panel = "rgba(3,15,30,0.95)";
+const panel = "rgba(3,15,30,0.96)";
 const panelRaised = "rgba(7,28,50,0.96)";
 const mutedText = "#A8C7D8";
-const cyanBorder = "rgba(39,245,255,0.48)";
+const cyanBorder = "rgba(39,245,255,0.55)";
 
 function formatCurrency(value: number) {
   return value.toLocaleString(undefined, {
@@ -47,70 +47,29 @@ function getStringParam(value: string | string[] | undefined) {
 
 function getCorridorSignal(country: string) {
   if (country === "Philippines") {
-    return { confidence: 92, liquidity: "High", delivery: "Minutes", rail: "GBP → RLUSD → PHP" };
+    return {
+      confidence: 92,
+      liquidity: "High",
+      delivery: "Minutes",
+      rail: "GBP → RLUSD → PHP",
+    };
   }
 
-  return { confidence: 86, liquidity: "Healthy", delivery: "Minutes", rail: "GBP → RLUSD → MYR" };
+  return {
+    confidence: 86,
+    liquidity: "Healthy",
+    delivery: "Minutes",
+    rail: "GBP → RLUSD → MYR",
+  };
 }
 
-function GlowOrb({
-  top,
-  right,
-  left,
-  size,
-  color,
-  opacity,
+function GlassCard({
+  children,
+  style,
 }: {
-  top?: number;
-  right?: number;
-  left?: number;
-  size: number;
-  color: string;
-  opacity: number;
+  children: React.ReactNode;
+  style?: any;
 }) {
-  return (
-    <View
-      pointerEvents="none"
-      style={{
-        position: "absolute",
-        top,
-        right,
-        left,
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        backgroundColor: color,
-        opacity,
-        shadowColor: color,
-        shadowOpacity: 1,
-        shadowRadius: 42,
-      }}
-    />
-  );
-}
-
-function FlowLine({ top, rotate = "0deg" }: { top: number; rotate?: string }) {
-  return (
-    <View
-      pointerEvents="none"
-      style={{
-        position: "absolute",
-        top,
-        right: -85,
-        width: 390,
-        height: 2,
-        borderRadius: 999,
-        backgroundColor: "rgba(39,245,255,0.44)",
-        transform: [{ rotate }],
-        shadowColor: cyan,
-        shadowOpacity: 1,
-        shadowRadius: 18,
-      }}
-    />
-  );
-}
-
-function GlassCard({ children, style }: { children: React.ReactNode; style?: any }) {
   return (
     <AppCard
       style={{
@@ -118,10 +77,10 @@ function GlassCard({ children, style }: { children: React.ReactNode; style?: any
         borderColor: cyanBorder,
         borderWidth: 1,
         shadowColor: cyan,
-        shadowOpacity: 0.36,
+        shadowOpacity: 0.45,
         shadowRadius: 28,
         shadowOffset: { width: 0, height: 14 },
-        elevation: 10,
+        elevation: 12,
         overflow: "hidden",
         ...style,
       }}
@@ -133,40 +92,27 @@ function GlassCard({ children, style }: { children: React.ReactNode; style?: any
           top: 0,
           left: 0,
           right: 0,
-          height: 86,
-          backgroundColor: "rgba(39,245,255,0.11)",
+          height: 84,
+          backgroundColor: "rgba(39,245,255,0.14)",
         }}
       />
+
       <View
         pointerEvents="none"
         style={{
           position: "absolute",
-          top: -52,
-          right: -48,
-          width: 150,
-          height: 150,
-          borderRadius: 75,
-          backgroundColor: "rgba(39,245,255,0.16)",
+          top: -42,
+          right: -42,
+          width: 148,
+          height: 148,
+          borderRadius: 74,
+          backgroundColor: "rgba(39,245,255,0.18)",
           shadowColor: cyan,
           shadowOpacity: 1,
-          shadowRadius: 34,
+          shadowRadius: 32,
         }}
       />
-      <View
-        pointerEvents="none"
-        style={{
-          position: "absolute",
-          bottom: -52,
-          left: -58,
-          width: 145,
-          height: 145,
-          borderRadius: 73,
-          backgroundColor: "rgba(14,165,233,0.10)",
-          shadowColor: cyan,
-          shadowOpacity: 0.8,
-          shadowRadius: 28,
-        }}
-      />
+
       <View style={{ position: "relative" }}>{children}</View>
     </AppCard>
   );
@@ -194,16 +140,16 @@ function InputField({
       placeholderTextColor="#6EAFC0"
       style={{
         borderWidth: 1,
-        borderColor: "rgba(39,245,255,0.44)",
+        borderColor: "rgba(39,245,255,0.5)",
         borderRadius: 18,
         padding: large ? 18 : 15,
         fontSize: large ? 31 : 16,
         fontWeight: large ? "900" : "700",
         color: "#FFFFFF",
-        backgroundColor: "rgba(1,8,18,0.78)",
+        backgroundColor: "rgba(1,8,18,0.82)",
         shadowColor: cyan,
-        shadowOpacity: 0.22,
-        shadowRadius: 12,
+        shadowOpacity: 0.25,
+        shadowRadius: 10,
       }}
     />
   );
@@ -229,7 +175,9 @@ function SelectorChip({
         borderRadius: 999,
         borderWidth: 1,
         borderColor: selected ? accent : "rgba(255,255,255,0.18)",
-        backgroundColor: selected ? "rgba(39,245,255,0.20)" : "rgba(255,255,255,0.06)",
+        backgroundColor: selected
+          ? "rgba(39,245,255,0.2)"
+          : "rgba(255,255,255,0.06)",
         shadowColor: selected ? accent : "transparent",
         shadowOpacity: selected ? 0.72 : 0,
         shadowRadius: selected ? 18 : 0,
@@ -295,9 +243,11 @@ function RouteNode({ label, detail }: { label: string; detail: string }) {
           {label.slice(0, 1)}
         </AppText>
       </View>
+
       <AppText color="#FFFFFF" style={{ fontWeight: "900" }}>
         {label}
       </AppText>
+
       <AppText variant="caption" color={mutedText}>
         {detail}
       </AppText>
@@ -319,14 +269,19 @@ function RoutePreviewCard({
   payoutMethod: PayoutMethod;
 }) {
   const signal = getCorridorSignal(selectedCountry);
-  const estimatedReceive = amount > 0 ? amount * (currency === "PHP" ? 72.4 : 5.92) : 0;
+  const estimatedReceive =
+    amount > 0 ? amount * (currency === "PHP" ? 72.4 : 5.92) : 0;
 
   return (
-    <GlassCard style={{ borderColor: "rgba(39,245,255,0.56)" }}>
-      <FlowLine top={74} rotate="-8deg" />
-      <FlowLine top={158} rotate="12deg" />
+    <GlassCard style={{ borderColor: "rgba(39,245,255,0.62)" }}>
       <View style={{ gap: 15 }}>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            gap: 12,
+          }}
+        >
           <View style={{ gap: 4, flex: 1 }}>
             <AppText variant="subheading" color="#FFFFFF">
               Route preview
@@ -335,12 +290,13 @@ function RoutePreviewCard({
               Visual orchestration path before route ranking.
             </AppText>
           </View>
+
           <View
             style={{
               paddingHorizontal: 11,
               paddingVertical: 7,
               borderRadius: 999,
-              backgroundColor: "rgba(39,245,255,0.20)",
+              backgroundColor: "rgba(39,245,255,0.2)",
               borderWidth: 1,
               borderColor: "rgba(39,245,255,0.62)",
               shadowColor: cyan,
@@ -394,8 +350,22 @@ function RoutePreviewCard({
                 {signal.confidence}%
               </AppText>
             </View>
-            <View style={{ height: 9, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.12)", overflow: "hidden" }}>
-              <View style={{ width: `${signal.confidence}%`, height: "100%", backgroundColor: cyan }} />
+
+            <View
+              style={{
+                height: 9,
+                borderRadius: 999,
+                backgroundColor: "rgba(255,255,255,0.12)",
+                overflow: "hidden",
+              }}
+            >
+              <View
+                style={{
+                  width: `${signal.confidence}%`,
+                  height: "100%",
+                  backgroundColor: cyan,
+                }}
+              />
             </View>
           </View>
         </View>
@@ -413,11 +383,15 @@ function RoutePreviewCard({
           <AppText variant="caption" color={mutedText}>
             Estimated receive amount
           </AppText>
+
           <AppText variant="title" color="#FFFFFF">
-            {estimatedReceive > 0 ? formatCurrency(estimatedReceive) : "0.00"} {currency ?? ""}
+            {estimatedReceive > 0 ? formatCurrency(estimatedReceive) : "0.00"}{" "}
+            {currency ?? ""}
           </AppText>
+
           <AppText variant="caption" color={mutedText}>
-            {signal.rail} • {getPayoutLabel(payoutMethod)} via {provider || "provider"}
+            {signal.rail} • {getPayoutLabel(payoutMethod)} via{" "}
+            {provider || "provider"}
           </AppText>
         </View>
       </View>
@@ -431,10 +405,13 @@ export default function SendScreen() {
   const { createTransfer, setRecipient } = useTransfer();
 
   const [savedRecipients, setSavedRecipients] = useState<SavedRecipient[]>([]);
-  const [selectedRecipientId, setSelectedRecipientId] = useState<string | null>(null);
+  const [selectedRecipientId, setSelectedRecipientId] = useState<string | null>(
+    null
+  );
   const [amount, setAmount] = useState("");
   const [selectedCountry, setSelectedCountry] = useState("Philippines");
-  const [selectedPayoutMethod, setSelectedPayoutMethod] = useState<PayoutMethod>("BANK");
+  const [selectedPayoutMethod, setSelectedPayoutMethod] =
+    useState<PayoutMethod>("BANK");
   const [selectedProvider, setSelectedProvider] = useState("BDO");
 
   const [firstName, setFirstName] = useState("");
@@ -446,14 +423,17 @@ export default function SendScreen() {
 
   const refreshSavedRecipients = useCallback(() => {
     let cancelled = false;
+
     loadSavedRecipients().then((recipients) => {
       if (!cancelled) setSavedRecipients(recipients);
     });
+
     const retryTimer = setTimeout(() => {
       loadSavedRecipients().then((recipients) => {
         if (!cancelled) setSavedRecipients(recipients);
       });
     }, 600);
+
     return () => {
       cancelled = true;
       clearTimeout(retryTimer);
@@ -464,8 +444,14 @@ export default function SendScreen() {
 
   useEffect(() => {
     const hasResendParams =
-      params.amount || params.country || params.firstName || params.middleName || params.surname ||
-      params.bankCode || params.accountNumber || params.mobileNumber;
+      params.amount ||
+      params.country ||
+      params.firstName ||
+      params.middleName ||
+      params.surname ||
+      params.bankCode ||
+      params.accountNumber ||
+      params.mobileNumber;
 
     if (!hasResendParams) return;
 
@@ -478,12 +464,17 @@ export default function SendScreen() {
 
     if (resendCountry) {
       const corridor = corridors.find((item) => item.country === resendCountry);
+
       if (corridor) {
         const payoutMethod =
           resendPayoutMethod === "BANK" || resendPayoutMethod === "MOBILE_WALLET"
             ? resendPayoutMethod
             : corridor.payoutMethods[0].type;
-        const payoutConfig = corridor.payoutMethods.find((item) => item.type === payoutMethod);
+
+        const payoutConfig = corridor.payoutMethods.find(
+          (item) => item.type === payoutMethod
+        );
+
         setSelectedCountry(corridor.country);
         setSelectedPayoutMethod(payoutMethod);
         setSelectedProvider(resendProvider || payoutConfig?.providers[0] || "");
@@ -499,12 +490,22 @@ export default function SendScreen() {
   }, []);
 
   const numericAmount = Number(amount);
-  const safeAmount = !Number.isNaN(numericAmount) && numericAmount > 0 ? numericAmount : 0;
+  const safeAmount =
+    !Number.isNaN(numericAmount) && numericAmount > 0 ? numericAmount : 0;
   const balanceAfterTransfer = Math.max((gbpBalance ?? 0) - safeAmount, 0);
 
-  const selectedCorridor = useMemo(() => corridors.find((corridor) => corridor.country === selectedCountry), [selectedCountry]);
+  const selectedCorridor = useMemo(
+    () => corridors.find((corridor) => corridor.country === selectedCountry),
+    [selectedCountry]
+  );
+
   const availablePayoutMethods = selectedCorridor?.payoutMethods ?? [];
-  const selectedPayoutConfig = useMemo(() => availablePayoutMethods.find((method) => method.type === selectedPayoutMethod), [availablePayoutMethods, selectedPayoutMethod]);
+
+  const selectedPayoutConfig = useMemo(
+    () => availablePayoutMethods.find((method) => method.type === selectedPayoutMethod),
+    [availablePayoutMethods, selectedPayoutMethod]
+  );
+
   const availableProviders = selectedPayoutConfig?.providers ?? [];
 
   const handleSelectSavedRecipient = (recipient: SavedRecipient) => {
@@ -537,7 +538,10 @@ export default function SendScreen() {
         country: recipient.country,
         currency: recipient.currency,
         payout_method: recipient.payoutMethod,
-        provider: recipient.payoutMethod === "BANK" ? recipient.bankName : recipient.mobileWalletProvider,
+        provider:
+          recipient.payoutMethod === "BANK"
+            ? recipient.bankName
+            : recipient.mobileWalletProvider,
       },
     });
   };
@@ -550,8 +554,10 @@ export default function SendScreen() {
   const handleCountrySelect = (country: string) => {
     const corridor = corridors.find((item) => item.country === country);
     if (!corridor) return;
+
     const firstPayoutMethod = corridor.payoutMethods[0];
     const firstProvider = firstPayoutMethod.providers[0];
+
     setSelectedRecipientId(null);
     setSelectedCountry(country);
     setSelectedPayoutMethod(firstPayoutMethod.type);
@@ -563,6 +569,7 @@ export default function SendScreen() {
 
   const handlePayoutMethodSelect = (method: PayoutMethod) => {
     const payoutConfig = availablePayoutMethods.find((item) => item.type === method);
+
     setSelectedRecipientId(null);
     setSelectedPayoutMethod(method);
     setSelectedProvider(payoutConfig?.providers[0] ?? "");
@@ -573,40 +580,60 @@ export default function SendScreen() {
 
   const handleFindRoutes = () => {
     const numericAmount = Number(amount);
+
     if (!amount || Number.isNaN(numericAmount) || numericAmount <= 0) {
       Alert.alert("Enter amount", "Please enter a valid GBP amount.");
       return;
     }
+
     if (numericAmount > gbpBalance) {
       Alert.alert("Insufficient balance", "You do not have enough GBP funds.");
       return;
     }
+
     if (!selectedCorridor) {
       Alert.alert("Select country", "Please select a destination country.");
       return;
     }
+
     if (!firstName.trim()) {
       Alert.alert("First name required", "Please enter the recipient first name.");
       return;
     }
+
     if (!surname.trim()) {
       Alert.alert("Surname required", "Please enter the recipient surname.");
       return;
     }
+
     if (selectedPayoutMethod === "BANK" && !bankCode.trim()) {
-      Alert.alert("Bank routing required", "Please enter the recipient bank, branch, or sort code.");
-      return;
-    }
-    if (selectedPayoutMethod === "BANK" && !accountNumber.trim()) {
-      Alert.alert("Account number required", "Please enter recipient bank account number.");
-      return;
-    }
-    if (selectedPayoutMethod === "MOBILE_WALLET" && !mobileNumber.trim()) {
-      Alert.alert("Mobile number required", "Please enter recipient mobile wallet number.");
+      Alert.alert(
+        "Bank routing required",
+        "Please enter the recipient bank, branch, or sort code."
+      );
       return;
     }
 
-    const recipientFullName = [firstName.trim(), middleName.trim(), surname.trim()].filter(Boolean).join(" ");
+    if (selectedPayoutMethod === "BANK" && !accountNumber.trim()) {
+      Alert.alert(
+        "Account number required",
+        "Please enter recipient bank account number."
+      );
+      return;
+    }
+
+    if (selectedPayoutMethod === "MOBILE_WALLET" && !mobileNumber.trim()) {
+      Alert.alert(
+        "Mobile number required",
+        "Please enter recipient mobile wallet number."
+      );
+      return;
+    }
+
+    const recipientFullName = [firstName.trim(), middleName.trim(), surname.trim()]
+      .filter(Boolean)
+      .join(" ");
+
     const recipient: Recipient = {
       name: recipientFullName,
       firstName: firstName.trim(),
@@ -617,9 +644,12 @@ export default function SendScreen() {
       payoutMethod: selectedPayoutMethod,
       bankName: selectedPayoutMethod === "BANK" ? selectedProvider : undefined,
       bankCode: selectedPayoutMethod === "BANK" ? bankCode.trim() : undefined,
-      accountNumber: selectedPayoutMethod === "BANK" ? accountNumber.trim() : undefined,
-      mobileWalletProvider: selectedPayoutMethod === "MOBILE_WALLET" ? selectedProvider : undefined,
-      mobileNumber: selectedPayoutMethod === "MOBILE_WALLET" ? mobileNumber.trim() : undefined,
+      accountNumber:
+        selectedPayoutMethod === "BANK" ? accountNumber.trim() : undefined,
+      mobileWalletProvider:
+        selectedPayoutMethod === "MOBILE_WALLET" ? selectedProvider : undefined,
+      mobileNumber:
+        selectedPayoutMethod === "MOBILE_WALLET" ? mobileNumber.trim() : undefined,
     };
 
     createTransfer(numericAmount);
@@ -629,14 +659,29 @@ export default function SendScreen() {
 
   return (
     <Screen style={{ backgroundColor: deepSpace }}>
-      <View style={{ position: "absolute", top: 0, left: -18, right: -18, bottom: -40, backgroundColor: deepSpace }} />
-      <View pointerEvents="none" style={{ position: "absolute", top: 0, left: -18, right: -18, height: 620, backgroundColor: deepNavy, opacity: 0.42 }} />
-      <GlowOrb top={18} right={-80} size={260} color={cyan} opacity={0.14} />
-      <GlowOrb top={270} left={-140} size={270} color="#0EA5E9" opacity={0.10} />
-      <GlowOrb top={560} right={-150} size={330} color={colors.gold} opacity={0.08} />
-      <FlowLine top={145} rotate="-10deg" />
-      <FlowLine top={205} rotate="-7deg" />
-      <FlowLine top={655} rotate="12deg" />
+      <View
+        style={{
+          position: "absolute",
+          top: 0,
+          left: -18,
+          right: -18,
+          bottom: -40,
+          backgroundColor: deepSpace,
+        }}
+      />
+
+      <View
+        pointerEvents="none"
+        style={{
+          position: "absolute",
+          top: 0,
+          left: -18,
+          right: -18,
+          height: 620,
+          backgroundColor: deepNavy,
+          opacity: 0.42,
+        }}
+      />
 
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={{ gap: 18, paddingBottom: 40 }}>
@@ -644,23 +689,47 @@ export default function SendScreen() {
             <AppText variant="caption" color={cyan} style={{ fontWeight: "900" }}>
               ORCHESTRATION ENGINE
             </AppText>
-            <AppText variant="title" color="#FFFFFF" style={{ textShadowColor: cyan, textShadowRadius: 10 }}>
+
+            <AppText
+              variant="title"
+              color="#FFFFFF"
+              style={{ textShadowColor: cyan, textShadowRadius: 10 }}
+            >
               Send Money
             </AppText>
+
             <AppText variant="body" color={mutedText}>
               Move value through the smartest available corridor.
             </AppText>
           </View>
 
-          <GlassCard style={{ borderColor: "rgba(39,245,255,0.56)" }}>
+          <GlassCard style={{ borderColor: "rgba(39,245,255,0.62)" }}>
             <View style={{ gap: 14 }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  gap: 12,
+                }}
+              >
                 <View style={{ flex: 1, gap: 8 }}>
-                  <AppText variant="caption" color="#8EEBFF" style={{ fontWeight: "900" }}>
+                  <AppText
+                    variant="caption"
+                    color="#8EEBFF"
+                    style={{ fontWeight: "900" }}
+                  >
                     You send
                   </AppText>
-                  <InputField value={amount} onChangeText={setAmount} keyboardType="decimal-pad" placeholder="0.00" large />
+
+                  <InputField
+                    value={amount}
+                    onChangeText={setAmount}
+                    keyboardType="decimal-pad"
+                    placeholder="0.00"
+                    large
+                  />
                 </View>
+
                 <View
                   style={{
                     width: 118,
@@ -676,45 +745,97 @@ export default function SendScreen() {
                     shadowRadius: 16,
                   }}
                 >
-                  <AppText color={cyan} style={{ fontSize: 28, fontWeight: "900", textShadowColor: cyan, textShadowRadius: 8 }}>
+                  <AppText
+                    color={cyan}
+                    style={{
+                      fontSize: 28,
+                      fontWeight: "900",
+                      textShadowColor: cyan,
+                      textShadowRadius: 8,
+                    }}
+                  >
                     ↗
                   </AppText>
-                  <AppText variant="caption" color="#FFFFFF" style={{ fontWeight: "900" }}>
+
+                  <AppText
+                    variant="caption"
+                    color="#FFFFFF"
+                    style={{ fontWeight: "900" }}
+                  >
                     Live rate
                   </AppText>
-                  <AppText variant="caption" color={colors.gold} style={{ fontWeight: "900" }}>
+
+                  <AppText
+                    variant="caption"
+                    color={colors.gold}
+                    style={{ fontWeight: "900" }}
+                  >
                     GBP → {selectedCorridor?.currency ?? "..."}
                   </AppText>
                 </View>
               </View>
+
               <View style={{ flexDirection: "row", gap: 8 }}>
-                <PreviewMetric label="Available" value={`£${formatCurrency(gbpBalance ?? 0)}`} />
-                <PreviewMetric label="After" value={`£${formatCurrency(balanceAfterTransfer)}`} />
+                <PreviewMetric
+                  label="Available"
+                  value={`£${formatCurrency(gbpBalance ?? 0)}`}
+                />
+                <PreviewMetric
+                  label="After"
+                  value={`£${formatCurrency(balanceAfterTransfer)}`}
+                />
               </View>
             </View>
           </GlassCard>
 
-          <SavedRecipientsCard recipients={savedRecipients} selectedRecipientId={selectedRecipientId ?? undefined} onSelectRecipient={handleSelectSavedRecipient} onToggleFavorite={handleToggleFavorite} />
+          <SavedRecipientsCard
+            recipients={savedRecipients}
+            selectedRecipientId={selectedRecipientId ?? undefined}
+            onSelectRecipient={handleSelectSavedRecipient}
+            onToggleFavorite={handleToggleFavorite}
+          />
 
           <GlassCard>
             <View style={{ gap: 12 }}>
-              <AppText variant="subheading" color="#FFFFFF">Corridor</AppText>
+              <AppText variant="subheading" color="#FFFFFF">
+                Corridor
+              </AppText>
+
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                 {corridors.map((corridor) => (
-                  <SelectorChip key={corridor.country} label={`GBP → ${corridor.currency}`} selected={selectedCountry === corridor.country} onPress={() => handleCountrySelect(corridor.country)} />
+                  <SelectorChip
+                    key={corridor.country}
+                    label={`GBP → ${corridor.currency}`}
+                    selected={selectedCountry === corridor.country}
+                    onPress={() => handleCountrySelect(corridor.country)}
+                  />
                 ))}
               </View>
             </View>
           </GlassCard>
 
-          <RoutePreviewCard selectedCountry={selectedCountry} currency={selectedCorridor?.currency} amount={safeAmount} provider={selectedProvider} payoutMethod={selectedPayoutMethod} />
+          <RoutePreviewCard
+            selectedCountry={selectedCountry}
+            currency={selectedCorridor?.currency}
+            amount={safeAmount}
+            provider={selectedProvider}
+            payoutMethod={selectedPayoutMethod}
+          />
 
           <GlassCard>
             <View style={{ gap: 12 }}>
-              <AppText variant="subheading" color="#FFFFFF">Payout method</AppText>
+              <AppText variant="subheading" color="#FFFFFF">
+                Payout method
+              </AppText>
+
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                 {availablePayoutMethods.map((method) => (
-                  <SelectorChip key={method.type} label={method.type === "BANK" ? "Bank" : "Mobile Wallet"} selected={selectedPayoutMethod === method.type} onPress={() => handlePayoutMethodSelect(method.type)} />
+                  <SelectorChip
+                    key={method.type}
+                    label={method.type === "BANK" ? "Bank" : "Mobile Wallet"}
+                    selected={selectedPayoutMethod === method.type}
+                    onPress={() => handlePayoutMethodSelect(method.type)}
+                  />
                 ))}
               </View>
             </View>
@@ -722,10 +843,22 @@ export default function SendScreen() {
 
           <GlassCard>
             <View style={{ gap: 12 }}>
-              <AppText variant="subheading" color="#FFFFFF">{selectedPayoutMethod === "BANK" ? "Payout bank" : "Wallet provider"}</AppText>
+              <AppText variant="subheading" color="#FFFFFF">
+                {selectedPayoutMethod === "BANK" ? "Payout bank" : "Wallet provider"}
+              </AppText>
+
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                 {availableProviders.map((provider) => (
-                  <SelectorChip key={provider} label={provider} selected={selectedProvider === provider} onPress={() => { setSelectedRecipientId(null); setSelectedProvider(provider); }} accent={colors.gold} />
+                  <SelectorChip
+                    key={provider}
+                    label={provider}
+                    selected={selectedProvider === provider}
+                    onPress={() => {
+                      setSelectedRecipientId(null);
+                      setSelectedProvider(provider);
+                    }}
+                    accent={colors.gold}
+                  />
                 ))}
               </View>
             </View>
@@ -734,19 +867,72 @@ export default function SendScreen() {
           <GlassCard>
             <View style={{ gap: 12 }}>
               <View style={{ gap: 4 }}>
-                <AppText variant="subheading" color="#FFFFFF">Recipient details</AppText>
-                <AppText variant="caption" color={mutedText}>Required for payout screening and destination matching.</AppText>
+                <AppText variant="subheading" color="#FFFFFF">
+                  Recipient details
+                </AppText>
+                <AppText variant="caption" color={mutedText}>
+                  Required for payout screening and destination matching.
+                </AppText>
               </View>
-              <InputField value={firstName} onChangeText={(v) => { setSelectedRecipientId(null); setFirstName(v); }} placeholder="First name *" />
-              <InputField value={middleName} onChangeText={(v) => { setSelectedRecipientId(null); setMiddleName(v); }} placeholder="Middle name (optional)" />
-              <InputField value={surname} onChangeText={(v) => { setSelectedRecipientId(null); setSurname(v); }} placeholder="Surname *" />
+
+              <InputField
+                value={firstName}
+                onChangeText={(value) => {
+                  setSelectedRecipientId(null);
+                  setFirstName(value);
+                }}
+                placeholder="First name *"
+              />
+
+              <InputField
+                value={middleName}
+                onChangeText={(value) => {
+                  setSelectedRecipientId(null);
+                  setMiddleName(value);
+                }}
+                placeholder="Middle name (optional)"
+              />
+
+              <InputField
+                value={surname}
+                onChangeText={(value) => {
+                  setSelectedRecipientId(null);
+                  setSurname(value);
+                }}
+                placeholder="Surname *"
+              />
+
               {selectedPayoutMethod === "BANK" ? (
                 <>
-                  <InputField value={bankCode} onChangeText={(v) => { setSelectedRecipientId(null); setBankCode(v); }} placeholder="Bank / branch / sort code *" />
-                  <InputField value={accountNumber} onChangeText={(v) => { setSelectedRecipientId(null); setAccountNumber(v); }} keyboardType="number-pad" placeholder="Recipient bank account number *" />
+                  <InputField
+                    value={bankCode}
+                    onChangeText={(value) => {
+                      setSelectedRecipientId(null);
+                      setBankCode(value);
+                    }}
+                    placeholder="Bank / branch / sort code *"
+                  />
+
+                  <InputField
+                    value={accountNumber}
+                    onChangeText={(value) => {
+                      setSelectedRecipientId(null);
+                      setAccountNumber(value);
+                    }}
+                    keyboardType="number-pad"
+                    placeholder="Recipient bank account number *"
+                  />
                 </>
               ) : (
-                <InputField value={mobileNumber} onChangeText={(v) => { setSelectedRecipientId(null); setMobileNumber(v); }} keyboardType="phone-pad" placeholder="Recipient mobile wallet number *" />
+                <InputField
+                  value={mobileNumber}
+                  onChangeText={(value) => {
+                    setSelectedRecipientId(null);
+                    setMobileNumber(value);
+                  }}
+                  keyboardType="phone-pad"
+                  placeholder="Recipient mobile wallet number *"
+                />
               )}
             </View>
           </GlassCard>
@@ -767,10 +953,16 @@ export default function SendScreen() {
               transform: [{ scale: pressed ? 0.985 : 1 }],
             })}
           >
-            <AppText color="#07111F" style={{ fontSize: 18, fontWeight: "900" }}>Find best routes  →</AppText>
+            <AppText color="#07111F" style={{ fontSize: 18, fontWeight: "900" }}>
+              Find best routes →
+            </AppText>
           </Pressable>
 
-          <AppButton title="Back Home" variant="secondary" onPress={() => router.push("/")} />
+          <AppButton
+            title="Back Home"
+            variant="secondary"
+            onPress={() => router.push("/")}
+          />
         </View>
       </ScrollView>
     </Screen>
