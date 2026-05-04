@@ -1,5 +1,5 @@
-import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, TextInput, View } from "react-native";
 
 import { SavedRecipientsCard } from "../src/components/recipients/SavedRecipientsCard";
@@ -285,9 +285,30 @@ export default function SendScreen() {
   const [accountNumber, setAccountNumber] = useState("");
   const [mobileNumber, setMobileNumber] = useState("");
 
-  useEffect(() => {
-    loadSavedRecipients().then(setSavedRecipients);
+  const refreshSavedRecipients = useCallback(() => {
+    let cancelled = false;
+
+    loadSavedRecipients().then((recipients) => {
+      if (!cancelled) {
+        setSavedRecipients(recipients);
+      }
+    });
+
+    const retryTimer = setTimeout(() => {
+      loadSavedRecipients().then((recipients) => {
+        if (!cancelled) {
+          setSavedRecipients(recipients);
+        }
+      });
+    }, 600);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(retryTimer);
+    };
   }, []);
+
+  useFocusEffect(refreshSavedRecipients);
 
   useEffect(() => {
     const hasResendParams =
