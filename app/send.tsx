@@ -26,6 +26,11 @@ function getPayoutLabel(method: PayoutMethod) {
   return method === "BANK" ? "Bank account" : "Mobile wallet";
 }
 
+function getStringParam(value: string | string[] | undefined) {
+  if (Array.isArray(value)) return value[0] ?? "";
+  return value ?? "";
+}
+
 function getCorridorSignal(country: string) {
   if (country === "Philippines") {
     return {
@@ -279,22 +284,40 @@ export default function SendScreen() {
   const [mobileNumber, setMobileNumber] = useState("");
 
   useEffect(() => {
-    if (typeof params.amount === "string") {
-      setAmount(params.amount);
+    const resendAmount = getStringParam(params.amount);
+    const resendCountry = getStringParam(params.country);
+    const resendPayoutMethod = getStringParam(params.payoutMethod) as PayoutMethod;
+    const resendProvider = getStringParam(params.provider);
+
+    if (resendAmount) {
+      setAmount(resendAmount);
     }
 
-    if (typeof params.country === "string") {
-      const corridor = corridors.find((item) => item.country === params.country);
+    if (resendCountry) {
+      const corridor = corridors.find((item) => item.country === resendCountry);
 
       if (corridor) {
-        const firstPayoutMethod = corridor.payoutMethods[0];
-        const firstProvider = firstPayoutMethod.providers[0];
+        const payoutMethod =
+          resendPayoutMethod === "BANK" || resendPayoutMethod === "MOBILE_WALLET"
+            ? resendPayoutMethod
+            : corridor.payoutMethods[0].type;
+
+        const payoutConfig = corridor.payoutMethods.find(
+          (item) => item.type === payoutMethod
+        );
 
         setSelectedCountry(corridor.country);
-        setSelectedPayoutMethod(firstPayoutMethod.type);
-        setSelectedProvider(firstProvider);
+        setSelectedPayoutMethod(payoutMethod);
+        setSelectedProvider(resendProvider || payoutConfig?.providers[0] || "");
       }
     }
+
+    setFirstName(getStringParam(params.firstName));
+    setMiddleName(getStringParam(params.middleName));
+    setSurname(getStringParam(params.surname));
+    setBankCode(getStringParam(params.bankCode));
+    setAccountNumber(getStringParam(params.accountNumber));
+    setMobileNumber(getStringParam(params.mobileNumber));
   }, [params]);
 
   const numericAmount = Number(amount);
