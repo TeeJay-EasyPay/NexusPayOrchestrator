@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import { ScrollView, View } from "react-native";
 
+import { RecentTransactionHistoryCard } from "../src/components/transactions/RecentTransactionHistoryCard";
 import { AppButton } from "../src/components/ui/AppButton";
 import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
@@ -14,7 +15,6 @@ import {
 } from "../src/lib/corridorHealth";
 import { fetchCorridorFxRates, FxRate } from "../src/lib/fxFeed";
 
-import { useTransfer } from "../src/state/TransferContext";
 import { useWallet } from "../src/state/WalletContext";
 import { colors, spacing } from "../src/theme";
 
@@ -534,8 +534,6 @@ export default function HomeScreen() {
     setupRlusdTrustline,
   } = useWallet();
 
-  const { completedTransfers } = useTransfer();
-
   useEffect(() => {
     loadCorridorData();
 
@@ -705,82 +703,7 @@ export default function HomeScreen() {
             </View>
           </AppCard>
 
-          <AppCard>
-            <View style={{ gap: 12 }}>
-              <AppText variant="subheading" color={colors.textDarkPrimary}>
-                Recent transaction history
-              </AppText>
-
-              {completedTransfers.length === 0 ? (
-                <AppText variant="body" color={colors.textDarkSecondary}>
-                  No completed transfers yet.
-                </AppText>
-              ) : (
-                <View style={{ gap: 10 }}>
-                  {completedTransfers.map((item) => {
-                    const route = item.selectedRoute;
-                    const recipient = item.recipient;
-
-                    return (
-                      <View
-                        key={item.id}
-                        style={{
-                          padding: 12,
-                          borderRadius: 16,
-                          backgroundColor: "#F9FAFB",
-                          borderWidth: 1,
-                          borderColor: "#E5E7EB",
-                          gap: 4,
-                        }}
-                      >
-                        <View
-                          style={{
-                            flexDirection: "row",
-                            justifyContent: "space-between",
-                            gap: 12,
-                          }}
-                        >
-                          <AppText
-                            variant="body"
-                            color={colors.textDarkPrimary}
-                            style={{ fontWeight: "700" }}
-                          >
-                            {recipient.name || "Recipient"}
-                          </AppText>
-
-                          <AppText
-                            variant="caption"
-                            color={colors.textDarkPrimary}
-                            style={{ fontWeight: "700" }}
-                          >
-                            COMPLETED
-                          </AppText>
-                        </View>
-
-                        <AppText variant="caption" color={colors.textDarkSecondary}>
-                          £{item.senderAmount.toFixed(2)} GBP →{" "}
-                          {route
-                            ? `${route.receiveAmount.toLocaleString(undefined, {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              })} ${recipient.currency}`
-                            : recipient.currency}
-                        </AppText>
-
-                        <AppText variant="caption" color={colors.textDarkSecondary}>
-                          {recipient.country} • {route?.provider ?? "Route"}
-                        </AppText>
-
-                        <AppText variant="caption" color={colors.textDarkSecondary}>
-                          Ref: NPX-{item.id.slice(-6)}
-                        </AppText>
-                      </View>
-                    );
-                  })}
-                </View>
-              )}
-            </View>
-          </AppCard>
+          <RecentTransactionHistoryCard />
 
           <AppCard>
             <View style={{ gap: 12 }}>
