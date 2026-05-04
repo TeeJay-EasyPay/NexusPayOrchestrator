@@ -58,6 +58,10 @@ function normalizeRecipient(row: any): Recipient {
   const recipientName =
     toCleanString(snapshot.name) || toCleanString(row.recipient_name) || "Recipient";
   const splitName = splitRecipientName(recipientName);
+
+  const hasStructuredName =
+    snapshot.firstName || snapshot.middleName || snapshot.surname;
+
   const payoutMethod = toPayoutMethod(snapshot.payoutMethod ?? row.payout_method);
   const country =
     toCleanString(snapshot.country) || toCleanString(row.recipient_country) || "Destination";
@@ -66,9 +70,15 @@ function normalizeRecipient(row: any): Recipient {
 
   return {
     name: recipientName,
-    firstName: toCleanString(snapshot.firstName) || splitName.firstName || undefined,
-    middleName: toCleanString(snapshot.middleName) || splitName.middleName || undefined,
-    surname: toCleanString(snapshot.surname) || splitName.surname || undefined,
+    firstName: hasStructuredName
+      ? toCleanString(snapshot.firstName) || undefined
+      : splitName.firstName || undefined,
+    middleName: hasStructuredName
+      ? toCleanString(snapshot.middleName) || undefined
+      : splitName.middleName || undefined,
+    surname: hasStructuredName
+      ? toCleanString(snapshot.surname) || undefined
+      : splitName.surname || undefined,
     country,
     currency,
     payoutMethod,
