@@ -1,21 +1,105 @@
 import { supabase } from "../lib/supabase";
-import { Recipient, RouteQuote, Transfer } from "../types/transfer";
+import { Currency, PayoutMethod, Recipient, RouteQuote, Transfer } from "../types/transfer";
 
 function toNumber(value: unknown, fallback = 0) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-function normalizeRecipient(row: any): Recipient {
+function toCurrency(value: unknown, fallback: Currency = "PHP"): Currency {
+  const allowedCurrencies: Currency[] = ["GBP", "PHP", "MYR", "AED", "XRP", "RLUSD"];
+  return allowedCurrencies.includes(value as Currency) ? (value as Currency) : fallback;
+}
+
+function toPayoutMethod(value: unknown, fallback: PayoutMethod = "BANK"): PayoutMethod {
+  return value === "BANK" || value === "MOBILE_WALLET" ? value : fallback;
+}
+
+function toCleanString(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function splitRecipientName(fullName: string) {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+
+  if (parts.length === 0) {
+    return {
+      firstName: "",
+      middleName: "",
+      surname: "",
+    };
+  }
+
+  if (parts.length === 1) {
+    return {
+      firstName: parts[0],
+      middleName: "",
+      surname: "",
+    };
+  }
+
   return {
-    name: row.recipient_name ?? "Recipient",
-    country: row.recipient_country ?? "Destination",
-    currency: row.recipient_currency ?? "PHP",
-    payoutMethod: row.payout_method ?? "BANK",
-    bankName: row.payout_method === "BANK" ? row.payout_provider ?? undefined : undefined,
+    firstName: parts[0],
+    middleName: parts.length > 2 ? parts.slice(1, -1).join(" ") : "",
+    surname: parts[parts.length - 1],
+  };
+}
+
+function getRecipientSnapshot(row: any): Partial<Recipient> {
+  const selectedRoute = row.selected_route as (RouteQuote & {
+    recipientSnapshot?: Partial<Recipient>;
+  }) | null;
+
+  return selectedRoute?.recipientSnapshot ?? {};
+}
+
+function normalizeRecipient(row: any): Recipient {
+  const snapshot = getRecipientSnapshot(row);
+  const recipientName =
+    toCleanString(snapshot.name) || toCleanString(row.recipient_name) || "Recipient";
+  const splitName = splitRecipientName(recipientName);
+  const payoutMethod = toPayoutMethod(snapshot.payoutMethod ?? row.payout_method);
+  const country =
+    toCleanString(snapshot.country) || toCleanString(row.recipient_country) || "Destination";
+  const currency = toCurrency(snapshot.currency ?? row.recipient_currency);
+  const payoutProvider = toCleanString(row.payout_provider);
+
+  return {
+    name: recipientName,
+    firstName: toCleanString(snapshot.firstName) || splitName.firstName || undefined,
+    middleName: toCleanString(snapshot.middleName) || splitName.middleName || undefined,
+    surname: toCleanString(snapshot.surname) || splitName.surname || undefined,
+    country,
+    currency,
+    payoutMethod,
+    bankName:
+      payoutMethod === "BANK"
+        ? toCleanString(snapshot.bankName) || payoutProvider || undefined
+        : undefined,
+    bankCode:
+      payoutMethod === "BANK" ? toCleanString(snapshot.bankCode) || undefined : undefined,
+    accountNumber:
+      payoutMethod === "BANK"
+        ? toCleanString(snapshot.accountNumber) || undefined
+        : undefined,
     mobileWalletProvider:
-      row.payout_method === "MOBILE_WALLET" ? row.payout_provider ?? undefined : undefined,
-  } as Recipient;
+      payoutMethod === "MOBILE_WALLET"
+        ? toCleanString(snapshot.mobileWalletProvider) || payoutProvider || undefined
+        : undefined,
+    mobileNumber:
+      payoutMethod === "MOBILE_WALLET"
+        ? toCleanString(snapshot.mobileNumber) || undefined
+        : undefined,
+  };
+}
+
+function buildSelectedRoutePayload(transfer: Transfer) {
+  if (!transfer.selectedRoute) return null;
+
+  return {
+    ...transfer.selectedRoute,
+    recipientSnapshot: transfer.recipient,
+  };
 }
 
 export async function saveCompletedTransfer(transfer: Transfer) {
@@ -28,7 +112,7 @@ export async function saveCompletedTransfer(transfer: Transfer) {
   }
 
   const recipient = transfer.recipient;
-  const route = transfer.selectedRoute;
+  const routePayload = buildSelectedRoutePayload(transfer);
 
   const { error } = await supabase.from("transfers").upsert({
     id: transfer.id,
@@ -43,7 +127,7 @@ export async function saveCompletedTransfer(transfer: Transfer) {
       recipient.payoutMethod === "BANK"
         ? recipient.bankName ?? null
         : recipient.mobileWalletProvider ?? null,
-    selected_route: route ?? null,
+    selected_route: routePayload,
     status: transfer.status,
     updated_at: new Date().toISOString(),
     completed_at: transfer.status === "COMPLETED" ? new Date().toISOString() : null,
@@ -80,7 +164,7 @@ export async function loadCompletedTransfers(): Promise<Transfer[]> {
 
     return {
       id: row.id,
-      senderCurrency: row.sender_currency ?? "GBP",
+      senderCurrency: toCurrency(row.sender_currency, "GBP"),
       senderAmount: toNumber(row.sender_amount),
       recipient: normalizeRecipient(row),
       routes: selectedRoute ? [selectedRoute] : [],
