@@ -12,11 +12,6 @@ type Props = {
   onToggleFavorite: (recipient: SavedRecipient) => void;
 };
 
-const cyan = "#27F5FF";
-const cyanSoft = "rgba(39,245,255,0.16)";
-const darkPanel = "rgba(5,18,34,0.88)";
-const selectedGold = "rgba(255,209,102,0.18)";
-
 function getProviderLabel(recipient: SavedRecipient) {
   return recipient.payoutMethod === "BANK"
     ? recipient.bankName || "Bank"
@@ -45,48 +40,34 @@ export function SavedRecipientsCard({
   onToggleFavorite,
 }: Props) {
   return (
-    <AppCard
-      style={{
-        backgroundColor: "rgba(3,14,29,0.72)",
-        borderColor: "rgba(39,245,255,0.22)",
-        borderWidth: 1,
-        shadowColor: cyan,
-        shadowOpacity: 0.16,
-        shadowRadius: 18,
-        shadowOffset: { width: 0, height: 8 },
-      }}
-    >
+    <AppCard>
       <View style={{ gap: 14 }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-          <View style={{ gap: 3 }}>
-            <AppText variant="subheading" color="#FFFFFF">
+          <View style={{ gap: 3, flex: 1 }}>
+            <AppText variant="subheading" color={colors.textDarkPrimary}>
               Saved recipients
             </AppText>
-            <AppText variant="caption" color="#8EEBFF">
-              Tap a recipient node to auto-fill payout details.
+            <AppText variant="caption" color={colors.textDarkSecondary}>
+              Tap a saved recipient to auto-fill payout details.
             </AppText>
           </View>
-
-          <AppText variant="caption" color={cyan} style={{ fontWeight: "900" }}>
-            See all
-          </AppText>
         </View>
 
         {recipients.length === 0 ? (
           <View
             style={{
               padding: 14,
-              borderRadius: 20,
-              backgroundColor: darkPanel,
+              borderRadius: 18,
+              backgroundColor: "#F8FAFC",
               borderWidth: 1,
-              borderColor: "rgba(39,245,255,0.18)",
+              borderColor: "#E6ECF2",
               gap: 4,
             }}
           >
-            <AppText variant="body" color="#FFFFFF" style={{ fontWeight: "900" }}>
+            <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
               No saved recipients yet
             </AppText>
-            <AppText variant="caption" color="#A8C7D8">
+            <AppText variant="caption" color={colors.textDarkSecondary}>
               Complete a transfer and NexusPay will save the recipient here automatically.
             </AppText>
           </View>
@@ -104,39 +85,35 @@ export function SavedRecipientsCard({
                   key={recipient.id}
                   onPress={() => onSelectRecipient(recipient)}
                   style={({ pressed }) => ({
-                    width: 190,
-                    minHeight: 158,
+                    width: 178,
+                    minHeight: 136,
                     padding: 14,
-                    borderRadius: 24,
-                    backgroundColor: isSelected ? selectedGold : darkPanel,
+                    borderRadius: 20,
+                    backgroundColor: isSelected ? colors.goldSoft : "#F8FAFC",
                     borderWidth: 1,
                     borderColor: isSelected
-                      ? colors.gold
+                      ? "#F1D99B"
                       : recipient.isFavorite
-                        ? "rgba(255,209,102,0.50)"
-                        : "rgba(39,245,255,0.25)",
-                    shadowColor: isSelected ? colors.gold : cyan,
-                    shadowOpacity: isSelected ? 0.38 : 0.16,
-                    shadowRadius: isSelected ? 18 : 12,
-                    shadowOffset: { width: 0, height: 8 },
+                        ? "#F1D99B"
+                        : "#E6ECF2",
                     transform: [{ scale: pressed ? 0.985 : 1 }],
-                    gap: 12,
+                    gap: 10,
                   })}
                 >
                   <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <View
                       style={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: 24,
+                        width: 44,
+                        height: 44,
+                        borderRadius: 22,
                         alignItems: "center",
                         justifyContent: "center",
-                        backgroundColor: isSelected ? "rgba(214,168,79,0.28)" : cyanSoft,
+                        backgroundColor: isSelected ? "#F7E8BE" : "#EDF4F8",
                         borderWidth: 1,
-                        borderColor: isSelected ? colors.gold : "rgba(39,245,255,0.35)",
+                        borderColor: isSelected ? colors.gold : "#DDE6EE",
                       }}
                     >
-                      <AppText color="#FFFFFF" style={{ fontWeight: "900" }}>
+                      <AppText color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
                         {getInitials(recipient.name)}
                       </AppText>
                     </View>
@@ -153,11 +130,9 @@ export function SavedRecipientsCard({
                         borderRadius: 17,
                         alignItems: "center",
                         justifyContent: "center",
-                        backgroundColor: recipient.isFavorite
-                          ? "rgba(214,168,79,0.24)"
-                          : "rgba(255,255,255,0.06)",
+                        backgroundColor: recipient.isFavorite ? colors.goldSoft : "#FFFFFF",
                         borderWidth: 1,
-                        borderColor: recipient.isFavorite ? colors.gold : "rgba(255,255,255,0.14)",
+                        borderColor: recipient.isFavorite ? "#F1D99B" : "#E6ECF2",
                       }}
                     >
                       <AppText style={{ fontSize: 18 }}>
@@ -167,15 +142,15 @@ export function SavedRecipientsCard({
                   </View>
 
                   <View style={{ gap: 4 }}>
-                    <AppText variant="body" color="#FFFFFF" style={{ fontWeight: "900" }} numberOfLines={1}>
+                    <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }} numberOfLines={1}>
                       {recipient.name}
                     </AppText>
-                    <AppText variant="caption" color="#B7D3E1" numberOfLines={1}>
+                    <AppText variant="caption" color={colors.textDarkSecondary} numberOfLines={1}>
                       {getProviderLabel(recipient)}
                     </AppText>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 7, marginTop: 4 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 7, marginTop: 3 }}>
                       <AppText style={{ fontSize: 18 }}>{getFlag(recipient.country)}</AppText>
-                      <AppText variant="caption" color={isSelected ? colors.gold : cyan} style={{ fontWeight: "900" }}>
+                      <AppText variant="caption" color={isSelected ? colors.gold : colors.textDarkMuted} style={{ fontWeight: "900" }}>
                         {recipient.currency}
                       </AppText>
                     </View>
@@ -184,13 +159,13 @@ export function SavedRecipientsCard({
                   {isSelected ? (
                     <View
                       style={{
-                        paddingVertical: 5,
-                        paddingHorizontal: 10,
+                        paddingVertical: 4,
+                        paddingHorizontal: 9,
                         borderRadius: 999,
                         alignSelf: "flex-start",
-                        backgroundColor: "rgba(214,168,79,0.24)",
+                        backgroundColor: "#FFFFFF",
                         borderWidth: 1,
-                        borderColor: "rgba(214,168,79,0.40)",
+                        borderColor: "#F1D99B",
                       }}
                     >
                       <AppText variant="caption" color={colors.gold} style={{ fontWeight: "900" }}>
