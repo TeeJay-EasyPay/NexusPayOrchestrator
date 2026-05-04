@@ -1,12 +1,15 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { createTransferId } from "../lib/id";
+import { supabase } from "../lib/supabase";
 import { loadCompletedTransfers, saveCompletedTransfer } from "../services/transferService";
 import { Recipient, RouteQuote, Transfer } from "../types/transfer";
 
 interface TransferContextType {
   transfer: Transfer | null;
   completedTransfers: Transfer[];
+  isLoadingTransfers: boolean;
 
+  hydrateTransfers: () => Promise<void>;
   createTransfer: (amount: number) => void;
   setRecipient: (recipient: Recipient) => void;
   setRoutes: (routes: RouteQuote[]) => void;
@@ -23,16 +26,35 @@ const TransferContext = createContext<TransferContextType | undefined>(
 export function TransferProvider({ children }: { children: React.ReactNode }) {
   const [transfer, setTransfer] = useState<Transfer | null>(null);
   const [completedTransfers, setCompletedTransfers] = useState<Transfer[]>([]);
+  const [isLoadingTransfers, setIsLoadingTransfers] = useState(false);
 
   useEffect(() => {
     hydrateTransfers();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        hydrateTransfers();
+        return;
+      }
+
+      setCompletedTransfers([]);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   async function hydrateTransfers() {
-    const persistedTransfers = await loadCompletedTransfers();
+    setIsLoadingTransfers(true);
 
-    if (persistedTransfers.length > 0) {
+    try {
+      const persistedTransfers = await loadCompletedTransfers();
       setCompletedTransfers(persistedTransfers);
+    } finally {
+      setIsLoadingTransfers(false);
     }
   }
 
@@ -103,7 +125,9 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
         status: "COMPLETED",
       };
 
-      saveCompletedTransfer(completedTransfer);
+      saveCompletedTransfer(completedTransfer).then(() => {
+        hydrateTransfers();
+      });
 
       setCompletedTransfers((existingTransfers) => {
         const alreadyExists = existingTransfers.some(
@@ -128,6 +152,8 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
       value={{
         transfer,
         completedTransfers,
+        isLoadingTransfers,
+        hydrateTransfers,
         createTransfer,
         setRecipient,
         setRoutes,
