@@ -5,11 +5,11 @@ import { colors } from "../../theme";
 import { AppText } from "../ui/AppText";
 
 const MENU_ITEMS = [
-  { label: "Home", route: "/", match: "/" },
-  { label: "Send", route: "/send", match: "/send" },
-  { label: "Routes", route: "/routes", match: "/routes" },
-  { label: "Track", route: "/track", match: "/track" },
-  { label: "Account", route: "/account", match: "/account" },
+  { label: "Home", route: "/", match: "/", icon: "⌂" },
+  { label: "Send", route: "/send", match: "/send", icon: "➤" },
+  { label: "Routes", route: "/routes", match: "/routes", icon: "⎇" },
+  { label: "Track", route: "/track", match: "/track", icon: "◎" },
+  { label: "Account", route: "/account", match: "/account", icon: "☺" },
 ] as const;
 
 export function AppMenu() {
@@ -19,11 +19,11 @@ export function AppMenu() {
   return (
     <View
       style={{
-        padding: 10,
-        borderRadius: 24,
-        backgroundColor: "rgba(255,255,255,0.96)",
+        padding: 12,
+        borderRadius: 26,
+        backgroundColor: "#061625",
         borderWidth: 1,
-        borderColor: "#E2E8F0",
+        borderColor: "#0E2E4A",
         flexDirection: "row",
         gap: 6,
       }}
@@ -42,16 +42,23 @@ export function AppMenu() {
               justifyContent: "center",
               paddingVertical: 10,
               borderRadius: 18,
-              backgroundColor: isActive ? "#0B3F4A" : "#F8FAFC",
-              borderWidth: 1,
-              borderColor: isActive ? "#0B3F4A" : "#E2E8F0",
+              backgroundColor: isActive ? "#0D2F4A" : "transparent",
             }}
           >
             <AppText
+              style={{
+                fontSize: 16,
+                color: isActive ? colors.gold : "#6B8CA3",
+              }}
+            >
+              {item.icon}
+            </AppText>
+
+            <AppText
               variant="caption"
               style={{
-                color: isActive ? colors.gold : colors.textDarkSecondary,
-                fontWeight: "900",
+                color: isActive ? colors.gold : "#6B8CA3",
+                fontWeight: "700",
               }}
             >
               {item.label}
