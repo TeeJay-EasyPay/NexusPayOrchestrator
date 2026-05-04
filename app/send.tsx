@@ -1,5 +1,5 @@
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, TextInput, View } from "react-native";
 
 import { SavedRecipientsCard } from "../src/components/recipients/SavedRecipientsCard";
@@ -21,11 +21,13 @@ import { SavedRecipient } from "../src/types/recipient";
 import { PayoutMethod, Recipient } from "../src/types/transfer";
 
 const cyan = "#27F5FF";
-const cyanSoft = "rgba(39,245,255,0.16)";
-const darkPanel = "rgba(5,18,34,0.88)";
-const darkPanelSoft = "rgba(9,28,49,0.78)";
-const borderCyan = "rgba(39,245,255,0.24)";
+const cyanDim = "rgba(39,245,255,0.18)";
+const deepSpace = "#020713";
+const deepNavy = "#041426";
+const panel = "rgba(3,15,30,0.95)";
+const panelRaised = "rgba(7,28,50,0.96)";
 const mutedText = "#A8C7D8";
+const cyanBorder = "rgba(39,245,255,0.48)";
 
 function formatCurrency(value: number) {
   return value.toLocaleString(undefined, {
@@ -45,39 +47,127 @@ function getStringParam(value: string | string[] | undefined) {
 
 function getCorridorSignal(country: string) {
   if (country === "Philippines") {
-    return {
-      confidence: 92,
-      liquidity: "High",
-      delivery: "Minutes",
-      rail: "GBP → RLUSD → PHP",
-      note: "Strong payout coverage and healthy corridor liquidity.",
-    };
+    return { confidence: 92, liquidity: "High", delivery: "Minutes", rail: "GBP → RLUSD → PHP" };
   }
 
-  return {
-    confidence: 86,
-    liquidity: "Healthy",
-    delivery: "Minutes",
-    rail: "GBP → RLUSD → MYR",
-    note: "Optimised regional route with monitored payout capacity.",
-  };
+  return { confidence: 86, liquidity: "Healthy", delivery: "Minutes", rail: "GBP → RLUSD → MYR" };
+}
+
+function GlowOrb({
+  top,
+  right,
+  left,
+  size,
+  color,
+  opacity,
+}: {
+  top?: number;
+  right?: number;
+  left?: number;
+  size: number;
+  color: string;
+  opacity: number;
+}) {
+  return (
+    <View
+      pointerEvents="none"
+      style={{
+        position: "absolute",
+        top,
+        right,
+        left,
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        backgroundColor: color,
+        opacity,
+        shadowColor: color,
+        shadowOpacity: 1,
+        shadowRadius: 42,
+      }}
+    />
+  );
+}
+
+function FlowLine({ top, rotate = "0deg" }: { top: number; rotate?: string }) {
+  return (
+    <View
+      pointerEvents="none"
+      style={{
+        position: "absolute",
+        top,
+        right: -85,
+        width: 390,
+        height: 2,
+        borderRadius: 999,
+        backgroundColor: "rgba(39,245,255,0.44)",
+        transform: [{ rotate }],
+        shadowColor: cyan,
+        shadowOpacity: 1,
+        shadowRadius: 18,
+      }}
+    />
+  );
 }
 
 function GlassCard({ children, style }: { children: React.ReactNode; style?: any }) {
   return (
     <AppCard
       style={{
-        backgroundColor: darkPanel,
-        borderColor: borderCyan,
+        backgroundColor: panel,
+        borderColor: cyanBorder,
         borderWidth: 1,
         shadowColor: cyan,
-        shadowOpacity: 0.14,
-        shadowRadius: 18,
-        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.36,
+        shadowRadius: 28,
+        shadowOffset: { width: 0, height: 14 },
+        elevation: 10,
+        overflow: "hidden",
         ...style,
       }}
     >
-      {children}
+      <View
+        pointerEvents="none"
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 86,
+          backgroundColor: "rgba(39,245,255,0.11)",
+        }}
+      />
+      <View
+        pointerEvents="none"
+        style={{
+          position: "absolute",
+          top: -52,
+          right: -48,
+          width: 150,
+          height: 150,
+          borderRadius: 75,
+          backgroundColor: "rgba(39,245,255,0.16)",
+          shadowColor: cyan,
+          shadowOpacity: 1,
+          shadowRadius: 34,
+        }}
+      />
+      <View
+        pointerEvents="none"
+        style={{
+          position: "absolute",
+          bottom: -52,
+          left: -58,
+          width: 145,
+          height: 145,
+          borderRadius: 73,
+          backgroundColor: "rgba(14,165,233,0.10)",
+          shadowColor: cyan,
+          shadowOpacity: 0.8,
+          shadowRadius: 28,
+        }}
+      />
+      <View style={{ position: "relative" }}>{children}</View>
     </AppCard>
   );
 }
@@ -104,13 +194,16 @@ function InputField({
       placeholderTextColor="#6EAFC0"
       style={{
         borderWidth: 1,
-        borderColor: "rgba(39,245,255,0.22)",
+        borderColor: "rgba(39,245,255,0.44)",
         borderRadius: 18,
         padding: large ? 18 : 15,
-        fontSize: large ? 30 : 16,
+        fontSize: large ? 31 : 16,
         fontWeight: large ? "900" : "700",
         color: "#FFFFFF",
-        backgroundColor: "rgba(2,10,23,0.58)",
+        backgroundColor: "rgba(1,8,18,0.78)",
+        shadowColor: cyan,
+        shadowOpacity: 0.22,
+        shadowRadius: 12,
       }}
     />
   );
@@ -131,15 +224,16 @@ function SelectorChip({
     <Pressable
       onPress={onPress}
       style={({ pressed }) => ({
-        paddingVertical: 11,
-        paddingHorizontal: 15,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
         borderRadius: 999,
         borderWidth: 1,
-        borderColor: selected ? accent : "rgba(255,255,255,0.13)",
-        backgroundColor: selected ? "rgba(39,245,255,0.14)" : "rgba(255,255,255,0.04)",
+        borderColor: selected ? accent : "rgba(255,255,255,0.18)",
+        backgroundColor: selected ? "rgba(39,245,255,0.20)" : "rgba(255,255,255,0.06)",
         shadowColor: selected ? accent : "transparent",
-        shadowOpacity: selected ? 0.32 : 0,
-        shadowRadius: selected ? 12 : 0,
+        shadowOpacity: selected ? 0.72 : 0,
+        shadowRadius: selected ? 18 : 0,
+        elevation: selected ? 8 : 0,
         transform: [{ scale: pressed ? 0.98 : 1 }],
       })}
     >
@@ -160,11 +254,11 @@ function PreviewMetric({ label, value }: { label: string; value: string }) {
     <View
       style={{
         flex: 1,
-        padding: 11,
-        borderRadius: 16,
-        backgroundColor: "rgba(39,245,255,0.08)",
+        padding: 12,
+        borderRadius: 17,
+        backgroundColor: "rgba(39,245,255,0.11)",
         borderWidth: 1,
-        borderColor: "rgba(39,245,255,0.14)",
+        borderColor: "rgba(39,245,255,0.26)",
         gap: 4,
       }}
     >
@@ -183,17 +277,18 @@ function RouteNode({ label, detail }: { label: string; detail: string }) {
     <View style={{ flex: 1, alignItems: "center", gap: 6 }}>
       <View
         style={{
-          width: 42,
-          height: 42,
-          borderRadius: 21,
+          width: 45,
+          height: 45,
+          borderRadius: 23,
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: cyanSoft,
+          backgroundColor: cyanDim,
           borderWidth: 1,
           borderColor: cyan,
           shadowColor: cyan,
-          shadowOpacity: 0.3,
-          shadowRadius: 12,
+          shadowOpacity: 0.72,
+          shadowRadius: 16,
+          elevation: 8,
         }}
       >
         <AppText color="#FFFFFF" style={{ fontWeight: "900" }}>
@@ -227,7 +322,9 @@ function RoutePreviewCard({
   const estimatedReceive = amount > 0 ? amount * (currency === "PHP" ? 72.4 : 5.92) : 0;
 
   return (
-    <GlassCard>
+    <GlassCard style={{ borderColor: "rgba(39,245,255,0.56)" }}>
+      <FlowLine top={74} rotate="-8deg" />
+      <FlowLine top={158} rotate="12deg" />
       <View style={{ gap: 15 }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
           <View style={{ gap: 4, flex: 1 }}>
@@ -235,42 +332,48 @@ function RoutePreviewCard({
               Route preview
             </AppText>
             <AppText variant="caption" color={mutedText}>
-              Live-style orchestration preview before route ranking.
+              Visual orchestration path before route ranking.
             </AppText>
           </View>
           <View
             style={{
-              paddingHorizontal: 10,
-              paddingVertical: 6,
+              paddingHorizontal: 11,
+              paddingVertical: 7,
               borderRadius: 999,
-              backgroundColor: "rgba(39,245,255,0.14)",
+              backgroundColor: "rgba(39,245,255,0.20)",
               borderWidth: 1,
-              borderColor: "rgba(39,245,255,0.35)",
+              borderColor: "rgba(39,245,255,0.62)",
+              shadowColor: cyan,
+              shadowOpacity: 0.58,
+              shadowRadius: 15,
             }}
           >
             <AppText variant="caption" color={cyan} style={{ fontWeight: "900" }}>
-              Recommended
+              ★ Recommended
             </AppText>
           </View>
         </View>
 
         <View
           style={{
-            padding: 15,
-            borderRadius: 22,
-            backgroundColor: "rgba(2,10,23,0.58)",
+            padding: 16,
+            borderRadius: 24,
+            backgroundColor: panelRaised,
             borderWidth: 1,
-            borderColor: "rgba(39,245,255,0.20)",
-            gap: 14,
+            borderColor: "rgba(39,245,255,0.38)",
+            gap: 15,
+            shadowColor: cyan,
+            shadowOpacity: 0.28,
+            shadowRadius: 20,
           }}
         >
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
             <RouteNode label="GBP" detail="You send" />
-            <AppText color={cyan} style={{ fontSize: 22, fontWeight: "900" }}>
+            <AppText color={cyan} style={{ fontSize: 23, fontWeight: "900" }}>
               →
             </AppText>
             <RouteNode label="RLUSD" detail="Bridge" />
-            <AppText color={cyan} style={{ fontSize: 22, fontWeight: "900" }}>
+            <AppText color={cyan} style={{ fontSize: 23, fontWeight: "900" }}>
               →
             </AppText>
             <RouteNode label={currency ?? "..."} detail="Recipient gets" />
@@ -291,32 +394,19 @@ function RoutePreviewCard({
                 {signal.confidence}%
               </AppText>
             </View>
-            <View
-              style={{
-                height: 8,
-                borderRadius: 999,
-                backgroundColor: "rgba(255,255,255,0.12)",
-                overflow: "hidden",
-              }}
-            >
-              <View
-                style={{
-                  width: `${signal.confidence}%`,
-                  height: "100%",
-                  backgroundColor: cyan,
-                }}
-              />
+            <View style={{ height: 9, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.12)", overflow: "hidden" }}>
+              <View style={{ width: `${signal.confidence}%`, height: "100%", backgroundColor: cyan }} />
             </View>
           </View>
         </View>
 
         <View
           style={{
-            padding: 14,
-            borderRadius: 18,
-            backgroundColor: "rgba(255,255,255,0.05)",
+            padding: 15,
+            borderRadius: 20,
+            backgroundColor: "rgba(255,255,255,0.065)",
             borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.10)",
+            borderColor: "rgba(255,255,255,0.14)",
             gap: 6,
           }}
         >
@@ -412,16 +502,9 @@ export default function SendScreen() {
   const safeAmount = !Number.isNaN(numericAmount) && numericAmount > 0 ? numericAmount : 0;
   const balanceAfterTransfer = Math.max((gbpBalance ?? 0) - safeAmount, 0);
 
-  const selectedCorridor = useMemo(
-    () => corridors.find((corridor) => corridor.country === selectedCountry),
-    [selectedCountry]
-  );
-
+  const selectedCorridor = useMemo(() => corridors.find((corridor) => corridor.country === selectedCountry), [selectedCountry]);
   const availablePayoutMethods = selectedCorridor?.payoutMethods ?? [];
-  const selectedPayoutConfig = useMemo(
-    () => availablePayoutMethods.find((method) => method.type === selectedPayoutMethod),
-    [availablePayoutMethods, selectedPayoutMethod]
-  );
+  const selectedPayoutConfig = useMemo(() => availablePayoutMethods.find((method) => method.type === selectedPayoutMethod), [availablePayoutMethods, selectedPayoutMethod]);
   const availableProviders = selectedPayoutConfig?.providers ?? [];
 
   const handleSelectSavedRecipient = (recipient: SavedRecipient) => {
@@ -523,10 +606,7 @@ export default function SendScreen() {
       return;
     }
 
-    const recipientFullName = [firstName.trim(), middleName.trim(), surname.trim()]
-      .filter(Boolean)
-      .join(" ");
-
+    const recipientFullName = [firstName.trim(), middleName.trim(), surname.trim()].filter(Boolean).join(" ");
     const recipient: Recipient = {
       name: recipientFullName,
       firstName: firstName.trim(),
@@ -548,14 +628,23 @@ export default function SendScreen() {
   };
 
   return (
-    <Screen>
+    <Screen style={{ backgroundColor: deepSpace }}>
+      <View style={{ position: "absolute", top: 0, left: -18, right: -18, bottom: -40, backgroundColor: deepSpace }} />
+      <View pointerEvents="none" style={{ position: "absolute", top: 0, left: -18, right: -18, height: 620, backgroundColor: deepNavy, opacity: 0.42 }} />
+      <GlowOrb top={18} right={-80} size={260} color={cyan} opacity={0.14} />
+      <GlowOrb top={270} left={-140} size={270} color="#0EA5E9" opacity={0.10} />
+      <GlowOrb top={560} right={-150} size={330} color={colors.gold} opacity={0.08} />
+      <FlowLine top={145} rotate="-10deg" />
+      <FlowLine top={205} rotate="-7deg" />
+      <FlowLine top={655} rotate="12deg" />
+
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={{ gap: 18, paddingBottom: 40 }}>
           <View style={{ gap: 6 }}>
             <AppText variant="caption" color={cyan} style={{ fontWeight: "900" }}>
               ORCHESTRATION ENGINE
             </AppText>
-            <AppText variant="title" color="#FFFFFF">
+            <AppText variant="title" color="#FFFFFF" style={{ textShadowColor: cyan, textShadowRadius: 10 }}>
               Send Money
             </AppText>
             <AppText variant="body" color={mutedText}>
@@ -563,34 +652,31 @@ export default function SendScreen() {
             </AppText>
           </View>
 
-          <GlassCard>
+          <GlassCard style={{ borderColor: "rgba(39,245,255,0.56)" }}>
             <View style={{ gap: 14 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
                 <View style={{ flex: 1, gap: 8 }}>
-                  <AppText variant="caption" color="#8EEBFF">
+                  <AppText variant="caption" color="#8EEBFF" style={{ fontWeight: "900" }}>
                     You send
                   </AppText>
-                  <InputField
-                    value={amount}
-                    onChangeText={setAmount}
-                    keyboardType="decimal-pad"
-                    placeholder="0.00"
-                    large
-                  />
+                  <InputField value={amount} onChangeText={setAmount} keyboardType="decimal-pad" placeholder="0.00" large />
                 </View>
                 <View
                   style={{
-                    width: 116,
+                    width: 118,
                     padding: 13,
-                    borderRadius: 22,
-                    backgroundColor: "rgba(39,245,255,0.08)",
+                    borderRadius: 24,
+                    backgroundColor: panelRaised,
                     borderWidth: 1,
-                    borderColor: "rgba(39,245,255,0.24)",
+                    borderColor: "rgba(39,245,255,0.38)",
                     justifyContent: "center",
                     gap: 6,
+                    shadowColor: colors.gold,
+                    shadowOpacity: 0.28,
+                    shadowRadius: 16,
                   }}
                 >
-                  <AppText color={cyan} style={{ fontSize: 26, fontWeight: "900" }}>
+                  <AppText color={cyan} style={{ fontSize: 28, fontWeight: "900", textShadowColor: cyan, textShadowRadius: 8 }}>
                     ↗
                   </AppText>
                   <AppText variant="caption" color="#FFFFFF" style={{ fontWeight: "900" }}>
@@ -608,52 +694,27 @@ export default function SendScreen() {
             </View>
           </GlassCard>
 
-          <SavedRecipientsCard
-            recipients={savedRecipients}
-            selectedRecipientId={selectedRecipientId ?? undefined}
-            onSelectRecipient={handleSelectSavedRecipient}
-            onToggleFavorite={handleToggleFavorite}
-          />
+          <SavedRecipientsCard recipients={savedRecipients} selectedRecipientId={selectedRecipientId ?? undefined} onSelectRecipient={handleSelectSavedRecipient} onToggleFavorite={handleToggleFavorite} />
 
           <GlassCard>
             <View style={{ gap: 12 }}>
-              <AppText variant="subheading" color="#FFFFFF">
-                Corridor
-              </AppText>
+              <AppText variant="subheading" color="#FFFFFF">Corridor</AppText>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                 {corridors.map((corridor) => (
-                  <SelectorChip
-                    key={corridor.country}
-                    label={`GBP → ${corridor.currency}`}
-                    selected={selectedCountry === corridor.country}
-                    onPress={() => handleCountrySelect(corridor.country)}
-                  />
+                  <SelectorChip key={corridor.country} label={`GBP → ${corridor.currency}`} selected={selectedCountry === corridor.country} onPress={() => handleCountrySelect(corridor.country)} />
                 ))}
               </View>
             </View>
           </GlassCard>
 
-          <RoutePreviewCard
-            selectedCountry={selectedCountry}
-            currency={selectedCorridor?.currency}
-            amount={safeAmount}
-            provider={selectedProvider}
-            payoutMethod={selectedPayoutMethod}
-          />
+          <RoutePreviewCard selectedCountry={selectedCountry} currency={selectedCorridor?.currency} amount={safeAmount} provider={selectedProvider} payoutMethod={selectedPayoutMethod} />
 
           <GlassCard>
             <View style={{ gap: 12 }}>
-              <AppText variant="subheading" color="#FFFFFF">
-                Payout method
-              </AppText>
+              <AppText variant="subheading" color="#FFFFFF">Payout method</AppText>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                 {availablePayoutMethods.map((method) => (
-                  <SelectorChip
-                    key={method.type}
-                    label={method.type === "BANK" ? "Bank" : "Mobile Wallet"}
-                    selected={selectedPayoutMethod === method.type}
-                    onPress={() => handlePayoutMethodSelect(method.type)}
-                  />
+                  <SelectorChip key={method.type} label={method.type === "BANK" ? "Bank" : "Mobile Wallet"} selected={selectedPayoutMethod === method.type} onPress={() => handlePayoutMethodSelect(method.type)} />
                 ))}
               </View>
             </View>
@@ -661,21 +722,10 @@ export default function SendScreen() {
 
           <GlassCard>
             <View style={{ gap: 12 }}>
-              <AppText variant="subheading" color="#FFFFFF">
-                {selectedPayoutMethod === "BANK" ? "Payout bank" : "Wallet provider"}
-              </AppText>
+              <AppText variant="subheading" color="#FFFFFF">{selectedPayoutMethod === "BANK" ? "Payout bank" : "Wallet provider"}</AppText>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                 {availableProviders.map((provider) => (
-                  <SelectorChip
-                    key={provider}
-                    label={provider}
-                    selected={selectedProvider === provider}
-                    onPress={() => {
-                      setSelectedRecipientId(null);
-                      setSelectedProvider(provider);
-                    }}
-                    accent={colors.gold}
-                  />
+                  <SelectorChip key={provider} label={provider} selected={selectedProvider === provider} onPress={() => { setSelectedRecipientId(null); setSelectedProvider(provider); }} accent={colors.gold} />
                 ))}
               </View>
             </View>
@@ -684,12 +734,8 @@ export default function SendScreen() {
           <GlassCard>
             <View style={{ gap: 12 }}>
               <View style={{ gap: 4 }}>
-                <AppText variant="subheading" color="#FFFFFF">
-                  Recipient details
-                </AppText>
-                <AppText variant="caption" color={mutedText}>
-                  Required for payout screening and destination matching.
-                </AppText>
+                <AppText variant="subheading" color="#FFFFFF">Recipient details</AppText>
+                <AppText variant="caption" color={mutedText}>Required for payout screening and destination matching.</AppText>
               </View>
               <InputField value={firstName} onChangeText={(v) => { setSelectedRecipientId(null); setFirstName(v); }} placeholder="First name *" />
               <InputField value={middleName} onChangeText={(v) => { setSelectedRecipientId(null); setMiddleName(v); }} placeholder="Middle name (optional)" />
@@ -705,10 +751,26 @@ export default function SendScreen() {
             </View>
           </GlassCard>
 
-          <View style={{ gap: 12 }}>
-            <AppButton title="Find best routes" onPress={handleFindRoutes} />
-            <AppButton title="Back Home" variant="secondary" onPress={() => router.push("/")} />
-          </View>
+          <Pressable
+            onPress={handleFindRoutes}
+            style={({ pressed }) => ({
+              paddingVertical: 18,
+              borderRadius: 22,
+              alignItems: "center",
+              backgroundColor: colors.gold,
+              borderWidth: 1,
+              borderColor: "#FFD76B",
+              shadowColor: colors.gold,
+              shadowOpacity: 0.72,
+              shadowRadius: 22,
+              elevation: 12,
+              transform: [{ scale: pressed ? 0.985 : 1 }],
+            })}
+          >
+            <AppText color="#07111F" style={{ fontSize: 18, fontWeight: "900" }}>Find best routes  →</AppText>
+          </Pressable>
+
+          <AppButton title="Back Home" variant="secondary" onPress={() => router.push("/")} />
         </View>
       </ScrollView>
     </Screen>
