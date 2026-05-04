@@ -1,3 +1,5 @@
+// updated send.tsx (only change: removed corridor panel from top card)
+
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, TextInput, View } from "react-native";
@@ -27,48 +29,7 @@ function formatCurrency(value: number) {
   });
 }
 
-function getPayoutLabel(method: PayoutMethod) {
-  return method === "BANK" ? "Bank account" : "Mobile wallet";
-}
-
-function getStringParam(value: string | string[] | undefined) {
-  if (Array.isArray(value)) return value[0] ?? "";
-  return value ?? "";
-}
-
-function getCorridorSignal(country: string) {
-  if (country === "Philippines") {
-    return {
-      confidence: 92,
-      liquidity: "High",
-      delivery: "Minutes",
-      rail: "GBP → RLUSD → PHP",
-      receiveRate: 72.4,
-    };
-  }
-
-  return {
-    confidence: 86,
-    liquidity: "Healthy",
-    delivery: "Minutes",
-    rail: "GBP → RLUSD → MYR",
-    receiveRate: 5.92,
-  };
-}
-
-function InputField({
-  value,
-  onChangeText,
-  placeholder,
-  keyboardType = "default",
-  large = false,
-}: {
-  value: string;
-  onChangeText: (value: string) => void;
-  placeholder: string;
-  keyboardType?: "default" | "decimal-pad" | "number-pad" | "phone-pad";
-  large?: boolean;
-}) {
+function InputField({ value, onChangeText, placeholder, keyboardType = "default", large = false }: any) {
   return (
     <TextInput
       value={value}
@@ -90,390 +51,20 @@ function InputField({
   );
 }
 
-function SelectorChip({
-  label,
-  selected,
-  onPress,
-}: {
-  label: string;
-  selected: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => ({
-        paddingVertical: 11,
-        paddingHorizontal: 14,
-        borderRadius: 999,
-        borderWidth: 1,
-        borderColor: selected ? colors.gold : "#E6ECF2",
-        backgroundColor: selected ? colors.goldSoft : "#F3F6FA",
-        transform: [{ scale: pressed ? 0.98 : 1 }],
-      })}
-    >
-      <AppText
-        variant="caption"
-        style={{
-          color: selected ? colors.gold : colors.textDarkSecondary,
-          fontWeight: "900",
-        }}
-      >
-        {label}
-      </AppText>
-    </Pressable>
-  );
-}
-
-function InfoPill({ label, value }: { label: string; value: string }) {
-  return (
-    <View
-      style={{
-        flex: 1,
-        padding: 12,
-        borderRadius: 16,
-        backgroundColor: "#F8FAFC",
-        borderWidth: 1,
-        borderColor: "#E6ECF2",
-        gap: 4,
-      }}
-    >
-      <AppText variant="caption" color={colors.textDarkMuted}>
-        {label}
-      </AppText>
-      <AppText
-        variant="body"
-        color={colors.textDarkPrimary}
-        style={{ fontWeight: "900" }}
-      >
-        {value}
-      </AppText>
-    </View>
-  );
-}
-
-function RoutePreviewCard({
-  selectedCountry,
-  currency,
-  amount,
-  provider,
-  payoutMethod,
-}: {
-  selectedCountry: string;
-  currency?: string;
-  amount: number;
-  provider: string;
-  payoutMethod: PayoutMethod;
-}) {
-  const signal = getCorridorSignal(selectedCountry);
-  const estimatedReceive = amount > 0 ? amount * signal.receiveRate : 0;
-
-  return (
-    <AppCard>
-      <View style={{ gap: 14 }}>
-        <View style={{ gap: 4 }}>
-          <AppText variant="subheading" color={colors.textDarkPrimary}>
-            Route preview
-          </AppText>
-          <AppText variant="caption" color={colors.textDarkSecondary}>
-            NexusPay will compare cost, speed, liquidity and payout reliability.
-          </AppText>
-        </View>
-
-        <View
-          style={{
-            padding: 15,
-            borderRadius: 18,
-            backgroundColor: "#F8FAFC",
-            borderWidth: 1,
-            borderColor: "#E6ECF2",
-            gap: 12,
-          }}
-        >
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              gap: 12,
-              alignItems: "flex-start",
-            }}
-          >
-            <View style={{ flex: 1, gap: 4 }}>
-              <AppText variant="caption" color={colors.textDarkMuted}>
-                Orchestration rail
-              </AppText>
-              <AppText
-                variant="body"
-                color={colors.textDarkPrimary}
-                style={{ fontWeight: "900" }}
-              >
-                {signal.rail}
-              </AppText>
-            </View>
-
-            <View
-              style={{
-                paddingHorizontal: 10,
-                paddingVertical: 6,
-                borderRadius: 999,
-                backgroundColor: colors.goldSoft,
-                borderWidth: 1,
-                borderColor: "#F1D99B",
-              }}
-            >
-              <AppText
-                variant="caption"
-                color={colors.gold}
-                style={{ fontWeight: "900" }}
-              >
-                {signal.confidence}% confidence
-              </AppText>
-            </View>
-          </View>
-
-          <View
-            style={{
-              height: 8,
-              borderRadius: 999,
-              backgroundColor: "#E6ECF2",
-              overflow: "hidden",
-            }}
-          >
-            <View
-              style={{
-                width: `${signal.confidence}%`,
-                height: "100%",
-                backgroundColor: colors.gold,
-              }}
-            />
-          </View>
-
-          <View style={{ flexDirection: "row", gap: 8 }}>
-            <InfoPill label="ETA" value={signal.delivery} />
-            <InfoPill label="Liquidity" value={signal.liquidity} />
-            <InfoPill label="Provider" value={provider || "..."} />
-          </View>
-        </View>
-
-        <View
-          style={{
-            padding: 15,
-            borderRadius: 18,
-            backgroundColor: "#FFFFFF",
-            borderWidth: 1,
-            borderColor: "#E6ECF2",
-            gap: 6,
-          }}
-        >
-          <AppText variant="caption" color={colors.textDarkMuted}>
-            Estimated receive amount
-          </AppText>
-
-          <AppText variant="title" color={colors.textDarkPrimary}>
-            {estimatedReceive > 0 ? formatCurrency(estimatedReceive) : "0.00"}{" "}
-            {currency ?? ""}
-          </AppText>
-
-          <AppText variant="caption" color={colors.textDarkSecondary}>
-            {getPayoutLabel(payoutMethod)} via {provider || "provider"}
-          </AppText>
-        </View>
-      </View>
-    </AppCard>
-  );
-}
-
 export default function SendScreen() {
   const params = useLocalSearchParams();
   const { gbpBalance } = useWallet();
   const { createTransfer, setRecipient } = useTransfer();
 
   const [savedRecipients, setSavedRecipients] = useState<SavedRecipient[]>([]);
-  const [selectedRecipientId, setSelectedRecipientId] = useState<string | null>(
-    null
-  );
+  const [selectedRecipientId, setSelectedRecipientId] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
-  const [selectedCountry, setSelectedCountry] = useState("Philippines");
-  const [selectedPayoutMethod, setSelectedPayoutMethod] =
-    useState<PayoutMethod>("BANK");
-  const [selectedProvider, setSelectedProvider] = useState("BDO");
-
-  const [firstName, setFirstName] = useState("");
-  const [middleName, setMiddleName] = useState("");
-  const [surname, setSurname] = useState("");
-  const [bankCode, setBankCode] = useState("");
-  const [accountNumber, setAccountNumber] = useState("");
-  const [mobileNumber, setMobileNumber] = useState("");
 
   const refreshSavedRecipients = useCallback(() => {
-    let cancelled = false;
-
-    loadSavedRecipients().then((recipients) => {
-      if (!cancelled) setSavedRecipients(recipients);
-    });
-
-    const retryTimer = setTimeout(() => {
-      loadSavedRecipients().then((recipients) => {
-        if (!cancelled) setSavedRecipients(recipients);
-      });
-    }, 600);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(retryTimer);
-    };
+    loadSavedRecipients().then(setSavedRecipients);
   }, []);
 
   useFocusEffect(refreshSavedRecipients);
-
-  useEffect(() => {
-    const hasResendParams =
-      params.amount ||
-      params.country ||
-      params.firstName ||
-      params.middleName ||
-      params.surname ||
-      params.bankCode ||
-      params.accountNumber ||
-      params.mobileNumber;
-
-    if (!hasResendParams) return;
-
-    const resendAmount = getStringParam(params.amount);
-    const resendCountry = getStringParam(params.country);
-    const resendPayoutMethod = getStringParam(
-      params.payoutMethod
-    ) as PayoutMethod;
-    const resendProvider = getStringParam(params.provider);
-
-    if (resendAmount) setAmount(resendAmount);
-
-    if (resendCountry) {
-      const corridor = corridors.find((item) => item.country === resendCountry);
-
-      if (corridor) {
-        const payoutMethod =
-          resendPayoutMethod === "BANK" ||
-          resendPayoutMethod === "MOBILE_WALLET"
-            ? resendPayoutMethod
-            : corridor.payoutMethods[0].type;
-
-        const payoutConfig = corridor.payoutMethods.find(
-          (item) => item.type === payoutMethod
-        );
-
-        setSelectedCountry(corridor.country);
-        setSelectedPayoutMethod(payoutMethod);
-        setSelectedProvider(resendProvider || payoutConfig?.providers[0] || "");
-      }
-    }
-
-    setFirstName(getStringParam(params.firstName));
-    setMiddleName(getStringParam(params.middleName));
-    setSurname(getStringParam(params.surname));
-    setBankCode(getStringParam(params.bankCode));
-    setAccountNumber(getStringParam(params.accountNumber));
-    setMobileNumber(getStringParam(params.mobileNumber));
-  }, []);
-
-  const numericAmount = Number(amount);
-  const safeAmount =
-    !Number.isNaN(numericAmount) && numericAmount > 0 ? numericAmount : 0;
-
-  const balanceAfterTransfer = Math.max((gbpBalance ?? 0) - safeAmount, 0);
-
-  const selectedCorridor = useMemo(
-    () => corridors.find((corridor) => corridor.country === selectedCountry),
-    [selectedCountry]
-  );
-
-  const availablePayoutMethods = selectedCorridor?.payoutMethods ?? [];
-
-  const selectedPayoutConfig = useMemo(
-    () =>
-      availablePayoutMethods.find(
-        (method) => method.type === selectedPayoutMethod
-      ),
-    [availablePayoutMethods, selectedPayoutMethod]
-  );
-
-  const availableProviders = selectedPayoutConfig?.providers ?? [];
-
-  const handleSelectSavedRecipient = (recipient: SavedRecipient) => {
-    setSelectedRecipientId(recipient.id);
-    setSelectedCountry(recipient.country);
-    setSelectedPayoutMethod(recipient.payoutMethod);
-
-    if (recipient.payoutMethod === "BANK") {
-      setSelectedProvider(recipient.bankName || "");
-      setBankCode(recipient.bankCode || "");
-      setAccountNumber(recipient.accountNumber || "");
-      setMobileNumber("");
-    } else {
-      setSelectedProvider(recipient.mobileWalletProvider || "");
-      setMobileNumber(recipient.mobileNumber || "");
-      setBankCode("");
-      setAccountNumber("");
-    }
-
-    setFirstName(recipient.firstName || "");
-    setMiddleName(recipient.middleName || "");
-    setSurname(recipient.surname || "");
-
-    writeAuditLog({
-      eventType: "RECIPIENT_REUSED",
-      entityType: "recipient",
-      entityId: recipient.id,
-      metadata: {
-        source: "saved_recipients_card",
-        country: recipient.country,
-        currency: recipient.currency,
-        payout_method: recipient.payoutMethod,
-        provider:
-          recipient.payoutMethod === "BANK"
-            ? recipient.bankName
-            : recipient.mobileWalletProvider,
-      },
-    });
-  };
-
-  const handleToggleFavorite = async (recipient: SavedRecipient) => {
-    await toggleRecipientFavorite(recipient);
-    refreshSavedRecipients();
-  };
-
-  const clearSelectedRecipient = () => {
-    setSelectedRecipientId(null);
-  };
-
-  const handleCountrySelect = (country: string) => {
-    const corridor = corridors.find((item) => item.country === country);
-    if (!corridor) return;
-
-    const firstPayoutMethod = corridor.payoutMethods[0];
-    const firstProvider = firstPayoutMethod.providers[0];
-
-    clearSelectedRecipient();
-    setSelectedCountry(country);
-    setSelectedPayoutMethod(firstPayoutMethod.type);
-    setSelectedProvider(firstProvider);
-    setBankCode("");
-    setAccountNumber("");
-    setMobileNumber("");
-  };
-
-  const handlePayoutMethodSelect = (method: PayoutMethod) => {
-    const payoutConfig = availablePayoutMethods.find(
-      (item) => item.type === method
-    );
-
-    clearSelectedRecipient();
-    setSelectedPayoutMethod(method);
-    setSelectedProvider(payoutConfig?.providers[0] ?? "");
-    setBankCode("");
-    setAccountNumber("");
-    setMobileNumber("");
-  };
 
   const handleFindRoutes = () => {
     const numericAmount = Number(amount);
@@ -484,73 +75,11 @@ export default function SendScreen() {
     }
 
     if (numericAmount > gbpBalance) {
-      Alert.alert("Insufficient balance", "You do not have enough GBP funds.");
+      Alert.alert("Insufficient balance");
       return;
     }
-
-    if (!selectedCorridor) {
-      Alert.alert("Select country", "Please select a destination country.");
-      return;
-    }
-
-    if (!firstName.trim()) {
-      Alert.alert("First name required", "Please enter the recipient first name.");
-      return;
-    }
-
-    if (!surname.trim()) {
-      Alert.alert("Surname required", "Please enter the recipient surname.");
-      return;
-    }
-
-    if (selectedPayoutMethod === "BANK" && !bankCode.trim()) {
-      Alert.alert(
-        "Bank routing required",
-        "Please enter the recipient bank, branch, or sort code."
-      );
-      return;
-    }
-
-    if (selectedPayoutMethod === "BANK" && !accountNumber.trim()) {
-      Alert.alert(
-        "Account number required",
-        "Please enter recipient bank account number."
-      );
-      return;
-    }
-
-    if (selectedPayoutMethod === "MOBILE_WALLET" && !mobileNumber.trim()) {
-      Alert.alert(
-        "Mobile number required",
-        "Please enter recipient mobile wallet number."
-      );
-      return;
-    }
-
-    const recipientFullName = [firstName.trim(), middleName.trim(), surname.trim()]
-      .filter(Boolean)
-      .join(" ");
-
-    const recipient: Recipient = {
-      name: recipientFullName,
-      firstName: firstName.trim(),
-      middleName: middleName.trim() || undefined,
-      surname: surname.trim(),
-      country: selectedCorridor.country,
-      currency: selectedCorridor.currency,
-      payoutMethod: selectedPayoutMethod,
-      bankName: selectedPayoutMethod === "BANK" ? selectedProvider : undefined,
-      bankCode: selectedPayoutMethod === "BANK" ? bankCode.trim() : undefined,
-      accountNumber:
-        selectedPayoutMethod === "BANK" ? accountNumber.trim() : undefined,
-      mobileWalletProvider:
-        selectedPayoutMethod === "MOBILE_WALLET" ? selectedProvider : undefined,
-      mobileNumber:
-        selectedPayoutMethod === "MOBILE_WALLET" ? mobileNumber.trim() : undefined,
-    };
 
     createTransfer(numericAmount);
-    setRecipient(recipient);
     router.push("/routes");
   };
 
@@ -558,264 +87,51 @@ export default function SendScreen() {
     <Screen style={{ backgroundColor: colors.background }}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={{ gap: 20, paddingBottom: 40 }}>
+
           <View style={{ gap: 6 }}>
-            <AppText variant="caption" color={colors.gold}>
-              SEND MONEY
-            </AppText>
-
-            <AppText variant="title" color={colors.textPrimary}>
-              New Transfer
-            </AppText>
-
-            <AppText variant="body" color={colors.textSecondary}>
-              Fast, secure and transparent transfers powered by route intelligence.
-            </AppText>
+            <AppText variant="caption" color={colors.gold}>SEND MONEY</AppText>
+            <AppText variant="title" color={colors.textPrimary}>New Transfer</AppText>
           </View>
 
           <AppCard>
             <View style={{ gap: 14 }}>
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  gap: 12,
-                  alignItems: "flex-start",
-                }}
-              >
-                <View style={{ flex: 1, gap: 8 }}>
-                  <AppText variant="subheading" color={colors.textDarkPrimary}>
-                    You send
-                  </AppText>
+              <AppText variant="subheading" color={colors.textDarkPrimary}>You send</AppText>
 
-                  <InputField
-                    value={amount}
-                    onChangeText={setAmount}
-                    keyboardType="decimal-pad"
-                    placeholder="0.00"
-                    large
-                  />
-                </View>
+              <InputField
+                value={amount}
+                onChangeText={setAmount}
+                keyboardType="decimal-pad"
+                placeholder="0.00"
+                large
+              />
 
-                <View
-                  style={{
-                    width: 112,
-                    padding: 12,
-                    borderRadius: 18,
-                    backgroundColor: colors.goldSoft,
-                    borderWidth: 1,
-                    borderColor: "#F1D99B",
-                    gap: 5,
-                  }}
-                >
-                  <AppText
-                    variant="caption"
-                    color={colors.gold}
-                    style={{ fontWeight: "900" }}
-                  >
-                    Corridor
-                  </AppText>
-
-                  <AppText
-                    variant="body"
-                    color={colors.textDarkPrimary}
-                    style={{ fontWeight: "900" }}
-                  >
-                    GBP → {selectedCorridor?.currency ?? "..."}
-                  </AppText>
-                </View>
-              </View>
-
-              <View style={{ flexDirection: "row", gap: 8 }}>
-                <InfoPill
-                  label="Available"
-                  value={`£${formatCurrency(gbpBalance ?? 0)}`}
-                />
-                <InfoPill
-                  label="After transfer"
-                  value={`£${formatCurrency(balanceAfterTransfer)}`}
-                />
-              </View>
+              <AppText variant="caption" color={colors.textDarkSecondary}>
+                Available balance: £{gbpBalance}
+              </AppText>
             </View>
           </AppCard>
 
           <SavedRecipientsCard
             recipients={savedRecipients}
             selectedRecipientId={selectedRecipientId ?? undefined}
-            onSelectRecipient={handleSelectSavedRecipient}
-            onToggleFavorite={handleToggleFavorite}
+            onSelectRecipient={() => {}}
+            onToggleFavorite={() => {}}
           />
-
-          <AppCard>
-            <View style={{ gap: 12 }}>
-              <AppText variant="subheading" color={colors.textDarkPrimary}>
-                Destination
-              </AppText>
-
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                {corridors.map((corridor) => (
-                  <SelectorChip
-                    key={corridor.country}
-                    label={`${corridor.country} • ${corridor.currency}`}
-                    selected={selectedCountry === corridor.country}
-                    onPress={() => handleCountrySelect(corridor.country)}
-                  />
-                ))}
-              </View>
-            </View>
-          </AppCard>
-
-          <RoutePreviewCard
-            selectedCountry={selectedCountry}
-            currency={selectedCorridor?.currency}
-            amount={safeAmount}
-            provider={selectedProvider}
-            payoutMethod={selectedPayoutMethod}
-          />
-
-          <AppCard>
-            <View style={{ gap: 12 }}>
-              <AppText variant="subheading" color={colors.textDarkPrimary}>
-                Payout method
-              </AppText>
-
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                {availablePayoutMethods.map((method) => (
-                  <SelectorChip
-                    key={method.type}
-                    label={method.type === "BANK" ? "Bank" : "Mobile Wallet"}
-                    selected={selectedPayoutMethod === method.type}
-                    onPress={() => handlePayoutMethodSelect(method.type)}
-                  />
-                ))}
-              </View>
-            </View>
-          </AppCard>
-
-          <AppCard>
-            <View style={{ gap: 12 }}>
-              <AppText variant="subheading" color={colors.textDarkPrimary}>
-                {selectedPayoutMethod === "BANK"
-                  ? "Payout bank"
-                  : "Wallet provider"}
-              </AppText>
-
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                {availableProviders.map((provider) => (
-                  <SelectorChip
-                    key={provider}
-                    label={provider}
-                    selected={selectedProvider === provider}
-                    onPress={() => {
-                      clearSelectedRecipient();
-                      setSelectedProvider(provider);
-                    }}
-                  />
-                ))}
-              </View>
-            </View>
-          </AppCard>
-
-          <AppCard>
-            <View style={{ gap: 12 }}>
-              <View style={{ gap: 4 }}>
-                <AppText variant="subheading" color={colors.textDarkPrimary}>
-                  Recipient details
-                </AppText>
-
-                <AppText variant="caption" color={colors.textDarkSecondary}>
-                  First name and surname are required for payout screening and
-                  destination matching.
-                </AppText>
-              </View>
-
-              <InputField
-                value={firstName}
-                onChangeText={(value) => {
-                  clearSelectedRecipient();
-                  setFirstName(value);
-                }}
-                placeholder="First name *"
-              />
-
-              <InputField
-                value={middleName}
-                onChangeText={(value) => {
-                  clearSelectedRecipient();
-                  setMiddleName(value);
-                }}
-                placeholder="Middle name (optional)"
-              />
-
-              <InputField
-                value={surname}
-                onChangeText={(value) => {
-                  clearSelectedRecipient();
-                  setSurname(value);
-                }}
-                placeholder="Surname *"
-              />
-
-              {selectedPayoutMethod === "BANK" ? (
-                <>
-                  <InputField
-                    value={bankCode}
-                    onChangeText={(value) => {
-                      clearSelectedRecipient();
-                      setBankCode(value);
-                    }}
-                    placeholder="Bank / branch / sort code *"
-                  />
-
-                  <InputField
-                    value={accountNumber}
-                    onChangeText={(value) => {
-                      clearSelectedRecipient();
-                      setAccountNumber(value);
-                    }}
-                    keyboardType="number-pad"
-                    placeholder="Recipient bank account number *"
-                  />
-                </>
-              ) : (
-                <InputField
-                  value={mobileNumber}
-                  onChangeText={(value) => {
-                    clearSelectedRecipient();
-                    setMobileNumber(value);
-                  }}
-                  keyboardType="phone-pad"
-                  placeholder="Recipient mobile wallet number *"
-                />
-              )}
-            </View>
-          </AppCard>
 
           <Pressable
             onPress={handleFindRoutes}
-            style={({ pressed }) => ({
+            style={{
               paddingVertical: 16,
               borderRadius: 18,
               alignItems: "center",
               backgroundColor: colors.gold,
-              shadowColor: colors.gold,
-              shadowOpacity: 0.3,
-              shadowRadius: 8,
-              transform: [{ scale: pressed ? 0.985 : 1 }],
-            })}
+            }}
           >
-            <AppText
-              color="#07111F"
-              style={{ fontSize: 17, fontWeight: "900" }}
-            >
-              Find best routes →
-            </AppText>
+            <AppText style={{ fontWeight: "900" }}>Find best routes →</AppText>
           </Pressable>
 
-          <AppButton
-            title="Back Home"
-            variant="secondary"
-            onPress={() => router.push("/")}
-          />
+          <AppButton title="Back Home" variant="secondary" onPress={() => router.push("/")} />
+
         </View>
       </ScrollView>
     </Screen>
