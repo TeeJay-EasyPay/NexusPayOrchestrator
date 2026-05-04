@@ -44,6 +44,8 @@ function getCorridorSignal(country: string) {
       delivery: "Minutes",
       rail: "GBP → RLUSD → PHP",
       receiveRate: 72.4,
+      fee: "£3.20",
+      save: "£12.40",
     };
   }
 
@@ -53,6 +55,8 @@ function getCorridorSignal(country: string) {
     delivery: "Minutes",
     rail: "GBP → RLUSD → MYR",
     receiveRate: 5.92,
+    fee: "£2.85",
+    save: "£8.10",
   };
 }
 
@@ -78,11 +82,11 @@ function InputField({
       placeholderTextColor={colors.textDarkMuted}
       style={{
         borderWidth: 1,
-        borderColor: "#E6ECF2",
-        borderRadius: 14,
-        padding: large ? 18 : 14,
-        fontSize: large ? 28 : 16,
-        fontWeight: large ? "800" : "500",
+        borderColor: "#E1E8F0",
+        borderRadius: 18,
+        padding: large ? 20 : 15,
+        fontSize: large ? 32 : 16,
+        fontWeight: large ? "900" : "600",
         color: colors.textDarkPrimary,
         backgroundColor: "#F8FAFC",
       }}
@@ -103,12 +107,16 @@ function SelectorChip({
     <Pressable
       onPress={onPress}
       style={({ pressed }) => ({
-        paddingVertical: 11,
-        paddingHorizontal: 14,
+        paddingVertical: 12,
+        paddingHorizontal: 15,
         borderRadius: 999,
         borderWidth: 1,
         borderColor: selected ? colors.gold : "#E6ECF2",
-        backgroundColor: selected ? colors.goldSoft : "#F3F6FA",
+        backgroundColor: selected ? colors.goldSoft : "#F6F8FB",
+        shadowColor: selected ? colors.gold : "transparent",
+        shadowOpacity: selected ? 0.18 : 0,
+        shadowRadius: selected ? 10 : 0,
+        elevation: selected ? 4 : 0,
         transform: [{ scale: pressed ? 0.98 : 1 }],
       })}
     >
@@ -125,20 +133,20 @@ function SelectorChip({
   );
 }
 
-function InfoPill({ label, value }: { label: string; value: string }) {
+function InfoPill({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
   return (
     <View
       style={{
         flex: 1,
-        padding: 12,
-        borderRadius: 16,
-        backgroundColor: "#F8FAFC",
+        padding: 13,
+        borderRadius: 18,
+        backgroundColor: accent ? colors.goldSoft : "#F8FAFC",
         borderWidth: 1,
-        borderColor: "#E6ECF2",
-        gap: 4,
+        borderColor: accent ? "#F1D99B" : "#E6ECF2",
+        gap: 5,
       }}
     >
-      <AppText variant="caption" color={colors.textDarkMuted}>
+      <AppText variant="caption" color={accent ? colors.gold : colors.textDarkMuted}>
         {label}
       </AppText>
       <AppText
@@ -170,102 +178,124 @@ function RoutePreviewCard({
 
   return (
     <AppCard>
-      <View style={{ gap: 14 }}>
-        <View style={{ gap: 4 }}>
-          <AppText variant="subheading" color={colors.textDarkPrimary}>
-            Route preview
-          </AppText>
-          <AppText variant="caption" color={colors.textDarkSecondary}>
-            NexusPay will compare cost, speed, liquidity and payout reliability.
-          </AppText>
-        </View>
-
-        <View
-          style={{
-            padding: 15,
-            borderRadius: 18,
-            backgroundColor: "#F8FAFC",
-            borderWidth: 1,
-            borderColor: "#E6ECF2",
-            gap: 12,
-          }}
-        >
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              gap: 12,
-              alignItems: "flex-start",
-            }}
-          >
-            <View style={{ flex: 1, gap: 4 }}>
-              <AppText variant="caption" color={colors.textDarkMuted}>
-                Orchestration rail
-              </AppText>
-              <AppText
-                variant="body"
-                color={colors.textDarkPrimary}
-                style={{ fontWeight: "900" }}
-              >
-                {signal.rail}
-              </AppText>
-            </View>
-
-            <View
-              style={{
-                paddingHorizontal: 10,
-                paddingVertical: 6,
-                borderRadius: 999,
-                backgroundColor: colors.goldSoft,
-                borderWidth: 1,
-                borderColor: "#F1D99B",
-              }}
-            >
-              <AppText
-                variant="caption"
-                color={colors.gold}
-                style={{ fontWeight: "900" }}
-              >
-                {signal.confidence}% confidence
-              </AppText>
-            </View>
+      <View style={{ gap: 16 }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
+          <View style={{ gap: 4, flex: 1 }}>
+            <AppText variant="subheading" color={colors.textDarkPrimary}>
+              Route preview
+            </AppText>
+            <AppText variant="caption" color={colors.textDarkSecondary}>
+              Best route candidate based on speed, cost, liquidity and payout reliability.
+            </AppText>
           </View>
 
           <View
             style={{
-              height: 8,
+              paddingHorizontal: 11,
+              paddingVertical: 7,
               borderRadius: 999,
-              backgroundColor: "#E6ECF2",
-              overflow: "hidden",
+              backgroundColor: colors.goldSoft,
+              borderWidth: 1,
+              borderColor: "#F1D99B",
+              alignSelf: "flex-start",
             }}
           >
-            <View
-              style={{
-                width: `${signal.confidence}%`,
-                height: "100%",
-                backgroundColor: colors.gold,
-              }}
-            />
+            <AppText variant="caption" color={colors.gold} style={{ fontWeight: "900" }}>
+              Best route
+            </AppText>
+          </View>
+        </View>
+
+        <View
+          style={{
+            padding: 16,
+            borderRadius: 22,
+            backgroundColor: "#F8FAFC",
+            borderWidth: 1,
+            borderColor: "#E6ECF2",
+            gap: 14,
+          }}
+        >
+          <View style={{ gap: 7 }}>
+            <AppText variant="caption" color={colors.textDarkMuted}>
+              Orchestration rail
+            </AppText>
+            <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+              {signal.rail.split(" → ").map((step, index, list) => (
+                <View key={`${step}-${index}`} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <View
+                    style={{
+                      paddingVertical: 8,
+                      paddingHorizontal: 11,
+                      borderRadius: 999,
+                      backgroundColor: index === 1 ? colors.goldSoft : "#FFFFFF",
+                      borderWidth: 1,
+                      borderColor: index === 1 ? "#F1D99B" : "#E6ECF2",
+                    }}
+                  >
+                    <AppText
+                      variant="caption"
+                      color={index === 1 ? colors.gold : colors.textDarkPrimary}
+                      style={{ fontWeight: "900" }}
+                    >
+                      {step}
+                    </AppText>
+                  </View>
+                  {index < list.length - 1 ? (
+                    <AppText color={colors.textDarkMuted} style={{ fontWeight: "900" }}>
+                      →
+                    </AppText>
+                  ) : null}
+                </View>
+              ))}
+            </View>
           </View>
 
           <View style={{ flexDirection: "row", gap: 8 }}>
             <InfoPill label="ETA" value={signal.delivery} />
-            <InfoPill label="Liquidity" value={signal.liquidity} />
-            <InfoPill label="Provider" value={provider || "..."} />
+            <InfoPill label="Fee" value={signal.fee} accent />
+            <InfoPill label="You save" value={signal.save} />
+          </View>
+
+          <View style={{ gap: 8 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+              <AppText variant="caption" color={colors.textDarkMuted}>
+                Confidence
+              </AppText>
+              <AppText variant="caption" color={colors.gold} style={{ fontWeight: "900" }}>
+                {signal.confidence}%
+              </AppText>
+            </View>
+            <View
+              style={{
+                height: 10,
+                borderRadius: 999,
+                backgroundColor: "#E6ECF2",
+                overflow: "hidden",
+              }}
+            >
+              <View
+                style={{
+                  width: `${signal.confidence}%`,
+                  height: "100%",
+                  backgroundColor: colors.gold,
+                }}
+              />
+            </View>
           </View>
         </View>
 
         <View
           style={{
-            padding: 15,
-            borderRadius: 18,
-            backgroundColor: "#FFFFFF",
+            padding: 16,
+            borderRadius: 22,
+            backgroundColor: colors.goldSoft,
             borderWidth: 1,
-            borderColor: "#E6ECF2",
-            gap: 6,
+            borderColor: "#F1D99B",
+            gap: 7,
           }}
         >
-          <AppText variant="caption" color={colors.textDarkMuted}>
+          <AppText variant="caption" color={colors.gold}>
             Estimated receive amount
           </AppText>
 
@@ -560,10 +590,31 @@ export default function SendScreen() {
           </View>
 
           <AppCard>
-            <View style={{ gap: 14 }}>
-              <AppText variant="subheading" color={colors.textDarkPrimary}>
-                You send
-              </AppText>
+            <View style={{ gap: 16 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                <View>
+                  <AppText variant="subheading" color={colors.textDarkPrimary}>
+                    You send
+                  </AppText>
+                  <AppText variant="caption" color={colors.textDarkSecondary}>
+                    Enter the GBP amount to route.
+                  </AppText>
+                </View>
+                <View
+                  style={{
+                    paddingHorizontal: 10,
+                    paddingVertical: 6,
+                    borderRadius: 999,
+                    backgroundColor: "#F8FAFC",
+                    borderWidth: 1,
+                    borderColor: "#E6ECF2",
+                  }}
+                >
+                  <AppText variant="caption" color={colors.textDarkSecondary} style={{ fontWeight: "900" }}>
+                    GBP
+                  </AppText>
+                </View>
+              </View>
 
               <InputField
                 value={amount}
@@ -581,6 +632,7 @@ export default function SendScreen() {
                 <InfoPill
                   label="After transfer"
                   value={`£${formatCurrency(balanceAfterTransfer)}`}
+                  accent={safeAmount > 0}
                 />
               </View>
             </View>
@@ -741,19 +793,21 @@ export default function SendScreen() {
           <Pressable
             onPress={handleFindRoutes}
             style={({ pressed }) => ({
-              paddingVertical: 16,
-              borderRadius: 18,
+              paddingVertical: 18,
+              borderRadius: 22,
               alignItems: "center",
               backgroundColor: colors.gold,
               shadowColor: colors.gold,
-              shadowOpacity: 0.3,
-              shadowRadius: 8,
+              shadowOpacity: 0.42,
+              shadowRadius: 14,
+              shadowOffset: { width: 0, height: 8 },
+              elevation: 8,
               transform: [{ scale: pressed ? 0.985 : 1 }],
             })}
           >
             <AppText
               color="#07111F"
-              style={{ fontSize: 17, fontWeight: "900" }}
+              style={{ fontSize: 18, fontWeight: "900" }}
             >
               Find best routes →
             </AppText>
