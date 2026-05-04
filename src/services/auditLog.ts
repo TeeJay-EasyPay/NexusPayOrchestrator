@@ -7,8 +7,14 @@ export type AuditEventType =
   | "TRANSFER_STARTED"
   | "TRANSFER_COMPLETED"
   | "XRPL_SETTLEMENT_COMPLETED"
+  | "RECIPIENT_SAVED"
+  | "RECIPIENT_REUSED"
+  | "RECIPIENT_FAVORITED"
+  | "RECIPIENT_UNFAVORITED"
+  | "RESEND_INITIATED"
   | "LOGIN"
-  | "SIGNUP";
+  | "SIGNUP"
+  | "LOGOUT";
 
 interface WriteAuditLogInput {
   eventType: AuditEventType;
