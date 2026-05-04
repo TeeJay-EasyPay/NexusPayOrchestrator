@@ -263,23 +263,19 @@ function RoutePreviewCard({
 
 export default function SendScreen() {
   const params = useLocalSearchParams();
-
   const { gbpBalance } = useWallet();
-
   const { createTransfer, setRecipient } = useTransfer();
 
   const [amount, setAmount] = useState("");
-
   const [selectedCountry, setSelectedCountry] = useState("Philippines");
-
   const [selectedPayoutMethod, setSelectedPayoutMethod] = useState<PayoutMethod>("BANK");
-
   const [selectedProvider, setSelectedProvider] = useState("BDO");
 
-  const [recipientName, setRecipientName] = useState("");
-
+  const [firstName, setFirstName] = useState("");
+  const [middleName, setMiddleName] = useState("");
+  const [surname, setSurname] = useState("");
+  const [bankCode, setBankCode] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
-
   const [mobileNumber, setMobileNumber] = useState("");
 
   useEffect(() => {
@@ -292,13 +288,10 @@ export default function SendScreen() {
 
       if (corridor) {
         const firstPayoutMethod = corridor.payoutMethods[0];
-
         const firstProvider = firstPayoutMethod.providers[0];
 
         setSelectedCountry(corridor.country);
-
         setSelectedPayoutMethod(firstPayoutMethod.type);
-
         setSelectedProvider(firstProvider);
       }
     }
@@ -326,15 +319,13 @@ export default function SendScreen() {
     if (!corridor) return;
 
     const firstPayoutMethod = corridor.payoutMethods[0];
-
     const firstProvider = firstPayoutMethod.providers[0];
 
     setSelectedCountry(country);
-
     setSelectedPayoutMethod(firstPayoutMethod.type);
-
     setSelectedProvider(firstProvider);
 
+    setBankCode("");
     setAccountNumber("");
     setMobileNumber("");
   };
@@ -343,9 +334,9 @@ export default function SendScreen() {
     const payoutConfig = availablePayoutMethods.find((item) => item.type === method);
 
     setSelectedPayoutMethod(method);
-
     setSelectedProvider(payoutConfig?.providers[0] ?? "");
 
+    setBankCode("");
     setAccountNumber("");
     setMobileNumber("");
   };
@@ -355,63 +346,66 @@ export default function SendScreen() {
 
     if (!amount || Number.isNaN(numericAmount) || numericAmount <= 0) {
       Alert.alert("Enter amount", "Please enter a valid GBP amount.");
-
       return;
     }
 
     if (numericAmount > gbpBalance) {
       Alert.alert("Insufficient balance", "You do not have enough GBP funds.");
-
       return;
     }
 
     if (!selectedCorridor) {
       Alert.alert("Select country", "Please select a destination country.");
-
       return;
     }
 
-    if (!recipientName.trim()) {
-      Alert.alert("Recipient required", "Please enter recipient name.");
+    if (!firstName.trim()) {
+      Alert.alert("First name required", "Please enter the recipient first name.");
+      return;
+    }
 
+    if (!surname.trim()) {
+      Alert.alert("Surname required", "Please enter the recipient surname.");
+      return;
+    }
+
+    if (selectedPayoutMethod === "BANK" && !bankCode.trim()) {
+      Alert.alert("Bank routing required", "Please enter the recipient bank, branch, or sort code.");
       return;
     }
 
     if (selectedPayoutMethod === "BANK" && !accountNumber.trim()) {
       Alert.alert("Account number required", "Please enter recipient bank account number.");
-
       return;
     }
 
     if (selectedPayoutMethod === "MOBILE_WALLET" && !mobileNumber.trim()) {
       Alert.alert("Mobile number required", "Please enter recipient mobile wallet number.");
-
       return;
     }
 
+    const recipientFullName = [firstName.trim(), middleName.trim(), surname.trim()]
+      .filter(Boolean)
+      .join(" ");
+
     const recipient: Recipient = {
-      name: recipientName.trim(),
-
+      name: recipientFullName,
+      firstName: firstName.trim(),
+      middleName: middleName.trim() || undefined,
+      surname: surname.trim(),
       country: selectedCorridor.country,
-
       currency: selectedCorridor.currency,
-
       payoutMethod: selectedPayoutMethod,
-
       bankName: selectedPayoutMethod === "BANK" ? selectedProvider : undefined,
-
+      bankCode: selectedPayoutMethod === "BANK" ? bankCode.trim() : undefined,
       accountNumber: selectedPayoutMethod === "BANK" ? accountNumber.trim() : undefined,
-
       mobileWalletProvider:
         selectedPayoutMethod === "MOBILE_WALLET" ? selectedProvider : undefined,
-
       mobileNumber: selectedPayoutMethod === "MOBILE_WALLET" ? mobileNumber.trim() : undefined,
     };
 
     createTransfer(numericAmount);
-
     setRecipient(recipient);
-
     router.push("/routes");
   };
 
@@ -606,29 +600,55 @@ export default function SendScreen() {
 
           <AppCard>
             <View style={{ gap: 12 }}>
-              <AppText variant="subheading" color={colors.textDarkPrimary}>
-                Recipient details
-              </AppText>
+              <View style={{ gap: 4 }}>
+                <AppText variant="subheading" color={colors.textDarkPrimary}>
+                  Recipient details
+                </AppText>
+
+                <AppText variant="caption" color={colors.textDarkSecondary}>
+                  First name and surname are required for payout screening and bank matching.
+                </AppText>
+              </View>
 
               <InputField
-                value={recipientName}
-                onChangeText={setRecipientName}
-                placeholder="Recipient full name"
+                value={firstName}
+                onChangeText={setFirstName}
+                placeholder="First name *"
+              />
+
+              <InputField
+                value={middleName}
+                onChangeText={setMiddleName}
+                placeholder="Middle name (optional)"
+              />
+
+              <InputField
+                value={surname}
+                onChangeText={setSurname}
+                placeholder="Surname *"
               />
 
               {selectedPayoutMethod === "BANK" ? (
-                <InputField
-                  value={accountNumber}
-                  onChangeText={setAccountNumber}
-                  keyboardType="number-pad"
-                  placeholder="Recipient bank account number"
-                />
+                <>
+                  <InputField
+                    value={bankCode}
+                    onChangeText={setBankCode}
+                    placeholder="Bank / branch / sort code *"
+                  />
+
+                  <InputField
+                    value={accountNumber}
+                    onChangeText={setAccountNumber}
+                    keyboardType="number-pad"
+                    placeholder="Recipient bank account number *"
+                  />
+                </>
               ) : (
                 <InputField
                   value={mobileNumber}
                   onChangeText={setMobileNumber}
                   keyboardType="phone-pad"
-                  placeholder="Recipient mobile wallet number"
+                  placeholder="Recipient mobile wallet number *"
                 />
               )}
             </View>
