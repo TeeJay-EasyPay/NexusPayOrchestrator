@@ -20,15 +20,6 @@ import { colors } from "../src/theme";
 import { SavedRecipient } from "../src/types/recipient";
 import { PayoutMethod, Recipient } from "../src/types/transfer";
 
-const cyan = "#27F5FF";
-const cyanDim = "rgba(39,245,255,0.18)";
-const deepSpace = "#020713";
-const deepNavy = "#041426";
-const panel = "rgba(3,15,30,0.96)";
-const panelRaised = "rgba(7,28,50,0.96)";
-const mutedText = "#A8C7D8";
-const cyanBorder = "rgba(39,245,255,0.55)";
-
 function formatCurrency(value: number) {
   return value.toLocaleString(undefined, {
     minimumFractionDigits: 2,
@@ -52,6 +43,7 @@ function getCorridorSignal(country: string) {
       liquidity: "High",
       delivery: "Minutes",
       rail: "GBP → RLUSD → PHP",
+      receiveRate: 72.4,
     };
   }
 
@@ -60,62 +52,8 @@ function getCorridorSignal(country: string) {
     liquidity: "Healthy",
     delivery: "Minutes",
     rail: "GBP → RLUSD → MYR",
+    receiveRate: 5.92,
   };
-}
-
-function GlassCard({
-  children,
-  style,
-}: {
-  children: React.ReactNode;
-  style?: any;
-}) {
-  return (
-    <AppCard
-      style={{
-        backgroundColor: panel,
-        borderColor: cyanBorder,
-        borderWidth: 1,
-        shadowColor: cyan,
-        shadowOpacity: 0.45,
-        shadowRadius: 28,
-        shadowOffset: { width: 0, height: 14 },
-        elevation: 12,
-        overflow: "hidden",
-        ...style,
-      }}
-    >
-      <View
-        pointerEvents="none"
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 84,
-          backgroundColor: "rgba(39,245,255,0.14)",
-        }}
-      />
-
-      <View
-        pointerEvents="none"
-        style={{
-          position: "absolute",
-          top: -42,
-          right: -42,
-          width: 148,
-          height: 148,
-          borderRadius: 74,
-          backgroundColor: "rgba(39,245,255,0.18)",
-          shadowColor: cyan,
-          shadowOpacity: 1,
-          shadowRadius: 32,
-        }}
-      />
-
-      <View style={{ position: "relative" }}>{children}</View>
-    </AppCard>
-  );
 }
 
 function InputField({
@@ -137,19 +75,16 @@ function InputField({
       onChangeText={onChangeText}
       keyboardType={keyboardType}
       placeholder={placeholder}
-      placeholderTextColor="#6EAFC0"
+      placeholderTextColor={colors.textDarkMuted}
       style={{
         borderWidth: 1,
-        borderColor: "rgba(39,245,255,0.5)",
-        borderRadius: 18,
-        padding: large ? 18 : 15,
-        fontSize: large ? 31 : 16,
-        fontWeight: large ? "900" : "700",
-        color: "#FFFFFF",
-        backgroundColor: "rgba(1,8,18,0.82)",
-        shadowColor: cyan,
-        shadowOpacity: 0.25,
-        shadowRadius: 10,
+        borderColor: "#E6ECF2",
+        borderRadius: 14,
+        padding: large ? 18 : 14,
+        fontSize: large ? 28 : 16,
+        fontWeight: large ? "800" : "500",
+        color: colors.textDarkPrimary,
+        backgroundColor: "#F8FAFC",
       }}
     />
   );
@@ -159,35 +94,28 @@ function SelectorChip({
   label,
   selected,
   onPress,
-  accent = cyan,
 }: {
   label: string;
   selected: boolean;
   onPress: () => void;
-  accent?: string;
 }) {
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => ({
-        paddingVertical: 12,
-        paddingHorizontal: 16,
+        paddingVertical: 11,
+        paddingHorizontal: 14,
         borderRadius: 999,
         borderWidth: 1,
-        borderColor: selected ? accent : "rgba(255,255,255,0.18)",
-        backgroundColor: selected
-          ? "rgba(39,245,255,0.2)"
-          : "rgba(255,255,255,0.06)",
-        shadowColor: selected ? accent : "transparent",
-        shadowOpacity: selected ? 0.72 : 0,
-        shadowRadius: selected ? 18 : 0,
-        elevation: selected ? 8 : 0,
+        borderColor: selected ? colors.gold : "#E6ECF2",
+        backgroundColor: selected ? colors.goldSoft : "#F3F6FA",
         transform: [{ scale: pressed ? 0.98 : 1 }],
       })}
     >
       <AppText
+        variant="caption"
         style={{
-          color: selected ? "#FFFFFF" : "#B7D3E1",
+          color: selected ? colors.gold : colors.textDarkSecondary,
           fontWeight: "900",
         }}
       >
@@ -197,59 +125,28 @@ function SelectorChip({
   );
 }
 
-function PreviewMetric({ label, value }: { label: string; value: string }) {
+function InfoPill({ label, value }: { label: string; value: string }) {
   return (
     <View
       style={{
         flex: 1,
         padding: 12,
-        borderRadius: 17,
-        backgroundColor: "rgba(39,245,255,0.11)",
+        borderRadius: 16,
+        backgroundColor: "#F8FAFC",
         borderWidth: 1,
-        borderColor: "rgba(39,245,255,0.26)",
+        borderColor: "#E6ECF2",
         gap: 4,
       }}
     >
-      <AppText variant="caption" color="#8EEBFF">
+      <AppText variant="caption" color={colors.textDarkMuted}>
         {label}
       </AppText>
-      <AppText variant="body" color="#FFFFFF" style={{ fontWeight: "900" }}>
-        {value}
-      </AppText>
-    </View>
-  );
-}
-
-function RouteNode({ label, detail }: { label: string; detail: string }) {
-  return (
-    <View style={{ flex: 1, alignItems: "center", gap: 6 }}>
-      <View
-        style={{
-          width: 45,
-          height: 45,
-          borderRadius: 23,
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: cyanDim,
-          borderWidth: 1,
-          borderColor: cyan,
-          shadowColor: cyan,
-          shadowOpacity: 0.72,
-          shadowRadius: 16,
-          elevation: 8,
-        }}
+      <AppText
+        variant="body"
+        color={colors.textDarkPrimary}
+        style={{ fontWeight: "900" }}
       >
-        <AppText color="#FFFFFF" style={{ fontWeight: "900" }}>
-          {label.slice(0, 1)}
-        </AppText>
-      </View>
-
-      <AppText color="#FFFFFF" style={{ fontWeight: "900" }}>
-        {label}
-      </AppText>
-
-      <AppText variant="caption" color={mutedText}>
-        {detail}
+        {value}
       </AppText>
     </View>
   );
@@ -269,133 +166,120 @@ function RoutePreviewCard({
   payoutMethod: PayoutMethod;
 }) {
   const signal = getCorridorSignal(selectedCountry);
-  const estimatedReceive =
-    amount > 0 ? amount * (currency === "PHP" ? 72.4 : 5.92) : 0;
+  const estimatedReceive = amount > 0 ? amount * signal.receiveRate : 0;
 
   return (
-    <GlassCard style={{ borderColor: "rgba(39,245,255,0.62)" }}>
-      <View style={{ gap: 15 }}>
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-between",
-            gap: 12,
-          }}
-        >
-          <View style={{ gap: 4, flex: 1 }}>
-            <AppText variant="subheading" color="#FFFFFF">
-              Route preview
-            </AppText>
-            <AppText variant="caption" color={mutedText}>
-              Visual orchestration path before route ranking.
-            </AppText>
-          </View>
-
-          <View
-            style={{
-              paddingHorizontal: 11,
-              paddingVertical: 7,
-              borderRadius: 999,
-              backgroundColor: "rgba(39,245,255,0.2)",
-              borderWidth: 1,
-              borderColor: "rgba(39,245,255,0.62)",
-              shadowColor: cyan,
-              shadowOpacity: 0.58,
-              shadowRadius: 15,
-            }}
-          >
-            <AppText variant="caption" color={cyan} style={{ fontWeight: "900" }}>
-              ★ Recommended
-            </AppText>
-          </View>
+    <AppCard>
+      <View style={{ gap: 14 }}>
+        <View style={{ gap: 4 }}>
+          <AppText variant="subheading" color={colors.textDarkPrimary}>
+            Route preview
+          </AppText>
+          <AppText variant="caption" color={colors.textDarkSecondary}>
+            NexusPay will compare cost, speed, liquidity and payout reliability.
+          </AppText>
         </View>
 
         <View
           style={{
-            padding: 16,
-            borderRadius: 24,
-            backgroundColor: panelRaised,
+            padding: 15,
+            borderRadius: 18,
+            backgroundColor: "#F8FAFC",
             borderWidth: 1,
-            borderColor: "rgba(39,245,255,0.38)",
-            gap: 15,
-            shadowColor: cyan,
-            shadowOpacity: 0.28,
-            shadowRadius: 20,
+            borderColor: "#E6ECF2",
+            gap: 12,
           }}
         >
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <RouteNode label="GBP" detail="You send" />
-            <AppText color={cyan} style={{ fontSize: 23, fontWeight: "900" }}>
-              →
-            </AppText>
-            <RouteNode label="RLUSD" detail="Bridge" />
-            <AppText color={cyan} style={{ fontSize: 23, fontWeight: "900" }}>
-              →
-            </AppText>
-            <RouteNode label={currency ?? "..."} detail="Recipient gets" />
-          </View>
-
-          <View style={{ flexDirection: "row", gap: 8 }}>
-            <PreviewMetric label="ETA" value={signal.delivery} />
-            <PreviewMetric label="Liquidity" value={signal.liquidity} />
-            <PreviewMetric label="Provider" value={provider || "..."} />
-          </View>
-
-          <View style={{ gap: 7 }}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <AppText variant="caption" color={mutedText}>
-                Confidence
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              gap: 12,
+              alignItems: "flex-start",
+            }}
+          >
+            <View style={{ flex: 1, gap: 4 }}>
+              <AppText variant="caption" color={colors.textDarkMuted}>
+                Orchestration rail
               </AppText>
-              <AppText variant="caption" color={cyan} style={{ fontWeight: "900" }}>
-                {signal.confidence}%
+              <AppText
+                variant="body"
+                color={colors.textDarkPrimary}
+                style={{ fontWeight: "900" }}
+              >
+                {signal.rail}
               </AppText>
             </View>
 
             <View
               style={{
-                height: 9,
+                paddingHorizontal: 10,
+                paddingVertical: 6,
                 borderRadius: 999,
-                backgroundColor: "rgba(255,255,255,0.12)",
-                overflow: "hidden",
+                backgroundColor: colors.goldSoft,
+                borderWidth: 1,
+                borderColor: "#F1D99B",
               }}
             >
-              <View
-                style={{
-                  width: `${signal.confidence}%`,
-                  height: "100%",
-                  backgroundColor: cyan,
-                }}
-              />
+              <AppText
+                variant="caption"
+                color={colors.gold}
+                style={{ fontWeight: "900" }}
+              >
+                {signal.confidence}% confidence
+              </AppText>
             </View>
+          </View>
+
+          <View
+            style={{
+              height: 8,
+              borderRadius: 999,
+              backgroundColor: "#E6ECF2",
+              overflow: "hidden",
+            }}
+          >
+            <View
+              style={{
+                width: `${signal.confidence}%`,
+                height: "100%",
+                backgroundColor: colors.gold,
+              }}
+            />
+          </View>
+
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <InfoPill label="ETA" value={signal.delivery} />
+            <InfoPill label="Liquidity" value={signal.liquidity} />
+            <InfoPill label="Provider" value={provider || "..."} />
           </View>
         </View>
 
         <View
           style={{
             padding: 15,
-            borderRadius: 20,
-            backgroundColor: "rgba(255,255,255,0.065)",
+            borderRadius: 18,
+            backgroundColor: "#FFFFFF",
             borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.14)",
+            borderColor: "#E6ECF2",
             gap: 6,
           }}
         >
-          <AppText variant="caption" color={mutedText}>
+          <AppText variant="caption" color={colors.textDarkMuted}>
             Estimated receive amount
           </AppText>
 
-          <AppText variant="title" color="#FFFFFF">
+          <AppText variant="title" color={colors.textDarkPrimary}>
             {estimatedReceive > 0 ? formatCurrency(estimatedReceive) : "0.00"}{" "}
             {currency ?? ""}
           </AppText>
 
-          <AppText variant="caption" color={mutedText}>
-            {signal.rail} • {getPayoutLabel(payoutMethod)} via{" "}
-            {provider || "provider"}
+          <AppText variant="caption" color={colors.textDarkSecondary}>
+            {getPayoutLabel(payoutMethod)} via {provider || "provider"}
           </AppText>
         </View>
       </View>
-    </GlassCard>
+    </AppCard>
   );
 }
 
@@ -457,7 +341,9 @@ export default function SendScreen() {
 
     const resendAmount = getStringParam(params.amount);
     const resendCountry = getStringParam(params.country);
-    const resendPayoutMethod = getStringParam(params.payoutMethod) as PayoutMethod;
+    const resendPayoutMethod = getStringParam(
+      params.payoutMethod
+    ) as PayoutMethod;
     const resendProvider = getStringParam(params.provider);
 
     if (resendAmount) setAmount(resendAmount);
@@ -467,7 +353,8 @@ export default function SendScreen() {
 
       if (corridor) {
         const payoutMethod =
-          resendPayoutMethod === "BANK" || resendPayoutMethod === "MOBILE_WALLET"
+          resendPayoutMethod === "BANK" ||
+          resendPayoutMethod === "MOBILE_WALLET"
             ? resendPayoutMethod
             : corridor.payoutMethods[0].type;
 
@@ -492,6 +379,7 @@ export default function SendScreen() {
   const numericAmount = Number(amount);
   const safeAmount =
     !Number.isNaN(numericAmount) && numericAmount > 0 ? numericAmount : 0;
+
   const balanceAfterTransfer = Math.max((gbpBalance ?? 0) - safeAmount, 0);
 
   const selectedCorridor = useMemo(
@@ -502,7 +390,10 @@ export default function SendScreen() {
   const availablePayoutMethods = selectedCorridor?.payoutMethods ?? [];
 
   const selectedPayoutConfig = useMemo(
-    () => availablePayoutMethods.find((method) => method.type === selectedPayoutMethod),
+    () =>
+      availablePayoutMethods.find(
+        (method) => method.type === selectedPayoutMethod
+      ),
     [availablePayoutMethods, selectedPayoutMethod]
   );
 
@@ -551,6 +442,10 @@ export default function SendScreen() {
     refreshSavedRecipients();
   };
 
+  const clearSelectedRecipient = () => {
+    setSelectedRecipientId(null);
+  };
+
   const handleCountrySelect = (country: string) => {
     const corridor = corridors.find((item) => item.country === country);
     if (!corridor) return;
@@ -558,7 +453,7 @@ export default function SendScreen() {
     const firstPayoutMethod = corridor.payoutMethods[0];
     const firstProvider = firstPayoutMethod.providers[0];
 
-    setSelectedRecipientId(null);
+    clearSelectedRecipient();
     setSelectedCountry(country);
     setSelectedPayoutMethod(firstPayoutMethod.type);
     setSelectedProvider(firstProvider);
@@ -568,9 +463,11 @@ export default function SendScreen() {
   };
 
   const handlePayoutMethodSelect = (method: PayoutMethod) => {
-    const payoutConfig = availablePayoutMethods.find((item) => item.type === method);
+    const payoutConfig = availablePayoutMethods.find(
+      (item) => item.type === method
+    );
 
-    setSelectedRecipientId(null);
+    clearSelectedRecipient();
     setSelectedPayoutMethod(method);
     setSelectedProvider(payoutConfig?.providers[0] ?? "");
     setBankCode("");
@@ -658,66 +555,35 @@ export default function SendScreen() {
   };
 
   return (
-    <Screen style={{ backgroundColor: deepSpace }}>
-      <View
-        style={{
-          position: "absolute",
-          top: 0,
-          left: -18,
-          right: -18,
-          bottom: -40,
-          backgroundColor: deepSpace,
-        }}
-      />
-
-      <View
-        pointerEvents="none"
-        style={{
-          position: "absolute",
-          top: 0,
-          left: -18,
-          right: -18,
-          height: 620,
-          backgroundColor: deepNavy,
-          opacity: 0.42,
-        }}
-      />
-
+    <Screen style={{ backgroundColor: colors.background }}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={{ gap: 18, paddingBottom: 40 }}>
+        <View style={{ gap: 20, paddingBottom: 40 }}>
           <View style={{ gap: 6 }}>
-            <AppText variant="caption" color={cyan} style={{ fontWeight: "900" }}>
-              ORCHESTRATION ENGINE
+            <AppText variant="caption" color={colors.gold}>
+              SEND MONEY
             </AppText>
 
-            <AppText
-              variant="title"
-              color="#FFFFFF"
-              style={{ textShadowColor: cyan, textShadowRadius: 10 }}
-            >
-              Send Money
+            <AppText variant="title" color={colors.textPrimary}>
+              New Transfer
             </AppText>
 
-            <AppText variant="body" color={mutedText}>
-              Move value through the smartest available corridor.
+            <AppText variant="body" color={colors.textSecondary}>
+              Fast, secure and transparent transfers powered by route intelligence.
             </AppText>
           </View>
 
-          <GlassCard style={{ borderColor: "rgba(39,245,255,0.62)" }}>
+          <AppCard>
             <View style={{ gap: 14 }}>
               <View
                 style={{
                   flexDirection: "row",
                   justifyContent: "space-between",
                   gap: 12,
+                  alignItems: "flex-start",
                 }}
               >
                 <View style={{ flex: 1, gap: 8 }}>
-                  <AppText
-                    variant="caption"
-                    color="#8EEBFF"
-                    style={{ fontWeight: "900" }}
-                  >
+                  <AppText variant="subheading" color={colors.textDarkPrimary}>
                     You send
                   </AppText>
 
@@ -732,42 +598,26 @@ export default function SendScreen() {
 
                 <View
                   style={{
-                    width: 118,
-                    padding: 13,
-                    borderRadius: 24,
-                    backgroundColor: panelRaised,
+                    width: 112,
+                    padding: 12,
+                    borderRadius: 18,
+                    backgroundColor: colors.goldSoft,
                     borderWidth: 1,
-                    borderColor: "rgba(39,245,255,0.38)",
-                    justifyContent: "center",
-                    gap: 6,
-                    shadowColor: colors.gold,
-                    shadowOpacity: 0.28,
-                    shadowRadius: 16,
+                    borderColor: "#F1D99B",
+                    gap: 5,
                   }}
                 >
                   <AppText
-                    color={cyan}
-                    style={{
-                      fontSize: 28,
-                      fontWeight: "900",
-                      textShadowColor: cyan,
-                      textShadowRadius: 8,
-                    }}
-                  >
-                    ↗
-                  </AppText>
-
-                  <AppText
-                    variant="caption"
-                    color="#FFFFFF"
-                    style={{ fontWeight: "900" }}
-                  >
-                    Live rate
-                  </AppText>
-
-                  <AppText
                     variant="caption"
                     color={colors.gold}
+                    style={{ fontWeight: "900" }}
+                  >
+                    Corridor
+                  </AppText>
+
+                  <AppText
+                    variant="body"
+                    color={colors.textDarkPrimary}
                     style={{ fontWeight: "900" }}
                   >
                     GBP → {selectedCorridor?.currency ?? "..."}
@@ -776,17 +626,17 @@ export default function SendScreen() {
               </View>
 
               <View style={{ flexDirection: "row", gap: 8 }}>
-                <PreviewMetric
+                <InfoPill
                   label="Available"
                   value={`£${formatCurrency(gbpBalance ?? 0)}`}
                 />
-                <PreviewMetric
-                  label="After"
+                <InfoPill
+                  label="After transfer"
                   value={`£${formatCurrency(balanceAfterTransfer)}`}
                 />
               </View>
             </View>
-          </GlassCard>
+          </AppCard>
 
           <SavedRecipientsCard
             recipients={savedRecipients}
@@ -795,24 +645,24 @@ export default function SendScreen() {
             onToggleFavorite={handleToggleFavorite}
           />
 
-          <GlassCard>
+          <AppCard>
             <View style={{ gap: 12 }}>
-              <AppText variant="subheading" color="#FFFFFF">
-                Corridor
+              <AppText variant="subheading" color={colors.textDarkPrimary}>
+                Destination
               </AppText>
 
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                 {corridors.map((corridor) => (
                   <SelectorChip
                     key={corridor.country}
-                    label={`GBP → ${corridor.currency}`}
+                    label={`${corridor.country} • ${corridor.currency}`}
                     selected={selectedCountry === corridor.country}
                     onPress={() => handleCountrySelect(corridor.country)}
                   />
                 ))}
               </View>
             </View>
-          </GlassCard>
+          </AppCard>
 
           <RoutePreviewCard
             selectedCountry={selectedCountry}
@@ -822,9 +672,9 @@ export default function SendScreen() {
             payoutMethod={selectedPayoutMethod}
           />
 
-          <GlassCard>
+          <AppCard>
             <View style={{ gap: 12 }}>
-              <AppText variant="subheading" color="#FFFFFF">
+              <AppText variant="subheading" color={colors.textDarkPrimary}>
                 Payout method
               </AppText>
 
@@ -839,12 +689,14 @@ export default function SendScreen() {
                 ))}
               </View>
             </View>
-          </GlassCard>
+          </AppCard>
 
-          <GlassCard>
+          <AppCard>
             <View style={{ gap: 12 }}>
-              <AppText variant="subheading" color="#FFFFFF">
-                {selectedPayoutMethod === "BANK" ? "Payout bank" : "Wallet provider"}
+              <AppText variant="subheading" color={colors.textDarkPrimary}>
+                {selectedPayoutMethod === "BANK"
+                  ? "Payout bank"
+                  : "Wallet provider"}
               </AppText>
 
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
@@ -854,31 +706,32 @@ export default function SendScreen() {
                     label={provider}
                     selected={selectedProvider === provider}
                     onPress={() => {
-                      setSelectedRecipientId(null);
+                      clearSelectedRecipient();
                       setSelectedProvider(provider);
                     }}
-                    accent={colors.gold}
                   />
                 ))}
               </View>
             </View>
-          </GlassCard>
+          </AppCard>
 
-          <GlassCard>
+          <AppCard>
             <View style={{ gap: 12 }}>
               <View style={{ gap: 4 }}>
-                <AppText variant="subheading" color="#FFFFFF">
+                <AppText variant="subheading" color={colors.textDarkPrimary}>
                   Recipient details
                 </AppText>
-                <AppText variant="caption" color={mutedText}>
-                  Required for payout screening and destination matching.
+
+                <AppText variant="caption" color={colors.textDarkSecondary}>
+                  First name and surname are required for payout screening and
+                  destination matching.
                 </AppText>
               </View>
 
               <InputField
                 value={firstName}
                 onChangeText={(value) => {
-                  setSelectedRecipientId(null);
+                  clearSelectedRecipient();
                   setFirstName(value);
                 }}
                 placeholder="First name *"
@@ -887,7 +740,7 @@ export default function SendScreen() {
               <InputField
                 value={middleName}
                 onChangeText={(value) => {
-                  setSelectedRecipientId(null);
+                  clearSelectedRecipient();
                   setMiddleName(value);
                 }}
                 placeholder="Middle name (optional)"
@@ -896,7 +749,7 @@ export default function SendScreen() {
               <InputField
                 value={surname}
                 onChangeText={(value) => {
-                  setSelectedRecipientId(null);
+                  clearSelectedRecipient();
                   setSurname(value);
                 }}
                 placeholder="Surname *"
@@ -907,7 +760,7 @@ export default function SendScreen() {
                   <InputField
                     value={bankCode}
                     onChangeText={(value) => {
-                      setSelectedRecipientId(null);
+                      clearSelectedRecipient();
                       setBankCode(value);
                     }}
                     placeholder="Bank / branch / sort code *"
@@ -916,7 +769,7 @@ export default function SendScreen() {
                   <InputField
                     value={accountNumber}
                     onChangeText={(value) => {
-                      setSelectedRecipientId(null);
+                      clearSelectedRecipient();
                       setAccountNumber(value);
                     }}
                     keyboardType="number-pad"
@@ -927,7 +780,7 @@ export default function SendScreen() {
                 <InputField
                   value={mobileNumber}
                   onChangeText={(value) => {
-                    setSelectedRecipientId(null);
+                    clearSelectedRecipient();
                     setMobileNumber(value);
                   }}
                   keyboardType="phone-pad"
@@ -935,25 +788,25 @@ export default function SendScreen() {
                 />
               )}
             </View>
-          </GlassCard>
+          </AppCard>
 
           <Pressable
             onPress={handleFindRoutes}
             style={({ pressed }) => ({
-              paddingVertical: 18,
-              borderRadius: 22,
+              paddingVertical: 16,
+              borderRadius: 18,
               alignItems: "center",
               backgroundColor: colors.gold,
-              borderWidth: 1,
-              borderColor: "#FFD76B",
               shadowColor: colors.gold,
-              shadowOpacity: 0.72,
-              shadowRadius: 22,
-              elevation: 12,
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
               transform: [{ scale: pressed ? 0.985 : 1 }],
             })}
           >
-            <AppText color="#07111F" style={{ fontSize: 18, fontWeight: "900" }}>
+            <AppText
+              color="#07111F"
+              style={{ fontSize: 17, fontWeight: "900" }}
+            >
               Find best routes →
             </AppText>
           </Pressable>
