@@ -1,6 +1,11 @@
 import { PayoutMethod, Recipient } from "../../types/transfer";
 
-export type PayoutProviderId = "MOCK_PAYOUT_SANDBOX" | "THUNES_SANDBOX" | "NIUM_SANDBOX";
+export type PayoutProviderId =
+  | "MOCK_PAYOUT_SANDBOX"
+  | "THUNES_SANDBOX"
+  | "NIUM_SANDBOX"
+  | "TRANGLO_SANDBOX"
+  | "NEXTPAY_SANDBOX";
 
 export type PayoutStatus =
   | "NOT_STARTED"
@@ -38,6 +43,8 @@ export interface PayoutResult {
   updatedAt: string;
   sandbox: boolean;
   providerMessage: string;
+  routingReason?: string;
+  fallbackUsed?: boolean;
 }
 
 export interface PayoutProvider {
@@ -45,4 +52,34 @@ export interface PayoutProvider {
   name: string;
   createPayout: (request: CreatePayoutRequest) => Promise<PayoutResult>;
   getPayoutStatus: (payoutReference: string) => Promise<PayoutStatus>;
+}
+
+export interface PayoutPartnerProfile {
+  id: PayoutProviderId;
+  name: string;
+  supportedCountries: string[];
+  supportedCurrencies: string[];
+  supportedPayoutMethods: PayoutMethod[];
+  supportedBanks: string[];
+  priority: number;
+  estimatedMinutes: number;
+  reliabilityScore: number;
+  feeScore: number;
+  sandboxReady: boolean;
+  requiresCredentials: boolean;
+}
+
+export interface PayoutPartnerSelection {
+  selectedProviderId: PayoutProviderId;
+  selectedProviderName: string;
+  score: number;
+  reason: string;
+  fallbackProviderId: PayoutProviderId;
+  evaluatedProviders: Array<{
+    id: PayoutProviderId;
+    name: string;
+    score: number;
+    supported: boolean;
+    reason: string;
+  }>;
 }
