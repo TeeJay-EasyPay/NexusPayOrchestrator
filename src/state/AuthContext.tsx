@@ -37,11 +37,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [demoAccessEnabled, setDemoAccessEnabled] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
+    let startupSessionCleared = false;
+
+    async function initialiseSecureEntry() {
+      if (!isSupabaseConfigured) {
+        console.error(getSupabaseConfigError());
+
+        if (isMounted) {
+          setSession(null);
+          setDemoAccessEnabled(false);
+          setLoading(false);
+        }
+
+        return;
+      }
+
+      try {
+        await supabase.auth.signOut();
+      } catch (error) {
+        console.warn("Startup session clear skipped", error);
+      } finally {
+        startupSessionCleared = true;
+
+        if (isMounted) {
+          setSession(null);
+          setDemoAccessEnabled(false);
+          setLoading(false);
+        }
+      }
+    }
+
     initialiseSecureEntry();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!startupSessionCleared && event === "INITIAL_SESSION") {
+        return;
+      }
+
       setSession(session);
 
       if (session?.user) {
@@ -54,25 +89,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => {
+      isMounted = false;
       subscription.unsubscribe();
     };
   }, []);
-
-  function initialiseSecureEntry() {
-    if (!isSupabaseConfigured) {
-      console.error(getSupabaseConfigError());
-    }
-
-    setSession(null);
-    setDemoAccessEnabled(false);
-    setLoading(false);
-
-    if (isSupabaseConfigured) {
-      supabase.auth.signOut().catch((error) => {
-        console.warn("Startup session clear skipped", error);
-      });
-    }
-  }
 
   async function enableDemoAccess() {
     if (!DEMO_EMAIL || !DEMO_PASSWORD) {
