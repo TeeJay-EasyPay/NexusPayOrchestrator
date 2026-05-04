@@ -1,6 +1,5 @@
 import { Session } from "@supabase/supabase-js";
 import * as Linking from "expo-linking";
-import { router } from "expo-router";
 import React, {
   createContext,
   useContext,
@@ -67,7 +66,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setSession(null);
     setDemoAccessEnabled(false);
     setLoading(false);
-    router.replace("/auth");
 
     if (isSupabaseConfigured) {
       supabase.auth.signOut().catch((error) => {
@@ -97,8 +95,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         mode: "DEMO_PLATFORM_ACCESS",
       },
     });
-
-    router.replace("/");
 
     return null;
   }
@@ -134,8 +130,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email,
         },
       });
-
-      router.replace("/");
 
       return null;
     } catch (error) {
@@ -183,7 +177,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setDemoAccessEnabled(false);
     setSession(null);
     await supabase.auth.signOut();
-    router.replace("/auth");
   }
 
   const value = useMemo(
