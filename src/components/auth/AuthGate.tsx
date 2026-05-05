@@ -1,5 +1,5 @@
 import { router, usePathname } from "expo-router";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { ActivityIndicator, View } from "react-native";
 
 import { useAuth } from "../../state/AuthContext";
@@ -19,15 +19,21 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isPublicRoute = PUBLIC_ROUTES.has(pathname);
 
+  const hasRedirectedRef = useRef(false);
+
   useEffect(() => {
     if (loading) return;
 
+    if (hasRedirectedRef.current) return;
+
     if (!session && !demoAccessEnabled && !isPublicRoute) {
+      hasRedirectedRef.current = true;
       router.replace("/auth");
       return;
     }
 
     if ((session || demoAccessEnabled) && pathname === "/auth") {
+      hasRedirectedRef.current = true;
       router.replace("/");
     }
   }, [session, loading, pathname, isPublicRoute, demoAccessEnabled]);
