@@ -23,7 +23,7 @@ function LoadingOverlay() {
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { session, loading, demoAccessEnabled } = useAuth();
-  const { locked, unlock, biometricAvailable } = useDeviceUnlock();
+  const { locked } = useDeviceUnlock();
   const pathname = usePathname();
   const lastRedirectRef = useRef<string | null>(null);
 
@@ -35,7 +35,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
     const target = !hasAccess && !isPublicRoute
       ? "/auth"
-      : hasAccess && isPublicRoute
+      : hasAccess && isPublicRoute && !locked
         ? "/"
         : null;
 
@@ -50,18 +50,11 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     }, 0);
 
     return () => clearTimeout(timeout);
-  }, [hasAccess, isPublicRoute, loading, pathname, router]);
+  }, [hasAccess, isPublicRoute, loading, locked, pathname, router]);
 
   useEffect(() => {
     lastRedirectRef.current = null;
   }, [pathname]);
-
-  // 🔥 NEW: Auto biometric unlock (no extra screen)
-  useEffect(() => {
-    if (!loading && hasAccess && locked && biometricAvailable && !isPublicRoute) {
-      unlock();
-    }
-  }, [loading, hasAccess, locked, biometricAvailable, isPublicRoute]);
 
   if (loading) {
     return (
@@ -73,6 +66,15 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   }
 
   if (!hasAccess && !isPublicRoute) {
+    return (
+      <View style={styles.root}>
+        {children}
+        <LoadingOverlay />
+      </View>
+    );
+  }
+
+  if (hasAccess && locked && !isPublicRoute) {
     return (
       <View style={styles.root}>
         {children}
