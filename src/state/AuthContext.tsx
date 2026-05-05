@@ -18,8 +18,6 @@ import { writeAuditLog } from "../services/auditLog";
 const DEMO_EMAIL = process.env.EXPO_PUBLIC_DEMO_EMAIL;
 const DEMO_PASSWORD = process.env.EXPO_PUBLIC_DEMO_PASSWORD;
 
-// Developer convenience: when running in Expo/dev mode, do not restore a saved
-// Supabase session on app reload. This keeps reloads landing on the login screen.
 const FORCE_LOGIN_ON_DEV_RELOAD = __DEV__;
 
 interface AuthContextType {
@@ -52,6 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let isMounted = true;
+    let ignoreAuthEventsUntil = FORCE_LOGIN_ON_DEV_RELOAD ? Date.now() + 1200 : 0;
 
     async function initialiseSecureEntry() {
       try {
@@ -67,6 +66,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
+        if (FORCE_LOGIN_ON_DEV_RELOAD) {
+          if (isMounted) {
+            setSession(null);
+            setDemoAccessEnabled(false);
+            setLoading(false);
+          }
+
+          supabase.auth.signOut().catch((signOutError) => {
+            console.warn("Dev reload sign-out failed", signOutError.message);
+          });
+
+          return;
+        }
+
         const {
           data: { session: existingSession },
           error,
@@ -74,20 +87,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (error) {
           console.warn("Unable to load existing Supabase session", error.message);
-        }
-
-        if (FORCE_LOGIN_ON_DEV_RELOAD && existingSession) {
-          setSession(null);
-          setDemoAccessEnabled(false);
-          setLoading(false);
-
-          // Run sign-out after local state has been released so the UI does not
-          // get trapped behind a loading overlay if the network is slow.
-          supabase.auth.signOut().catch((signOutError) => {
-            console.warn("Dev reload sign-out failed", signOutError.message);
-          });
-
-          return;
         }
 
         if (isMounted) {
@@ -113,6 +112,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+      if (FORCE_LOGIN_ON_DEV_RELOAD && Date.now() < ignoreAuthEventsUntil) {
+        setLoading(false);
+        return;
+      }
+
       setSession(nextSession);
       setDemoAccessEnabled(nextSession?.user?.email === DEMO_EMAIL);
       setLoading(false);
