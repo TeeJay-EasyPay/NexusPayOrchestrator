@@ -16,6 +16,7 @@ export function DeviceUnlockProvider({ children }: { children: React.ReactNode }
   const [locked, setLocked] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const wasBackgroundedRef = useRef(false);
+  const unlockInProgressRef = useRef(false);
 
   useEffect(() => {
     async function checkDeviceSecurity() {
@@ -29,7 +30,10 @@ export function DeviceUnlockProvider({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (state) => {
-      if (state === "background" || state === "inactive") {
+      // Do not lock on "inactive". Android/iOS can briefly report inactive
+      // while the native biometric sheet is opening/closing, which can re-lock
+      // the app during a successful unlock and leave the UI stuck behind the overlay.
+      if (state === "background") {
         wasBackgroundedRef.current = true;
         setLocked(true);
         return;
@@ -49,18 +53,28 @@ export function DeviceUnlockProvider({ children }: { children: React.ReactNode }
       return false;
     }
 
-    const result = await LocalAuthentication.authenticateAsync({
-      promptMessage: "Unlock NexusPay",
-      cancelLabel: "Cancel",
-      disableDeviceFallback: false,
-    });
-
-    if (result.success) {
-      setLocked(false);
-      return true;
+    if (unlockInProgressRef.current) {
+      return false;
     }
 
-    return false;
+    unlockInProgressRef.current = true;
+
+    try {
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: "Unlock NexusPay",
+        cancelLabel: "Cancel",
+        disableDeviceFallback: false,
+      });
+
+      if (result.success) {
+        setLocked(false);
+        return true;
+      }
+
+      return false;
+    } finally {
+      unlockInProgressRef.current = false;
+    }
   }
 
   function unlockWithPassword() {
