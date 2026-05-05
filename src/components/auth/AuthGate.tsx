@@ -1,6 +1,6 @@
 import { usePathname, useRouter } from "expo-router";
 import { useEffect, useRef } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
 
 import { useAuth } from "../../state/AuthContext";
 import { useDeviceUnlock } from "../../state/DeviceUnlockContext";
@@ -13,16 +13,9 @@ const PUBLIC_ROUTES = new Set([
   "/account-created",
 ]);
 
-function LoadingScreen() {
+function LoadingOverlay() {
   return (
-    <View
-      style={{
-        flex: 1,
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: colors.background,
-      }}
-    >
+    <View style={styles.overlay}>
       <ActivityIndicator color={colors.gold} size="large" />
     </View>
   );
@@ -52,15 +45,28 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     }
 
     lastRedirectRef.current = target;
-    router.replace(target);
+
+    const timeout = setTimeout(() => {
+      router.replace(target);
+    }, 0);
+
+    return () => clearTimeout(timeout);
   }, [hasAccess, isPublicRoute, loading, pathname, router]);
 
   useEffect(() => {
     lastRedirectRef.current = null;
   }, [pathname]);
 
+  // Important: keep the Expo Router Stack mounted while redirecting.
+  // If we replace children with a loading screen, the navigator has no registered routes,
+  // which causes warnings like: action REPLACE with name "index" was not handled.
   if (loading) {
-    return <LoadingScreen />;
+    return (
+      <View style={styles.root}>
+        {children}
+        <LoadingOverlay />
+      </View>
+    );
   }
 
   if (hasAccess && locked && !isPublicRoute) {
@@ -68,8 +74,25 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   }
 
   if (!hasAccess && !isPublicRoute) {
-    return <LoadingScreen />;
+    return (
+      <View style={styles.root}>
+        {children}
+        <LoadingOverlay />
+      </View>
+    );
   }
 
   return <>{children}</>;
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.background,
+  },
+});
