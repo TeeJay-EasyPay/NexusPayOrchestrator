@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Alert, Pressable, View } from "react-native";
 
 import { useAuth } from "../../state/AuthContext";
+import { useDeviceUnlock } from "../../state/DeviceUnlockContext";
 import { colors } from "../../theme";
 import { UserAccountBadge } from "../auth/UserAccountBadge";
 import { AppText } from "../ui/AppText";
@@ -19,6 +20,7 @@ export function AppDropdownMenu() {
   const router = useRouter();
   const pathname = usePathname();
   const { signOut } = useAuth();
+  const { lockApp } = useDeviceUnlock();
   const [isOpen, setIsOpen] = useState(false);
 
   const handleNavigate = (route: string) => {
@@ -34,8 +36,10 @@ export function AppDropdownMenu() {
         style: "destructive",
         onPress: async () => {
           setIsOpen(false);
+          lockApp();
           await signOut();
-          router.replace("/auth");
+          // AuthGate owns the redirect to /auth. Avoid a second manual replace,
+          // which causes the login screen to flash/reload twice.
         },
       },
     ]);
