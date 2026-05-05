@@ -1,10 +1,11 @@
 import { usePathname, useRouter } from "expo-router";
 import { useState } from "react";
-import { Pressable, View } from "react-native";
+import { Alert, Pressable, View } from "react-native";
 
+import { useAuth } from "../../state/AuthContext";
 import { colors } from "../../theme";
-import { AppText } from "../ui/AppText";
 import { UserAccountBadge } from "../auth/UserAccountBadge";
+import { AppText } from "../ui/AppText";
 
 const MENU_ITEMS = [
   { label: "Home", description: "Dashboard and corridor intelligence", route: "/", match: "/" },
@@ -17,11 +18,27 @@ const MENU_ITEMS = [
 export function AppDropdownMenu() {
   const router = useRouter();
   const pathname = usePathname();
+  const { signOut } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
 
   const handleNavigate = (route: string) => {
     setIsOpen(false);
     router.push(route);
+  };
+
+  const handleSignOut = () => {
+    Alert.alert("Sign out", "Do you want to end this NexusPay session?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Sign out",
+        style: "destructive",
+        onPress: async () => {
+          setIsOpen(false);
+          await signOut();
+          router.replace("/auth");
+        },
+      },
+    ]);
   };
 
   return (
@@ -128,6 +145,28 @@ export function AppDropdownMenu() {
               </Pressable>
             );
           })}
+
+          <Pressable
+            onPress={handleSignOut}
+            style={{
+              padding: 13,
+              borderRadius: 18,
+              backgroundColor: "#FFF1F2",
+              borderWidth: 1,
+              borderColor: "#FECDD3",
+              gap: 3,
+            }}
+          >
+            <AppText
+              variant="body"
+              style={{ color: "#BE123C", fontWeight: "900" }}
+            >
+              Sign out
+            </AppText>
+            <AppText variant="caption" style={{ color: "#9F1239" }}>
+              End this NexusPay session
+            </AppText>
+          </Pressable>
         </View>
       ) : null}
     </View>
