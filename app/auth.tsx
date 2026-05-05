@@ -99,10 +99,9 @@ export default function AuthScreen() {
 
       if (isSignUp) {
         router.replace({ pathname: "/check-email", params: { email: cleanEmail } });
-        return;
       }
 
-      router.replace("/");
+      // For sign-in, AuthGate now owns the redirect to prevent double navigation loops.
     } finally {
       setBusy(false);
     }
@@ -119,10 +118,9 @@ export default function AuthScreen() {
 
       if (error) {
         setErrorMessage(error);
-        return;
       }
 
-      router.replace("/");
+      // AuthGate owns the redirect after demo sign-in to avoid nested router updates.
     } finally {
       setBusy(false);
     }
