@@ -18,6 +18,10 @@ import { writeAuditLog } from "../services/auditLog";
 const DEMO_EMAIL = process.env.EXPO_PUBLIC_DEMO_EMAIL;
 const DEMO_PASSWORD = process.env.EXPO_PUBLIC_DEMO_PASSWORD;
 
+// During Expo development, always start from the login screen after a terminal reload.
+// Production builds can keep normal persistent sessions.
+const FORCE_LOGIN_ON_DEV_RELOAD = __DEV__;
+
 interface AuthContextType {
   session: Session | null;
   loading: boolean;
@@ -69,6 +73,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.warn("Unable to load existing Supabase session", error.message);
+      }
+
+      if (FORCE_LOGIN_ON_DEV_RELOAD && existingSession) {
+        await supabase.auth.signOut();
+
+        if (isMounted) {
+          setSession(null);
+          setDemoAccessEnabled(false);
+          setLoading(false);
+        }
+
+        return;
       }
 
       if (isMounted) {
