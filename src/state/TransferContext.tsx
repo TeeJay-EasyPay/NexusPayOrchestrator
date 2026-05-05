@@ -3,7 +3,13 @@ import { createTransferId } from "../lib/id";
 import { supabase } from "../lib/supabase";
 import { loadCompletedTransfers, saveCompletedTransfer } from "../services/transferService";
 import { saveRecipientFromTransfer } from "../services/recipientService";
-import { Recipient, RouteQuote, Transfer } from "../types/transfer";
+import {
+  FundingMethod,
+  FundingStatus,
+  Recipient,
+  RouteQuote,
+  Transfer,
+} from "../types/transfer";
 
 interface TransferContextType {
   transfer: Transfer | null;
@@ -15,6 +21,8 @@ interface TransferContextType {
   setRecipient: (recipient: Recipient) => void;
   setRoutes: (routes: RouteQuote[]) => void;
   selectRoute: (route: RouteQuote) => void;
+  setFundingMethod: (method: FundingMethod, fundingReference?: string) => void;
+  setFundingStatus: (status: FundingStatus) => void;
   startTransfer: () => void;
   completeTransfer: () => void;
   resetTransfer: () => void;
@@ -66,6 +74,7 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
       senderAmount: amount,
       recipient: {} as Recipient,
       routes: [],
+      fundingStatus: "NOT_STARTED",
       status: "CREATED",
       createdAt: Date.now(),
     });
@@ -106,6 +115,34 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  const setFundingMethod = (method: FundingMethod, fundingReference?: string) => {
+    setTransfer((currentTransfer) => {
+      if (!currentTransfer) return currentTransfer;
+
+      return {
+        ...currentTransfer,
+        fundingMethod: method,
+        fundingReference,
+        fundingStatus: "NOT_STARTED",
+        status: "FUNDING_SELECTED",
+      };
+    });
+  };
+
+  const setFundingStatus = (status: FundingStatus) => {
+    setTransfer((currentTransfer) => {
+      if (!currentTransfer) return currentTransfer;
+
+      return {
+        ...currentTransfer,
+        fundingStatus: status,
+        fundingAuthorisedAt:
+          status === "AUTHORISED" ? Date.now() : currentTransfer.fundingAuthorisedAt,
+        status: status === "AUTHORISED" ? "FUNDING_AUTHORISED" : currentTransfer.status,
+      };
+    });
+  };
+
   const startTransfer = () => {
     setTransfer((currentTransfer) => {
       if (!currentTransfer) return currentTransfer;
@@ -123,6 +160,7 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
 
       const completedTransfer: Transfer = {
         ...currentTransfer,
+        fundingStatus: currentTransfer.fundingStatus ?? "AUTHORISED",
         status: "COMPLETED",
       };
 
@@ -161,6 +199,8 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
         setRecipient,
         setRoutes,
         selectRoute,
+        setFundingMethod,
+        setFundingStatus,
         startTransfer,
         completeTransfer,
         resetTransfer,
