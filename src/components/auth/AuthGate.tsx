@@ -5,6 +5,7 @@ import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { useAuth } from "../../state/AuthContext";
 import { useDeviceUnlock } from "../../state/DeviceUnlockContext";
 import { colors } from "../../theme/colors";
+import { UnlockPanel } from "./UnlockPanel";
 
 const PUBLIC_ROUTES = new Set([
   "/auth",
@@ -74,13 +75,10 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // Returning from another app should show a real unlock screen, not a spinner.
+  // Login still handles biometric before access, so Home is not exposed during first entry.
   if (hasAccess && locked && !isPublicRoute) {
-    return (
-      <View style={styles.root}>
-        {children}
-        <LoadingOverlay />
-      </View>
-    );
+    return <UnlockPanel />;
   }
 
   return <>{children}</>;
