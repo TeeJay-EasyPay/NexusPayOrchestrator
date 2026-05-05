@@ -5,7 +5,6 @@ import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { useAuth } from "../../state/AuthContext";
 import { useDeviceUnlock } from "../../state/DeviceUnlockContext";
 import { colors } from "../../theme/colors";
-import { UnlockPanel } from "./UnlockPanel";
 
 const PUBLIC_ROUTES = new Set([
   "/auth",
@@ -24,9 +23,10 @@ function LoadingOverlay() {
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { session, loading, demoAccessEnabled } = useAuth();
-  const { locked } = useDeviceUnlock();
+  const { locked, unlock, biometricAvailable, unlockWithPassword } = useDeviceUnlock();
   const pathname = usePathname();
   const lastRedirectRef = useRef<string | null>(null);
+  const unlockAttemptInProgressRef = useRef(false);
 
   const isPublicRoute = PUBLIC_ROUTES.has(pathname);
   const hasAccess = Boolean(session) || demoAccessEnabled;
@@ -57,6 +57,27 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     lastRedirectRef.current = null;
   }, [pathname]);
 
+  useEffect(() => {
+    if (loading || !hasAccess || !locked || isPublicRoute) return;
+    if (unlockAttemptInProgressRef.current) return;
+
+    unlockAttemptInProgressRef.current = true;
+
+    async function runUnlock() {
+      try {
+        if (biometricAvailable) {
+          await unlock();
+        } else {
+          unlockWithPassword();
+        }
+      } finally {
+        unlockAttemptInProgressRef.current = false;
+      }
+    }
+
+    runUnlock();
+  }, [loading, hasAccess, locked, isPublicRoute, biometricAvailable, unlock, unlockWithPassword]);
+
   if (loading) {
     return (
       <View style={styles.root}>
@@ -75,10 +96,15 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Returning from another app should show a real unlock screen, not a spinner.
-  // Login still handles biometric before access, so Home is not exposed during first entry.
+  // When returning from another app, do not show the old custom unlock screen.
+  // Trigger the native biometric prompt and keep the app covered until it unlocks.
   if (hasAccess && locked && !isPublicRoute) {
-    return <UnlockPanel />;
+    return (
+      <View style={styles.root}>
+        {children}
+        <LoadingOverlay />
+      </View>
+    );
   }
 
   return <>{children}</>;
