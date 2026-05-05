@@ -1,5 +1,5 @@
-import { router, usePathname } from "expo-router";
-import { useEffect } from "react";
+import { usePathname, useRouter } from "expo-router";
+import { useEffect, useRef } from "react";
 import { ActivityIndicator, View } from "react-native";
 
 import { useAuth } from "../../state/AuthContext";
@@ -13,38 +13,62 @@ const PUBLIC_ROUTES = new Set([
   "/account-created",
 ]);
 
+function LoadingScreen() {
+  return (
+    <View
+      style={{
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: colors.background,
+      }}
+    >
+      <ActivityIndicator color={colors.gold} size="large" />
+    </View>
+  );
+}
+
 export function AuthGate({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const { session, loading, demoAccessEnabled } = useAuth();
   const { locked } = useDeviceUnlock();
   const pathname = usePathname();
+  const lastRedirectRef = useRef<string | null>(null);
+
   const isPublicRoute = PUBLIC_ROUTES.has(pathname);
+  const hasAccess = Boolean(session) || demoAccessEnabled;
 
   useEffect(() => {
     if (loading) return;
 
-    if (!session && !demoAccessEnabled && !isPublicRoute) {
-      router.replace("/auth");
+    const target = !hasAccess && !isPublicRoute
+      ? "/auth"
+      : hasAccess && isPublicRoute
+        ? "/"
+        : null;
+
+    if (!target || pathname === target || lastRedirectRef.current === target) {
+      return;
     }
-  }, [session, loading, isPublicRoute, demoAccessEnabled]);
+
+    lastRedirectRef.current = target;
+    router.replace(target);
+  }, [hasAccess, isPublicRoute, loading, pathname, router]);
+
+  useEffect(() => {
+    lastRedirectRef.current = null;
+  }, [pathname]);
 
   if (loading) {
-    return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background }}>
-        <ActivityIndicator color={colors.gold} size="large" />
-      </View>
-    );
+    return <LoadingScreen />;
   }
 
-  if (session && locked && !isPublicRoute) {
+  if (hasAccess && locked && !isPublicRoute) {
     return <UnlockPanel />;
   }
 
-  if (!session && !demoAccessEnabled && !isPublicRoute) {
-    return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background }}>
-        <ActivityIndicator color={colors.gold} size="large" />
-      </View>
-    );
+  if (!hasAccess && !isPublicRoute) {
+    return <LoadingScreen />;
   }
 
   return <>{children}</>;
