@@ -7,6 +7,7 @@ type DeviceUnlockContextType = {
   biometricAvailable: boolean;
   unlock: () => Promise<boolean>;
   unlockWithPassword: () => void;
+  lockApp: () => void;
 };
 
 const DeviceUnlockContext = createContext<DeviceUnlockContextType | undefined>(undefined);
@@ -27,7 +28,9 @@ export function DeviceUnlockProvider({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (state) => {
-      if (state === "active") setLocked(true);
+      if (state === "background" || state === "inactive") {
+        setLocked(true);
+      }
     });
 
     return () => subscription.remove();
@@ -56,8 +59,14 @@ export function DeviceUnlockProvider({ children }: { children: React.ReactNode }
     setLocked(false);
   }
 
+  function lockApp() {
+    setLocked(true);
+  }
+
   return (
-    <DeviceUnlockContext.Provider value={{ locked, biometricAvailable, unlock, unlockWithPassword }}>
+    <DeviceUnlockContext.Provider
+      value={{ locked, biometricAvailable, unlock, unlockWithPassword, lockApp }}
+    >
       {children}
     </DeviceUnlockContext.Provider>
   );
