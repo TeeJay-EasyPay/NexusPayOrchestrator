@@ -15,8 +15,8 @@ const PUBLIC_ROUTES = new Set([
 ]);
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
-  const { session, loading, demoAccessEnabled } = useAuth();
-  const { locked, unlock } = useDeviceUnlock();
+  const { session, loading, demoAccessEnabled, signOut } = useAuth();
+  const { locked, unlock, biometricAvailable } = useDeviceUnlock();
   const pathname = usePathname();
   const isPublicRoute = PUBLIC_ROUTES.has(pathname);
 
@@ -58,10 +58,21 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
         </AppText>
 
         <AppText variant="body" color={colors.textSecondary}>
-          Secure access required
+          {biometricAvailable
+            ? "Use your fingerprint or face to continue"
+            : "Tap unlock to continue"}
         </AppText>
 
         <AppButton title="Unlock" onPress={unlock} />
+
+        <AppButton
+          title="Use another account"
+          variant="secondary"
+          onPress={async () => {
+            await signOut();
+            router.replace("/auth");
+          }}
+        />
       </View>
     );
   }
