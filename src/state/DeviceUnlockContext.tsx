@@ -6,6 +6,7 @@ type DeviceUnlockContextType = {
   locked: boolean;
   biometricAvailable: boolean;
   unlock: () => Promise<boolean>;
+  unlockWithPassword: () => void;
 };
 
 const DeviceUnlockContext = createContext<DeviceUnlockContextType | undefined>(undefined);
@@ -34,8 +35,7 @@ export function DeviceUnlockProvider({ children }: { children: React.ReactNode }
 
   async function unlock() {
     if (!biometricAvailable) {
-      setLocked(false);
-      return true;
+      return false;
     }
 
     const result = await LocalAuthentication.authenticateAsync({
@@ -52,8 +52,12 @@ export function DeviceUnlockProvider({ children }: { children: React.ReactNode }
     return false;
   }
 
+  function unlockWithPassword() {
+    setLocked(false);
+  }
+
   return (
-    <DeviceUnlockContext.Provider value={{ locked, biometricAvailable, unlock }}>
+    <DeviceUnlockContext.Provider value={{ locked, biometricAvailable, unlock, unlockWithPassword }}>
       {children}
     </DeviceUnlockContext.Provider>
   );
