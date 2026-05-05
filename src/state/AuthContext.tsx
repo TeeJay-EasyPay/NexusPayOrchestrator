@@ -31,6 +31,16 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+async function upsertProfile(session: Session | null) {
+  if (!session?.user) return;
+
+  await supabase.from("profiles").upsert({
+    id: session.user.id,
+    email: session.user.email,
+    updated_at: new Date().toISOString(),
+  });
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,7 +48,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let isMounted = true;
-    let startupSessionCleared = false;
 
     async function initialiseSecureEntry() {
       if (!isSupabaseConfigured) {
@@ -53,39 +62,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      try {
-        await supabase.auth.signOut();
-      } catch (error) {
-        console.warn("Startup session clear skipped", error);
-      } finally {
-        startupSessionCleared = true;
+      const {
+        data: { session: existingSession },
+        error,
+      } = await supabase.auth.getSession();
 
-        if (isMounted) {
-          setSession(null);
-          setDemoAccessEnabled(false);
-          setLoading(false);
-        }
+      if (error) {
+        console.warn("Unable to load existing Supabase session", error.message);
       }
+
+      if (isMounted) {
+        setSession(existingSession ?? null);
+        setDemoAccessEnabled(existingSession?.user?.email === DEMO_EMAIL);
+        setLoading(false);
+      }
+
+      await upsertProfile(existingSession ?? null);
     }
 
     initialiseSecureEntry();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!startupSessionCleared && event === "INITIAL_SESSION") {
-        return;
-      }
-
-      setSession(session);
-
-      if (session?.user) {
-        await supabase.from("profiles").upsert({
-          id: session.user.id,
-          email: session.user.email,
-          updated_at: new Date().toISOString(),
-        });
-      }
+    } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+      setSession(nextSession);
+      setDemoAccessEnabled(nextSession?.user?.email === DEMO_EMAIL);
+      await upsertProfile(nextSession);
     });
 
     return () => {
@@ -129,8 +131,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return getSupabaseConfigError();
       }
 
+      const normalizedEmail = email.trim().toLowerCase();
+
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: normalizedEmail,
         password,
       });
 
@@ -139,15 +143,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       setSession(data.session);
+      setDemoAccessEnabled(normalizedEmail === DEMO_EMAIL);
 
-      if (email !== DEMO_EMAIL) {
-        setDemoAccessEnabled(false);
-      }
+      await upsertProfile(data.session);
 
       await writeAuditLog({
         eventType: "LOGIN",
         metadata: {
-          email,
+          email: normalizedEmail,
         },
       });
 
@@ -164,10 +167,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return getSupabaseConfigError();
       }
 
+      const normalizedEmail = email.trim().toLowerCase();
       const emailRedirectTo = Linking.createURL("/account-created");
 
-      const { error } = await supabase.auth.signUp({
-        email,
+      const { data, error } = await supabase.auth.signUp({
+        email: normalizedEmail,
         password,
         options: {
           emailRedirectTo,
@@ -178,11 +182,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return error.message;
       }
 
+      if (data.session) {
+        setSession(data.session);
+        setDemoAccessEnabled(normalizedEmail === DEMO_EMAIL);
+        await upsertProfile(data.session);
+      }
+
       await writeAuditLog({
         eventType: "SIGNUP",
         metadata: {
-          email,
+          email: normalizedEmail,
           emailRedirectTo,
+          session_created: Boolean(data.session),
         },
       });
 
