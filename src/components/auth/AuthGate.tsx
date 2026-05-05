@@ -5,7 +5,6 @@ import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { useAuth } from "../../state/AuthContext";
 import { useDeviceUnlock } from "../../state/DeviceUnlockContext";
 import { colors } from "../../theme/colors";
-import { UnlockPanel } from "./UnlockPanel";
 
 const PUBLIC_ROUTES = new Set([
   "/auth",
@@ -24,7 +23,7 @@ function LoadingOverlay() {
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { session, loading, demoAccessEnabled } = useAuth();
-  const { locked } = useDeviceUnlock();
+  const { locked, unlock, biometricAvailable } = useDeviceUnlock();
   const pathname = usePathname();
   const lastRedirectRef = useRef<string | null>(null);
 
@@ -57,9 +56,13 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     lastRedirectRef.current = null;
   }, [pathname]);
 
-  // Important: keep the Expo Router Stack mounted while redirecting.
-  // If we replace children with a loading screen, the navigator has no registered routes,
-  // which causes warnings like: action REPLACE with name "index" was not handled.
+  // 🔥 NEW: Auto biometric unlock (no extra screen)
+  useEffect(() => {
+    if (!loading && hasAccess && locked && biometricAvailable && !isPublicRoute) {
+      unlock();
+    }
+  }, [loading, hasAccess, locked, biometricAvailable, isPublicRoute]);
+
   if (loading) {
     return (
       <View style={styles.root}>
@@ -67,10 +70,6 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
         <LoadingOverlay />
       </View>
     );
-  }
-
-  if (hasAccess && locked && !isPublicRoute) {
-    return <UnlockPanel />;
   }
 
   if (!hasAccess && !isPublicRoute) {
