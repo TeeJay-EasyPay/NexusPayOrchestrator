@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { Alert, ScrollView, View } from "react-native";
+import { Alert, Pressable, ScrollView, View } from "react-native";
 
 import { AppButton } from "../src/components/ui/AppButton";
 import { AppCard } from "../src/components/ui/AppCard";
@@ -7,6 +7,7 @@ import { AppText } from "../src/components/ui/AppText";
 import { Screen } from "../src/components/ui/Screen";
 import { writeAuditLog } from "../src/services/auditLog";
 import { useAuth } from "../src/state/AuthContext";
+import { usePaymentMethods } from "../src/state/PaymentMethodsContext";
 import { colors } from "../src/theme";
 
 function getInitials(email?: string | null) {
@@ -166,6 +167,7 @@ function LimitCard({ label, value }: { label: string; value: string }) {
 
 export default function AccountScreen() {
   const { session, demoAccessEnabled, signOut } = useAuth();
+  const { primaryMethod, paymentMethods } = usePaymentMethods();
 
   const user = session?.user;
   const email = user?.email ?? "Not signed in";
@@ -193,7 +195,6 @@ export default function AccountScreen() {
           });
 
           await signOut();
-          router.replace("/auth");
         },
       },
     ]);
@@ -400,6 +401,43 @@ export default function AccountScreen() {
                 description="View and manage devices that have recently accessed this account."
                 status="1 device"
                 tone="blue"
+              />
+            </View>
+          </AppCard>
+
+          <AppCard>
+            <View style={{ gap: 12 }}>
+              <View style={{ gap: 4 }}>
+                <AppText variant="subheading" color={colors.textDarkPrimary}>
+                  Payment methods
+                </AppText>
+
+                <AppText variant="caption" color={colors.textDarkSecondary}>
+                  Manage saved cards and connected bank accounts used to fund transfers.
+                </AppText>
+              </View>
+
+              <Pressable onPress={() => router.push("/payment-methods")}>
+                <SettingRow
+                  title="Payment type setup"
+                  description="Add or manage card payments and open banking connections."
+                  status="Manage"
+                  tone="blue"
+                />
+              </Pressable>
+
+              <SettingRow
+                title="Primary funding method"
+                description={primaryMethod?.label ?? "Not selected"}
+                status={primaryMethod ? "Active" : "Missing"}
+                tone={primaryMethod ? "green" : "gold"}
+              />
+
+              <SettingRow
+                title="Saved funding sources"
+                description={`${paymentMethods.length} method${paymentMethods.length === 1 ? "" : "s"} available`}
+                status="Ready"
+                tone="green"
               />
             </View>
           </AppCard>
