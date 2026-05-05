@@ -4,6 +4,15 @@ export type RailType = "FIAT" | "CRYPTO" | "HYBRID";
 
 export type PayoutMethod = "BANK" | "MOBILE_WALLET";
 
+export type FundingMethod = "OPEN_BANKING" | "CARD";
+
+export type FundingStatus =
+  | "NOT_STARTED"
+  | "AUTHORISING"
+  | "AUTHORISED"
+  | "SETTLED"
+  | "FAILED";
+
 export type LiquidityStatus =
   | "AVAILABLE"
   | "LOW"
@@ -99,10 +108,17 @@ export interface Transfer {
   routes: RouteQuote[];
   selectedRoute?: RouteQuote;
 
+  fundingMethod?: FundingMethod;
+  fundingStatus?: FundingStatus;
+  fundingReference?: string;
+  fundingAuthorisedAt?: number;
+
   status:
     | "CREATED"
     | "ROUTES_FETCHED"
     | "ROUTE_SELECTED"
+    | "FUNDING_SELECTED"
+    | "FUNDING_AUTHORISED"
     | "IN_PROGRESS"
     | "COMPLETED"
     | "FAILED";
