@@ -1,5 +1,5 @@
 import * as LocalAuthentication from "expo-local-authentication";
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { AppState } from "react-native";
 
 type DeviceUnlockContextType = {
@@ -13,8 +13,9 @@ type DeviceUnlockContextType = {
 const DeviceUnlockContext = createContext<DeviceUnlockContextType | undefined>(undefined);
 
 export function DeviceUnlockProvider({ children }: { children: React.ReactNode }) {
-  const [locked, setLocked] = useState(true);
+  const [locked, setLocked] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const wasBackgroundedRef = useRef(false);
 
   useEffect(() => {
     async function checkDeviceSecurity() {
@@ -29,6 +30,13 @@ export function DeviceUnlockProvider({ children }: { children: React.ReactNode }
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (state) => {
       if (state === "background" || state === "inactive") {
+        wasBackgroundedRef.current = true;
+        setLocked(true);
+        return;
+      }
+
+      if (state === "active" && wasBackgroundedRef.current) {
+        wasBackgroundedRef.current = false;
         setLocked(true);
       }
     });
