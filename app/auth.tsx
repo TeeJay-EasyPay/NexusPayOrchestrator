@@ -15,6 +15,7 @@ import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
 import { Screen } from "../src/components/ui/Screen";
 import { useAuth } from "../src/state/AuthContext";
+import { useDeviceUnlock } from "../src/state/DeviceUnlockContext";
 import { colors, spacing } from "../src/theme";
 
 type AuthMode = "sign-in" | "sign-up";
@@ -64,6 +65,7 @@ function AuthInput({
 export default function AuthScreen() {
   const router = useRouter();
   const { signIn, signUp, enableDemoAccess } = useAuth();
+  const { unlock, biometricAvailable, unlockWithPassword, lockApp } = useDeviceUnlock();
 
   const [mode, setMode] = useState<AuthMode>("sign-in");
   const [email, setEmail] = useState("");
@@ -73,6 +75,17 @@ export default function AuthScreen() {
 
   const isSignUp = mode === "sign-up";
   const primaryTitle = isSignUp ? "Create Secure Account" : "Sign In Securely";
+
+  async function requireDeviceUnlock() {
+    lockApp();
+
+    if (biometricAvailable) {
+      return unlock();
+    }
+
+    unlockWithPassword();
+    return true;
+  }
 
   async function handlePrimaryAction() {
     if (busy) return;
@@ -88,11 +101,21 @@ export default function AuthScreen() {
     setErrorMessage(null);
 
     try {
+      if (!isSignUp) {
+        const unlocked = await requireDeviceUnlock();
+
+        if (!unlocked) {
+          setErrorMessage("Device unlock was cancelled. Please try again to continue.");
+          return;
+        }
+      }
+
       const error = isSignUp
         ? await signUp(cleanEmail, password)
         : await signIn(cleanEmail, password);
 
       if (error) {
+        if (!isSignUp) lockApp();
         setErrorMessage(error);
         return;
       }
@@ -100,8 +123,6 @@ export default function AuthScreen() {
       if (isSignUp) {
         router.replace({ pathname: "/check-email", params: { email: cleanEmail } });
       }
-
-      // For sign-in, AuthGate now owns the redirect to prevent double navigation loops.
     } finally {
       setBusy(false);
     }
@@ -114,13 +135,19 @@ export default function AuthScreen() {
     setErrorMessage(null);
 
     try {
+      const unlocked = await requireDeviceUnlock();
+
+      if (!unlocked) {
+        setErrorMessage("Device unlock was cancelled. Please try again to continue.");
+        return;
+      }
+
       const error = await enableDemoAccess();
 
       if (error) {
+        lockApp();
         setErrorMessage(error);
       }
-
-      // AuthGate owns the redirect after demo sign-in to avoid nested router updates.
     } finally {
       setBusy(false);
     }
