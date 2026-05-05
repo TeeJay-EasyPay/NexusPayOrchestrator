@@ -23,10 +23,10 @@ function LoadingOverlay() {
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { session, loading, demoAccessEnabled } = useAuth();
-  const { locked, unlock, biometricAvailable, unlockWithPassword } = useDeviceUnlock();
+  const { locked, unlock, biometricAvailable } = useDeviceUnlock();
   const pathname = usePathname();
   const lastRedirectRef = useRef<string | null>(null);
-  const unlockAttemptInProgressRef = useRef(false);
+  const unlockPromptInFlightRef = useRef(false);
 
   const isPublicRoute = PUBLIC_ROUTES.has(pathname);
   const hasAccess = Boolean(session) || demoAccessEnabled;
@@ -58,25 +58,16 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   }, [pathname]);
 
   useEffect(() => {
-    if (loading || !hasAccess || !locked || isPublicRoute) return;
-    if (unlockAttemptInProgressRef.current) return;
+    if (loading) return;
+    if (!hasAccess || isPublicRoute || !locked || !biometricAvailable) return;
+    if (unlockPromptInFlightRef.current) return;
 
-    unlockAttemptInProgressRef.current = true;
+    unlockPromptInFlightRef.current = true;
 
-    async function runUnlock() {
-      try {
-        if (biometricAvailable) {
-          await unlock();
-        } else {
-          unlockWithPassword();
-        }
-      } finally {
-        unlockAttemptInProgressRef.current = false;
-      }
-    }
-
-    runUnlock();
-  }, [loading, hasAccess, locked, isPublicRoute, biometricAvailable, unlock, unlockWithPassword]);
+    unlock().finally(() => {
+      unlockPromptInFlightRef.current = false;
+    });
+  }, [loading, hasAccess, isPublicRoute, locked, biometricAvailable, unlock]);
 
   if (loading) {
     return (
@@ -96,8 +87,6 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // When returning from another app, do not show the old custom unlock screen.
-  // Trigger the native biometric prompt and keep the app covered until it unlocks.
   if (hasAccess && locked && !isPublicRoute) {
     return (
       <View style={styles.root}>
