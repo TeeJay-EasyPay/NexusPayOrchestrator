@@ -1,6 +1,5 @@
 import * as LocalAuthentication from "expo-local-authentication";
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
-import { AppState } from "react-native";
 
 type DeviceUnlockContextType = {
   locked: boolean;
@@ -15,7 +14,6 @@ const DeviceUnlockContext = createContext<DeviceUnlockContextType | undefined>(u
 export function DeviceUnlockProvider({ children }: { children: React.ReactNode }) {
   const [locked, setLocked] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
-  const wasBackgroundedRef = useRef(false);
   const unlockInProgressRef = useRef(false);
 
   useEffect(() => {
@@ -26,26 +24,6 @@ export function DeviceUnlockProvider({ children }: { children: React.ReactNode }
     }
 
     checkDeviceSecurity();
-  }, []);
-
-  useEffect(() => {
-    const subscription = AppState.addEventListener("change", (state) => {
-      // Do not lock on "inactive". Android/iOS can briefly report inactive
-      // while the native biometric sheet is opening/closing, which can re-lock
-      // the app during a successful unlock and leave the UI stuck behind the overlay.
-      if (state === "background") {
-        wasBackgroundedRef.current = true;
-        setLocked(true);
-        return;
-      }
-
-      if (state === "active" && wasBackgroundedRef.current) {
-        wasBackgroundedRef.current = false;
-        setLocked(true);
-      }
-    });
-
-    return () => subscription.remove();
   }, []);
 
   async function unlock() {
