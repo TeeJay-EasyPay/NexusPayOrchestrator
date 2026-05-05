@@ -1,15 +1,12 @@
 import { router } from "expo-router";
-import { useState } from "react";
 import { Alert, Pressable, ScrollView, View } from "react-native";
 
 import { AppButton } from "../src/components/ui/AppButton";
 import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
 import { Screen } from "../src/components/ui/Screen";
-import {
-  mockPaymentMethods,
-  SavedPaymentMethod,
-} from "../src/data/mockPaymentMethods";
+import { SavedPaymentMethod } from "../src/data/mockPaymentMethods";
+import { usePaymentMethods } from "../src/state/PaymentMethodsContext";
 import { colors } from "../src/theme";
 
 function methodIcon(method: SavedPaymentMethod) {
@@ -165,11 +162,12 @@ function PaymentMethodManagementCard({
 }
 
 export default function PaymentMethodsScreen() {
-  const [primaryMethodId, setPrimaryMethodId] = useState(
-    mockPaymentMethods.find((method) => method.isPrimary)?.id ?? mockPaymentMethods[0]?.id
-  );
-
-  const primaryMethod = mockPaymentMethods.find((method) => method.id === primaryMethodId);
+  const {
+    paymentMethods,
+    primaryMethodId,
+    primaryMethod,
+    setPrimaryMethod,
+  } = usePaymentMethods();
 
   return (
     <Screen>
@@ -250,12 +248,12 @@ export default function PaymentMethodsScreen() {
           </AppCard>
 
           <View style={{ gap: 12 }}>
-            {mockPaymentMethods.map((method) => (
+            {paymentMethods.map((method) => (
               <PaymentMethodManagementCard
                 key={method.id}
                 method={method}
                 isPrimary={primaryMethodId === method.id}
-                onSetPrimary={() => setPrimaryMethodId(method.id)}
+                onSetPrimary={() => setPrimaryMethod(method.id)}
               />
             ))}
           </View>
