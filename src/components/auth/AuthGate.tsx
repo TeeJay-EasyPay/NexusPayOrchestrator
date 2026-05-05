@@ -5,8 +5,7 @@ import { ActivityIndicator, View } from "react-native";
 import { useAuth } from "../../state/AuthContext";
 import { useDeviceUnlock } from "../../state/DeviceUnlockContext";
 import { colors } from "../../theme/colors";
-import { AppText } from "../ui/AppText";
-import { AppButton } from "../ui/AppButton";
+import { UnlockPanel } from "./UnlockPanel";
 
 const PUBLIC_ROUTES = new Set([
   "/auth",
@@ -15,8 +14,8 @@ const PUBLIC_ROUTES = new Set([
 ]);
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
-  const { session, loading, demoAccessEnabled, signOut } = useAuth();
-  const { locked, unlock, biometricAvailable } = useDeviceUnlock();
+  const { session, loading, demoAccessEnabled } = useAuth();
+  const { locked } = useDeviceUnlock();
   const pathname = usePathname();
   const isPublicRoute = PUBLIC_ROUTES.has(pathname);
 
@@ -42,39 +41,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   }
 
   if (session && locked && !isPublicRoute) {
-    return (
-      <View
-        style={{
-          flex: 1,
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: colors.background,
-          gap: 16,
-          padding: 24,
-        }}
-      >
-        <AppText variant="title" color={colors.textPrimary}>
-          Unlock NexusPay
-        </AppText>
-
-        <AppText variant="body" color={colors.textSecondary}>
-          {biometricAvailable
-            ? "Use your fingerprint or face to continue"
-            : "Tap unlock to continue"}
-        </AppText>
-
-        <AppButton title="Unlock" onPress={unlock} />
-
-        <AppButton
-          title="Use another account"
-          variant="secondary"
-          onPress={async () => {
-            await signOut();
-            router.replace("/auth");
-          }}
-        />
-      </View>
-    );
+    return <UnlockPanel />;
   }
 
   if (!session && !demoAccessEnabled && !isPublicRoute) {
