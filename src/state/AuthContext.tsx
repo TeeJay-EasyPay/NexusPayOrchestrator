@@ -18,6 +18,10 @@ import { writeAuditLog } from "../services/auditLog";
 const DEMO_EMAIL = process.env.EXPO_PUBLIC_DEMO_EMAIL;
 const DEMO_PASSWORD = process.env.EXPO_PUBLIC_DEMO_PASSWORD;
 
+// Developer convenience: when running in Expo/dev mode, do not restore a saved
+// Supabase session on app reload. This keeps reloads landing on the login screen.
+const FORCE_LOGIN_ON_DEV_RELOAD = __DEV__;
+
 interface AuthContextType {
   session: Session | null;
   loading: boolean;
@@ -50,34 +54,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let isMounted = true;
 
     async function initialiseSecureEntry() {
-      if (!isSupabaseConfigured) {
-        console.error(getSupabaseConfigError());
+      try {
+        if (!isSupabaseConfigured) {
+          console.error(getSupabaseConfigError());
+
+          if (isMounted) {
+            setSession(null);
+            setDemoAccessEnabled(false);
+            setLoading(false);
+          }
+
+          return;
+        }
+
+        const {
+          data: { session: existingSession },
+          error,
+        } = await supabase.auth.getSession();
+
+        if (error) {
+          console.warn("Unable to load existing Supabase session", error.message);
+        }
+
+        if (FORCE_LOGIN_ON_DEV_RELOAD && existingSession) {
+          setSession(null);
+          setDemoAccessEnabled(false);
+          setLoading(false);
+
+          // Run sign-out after local state has been released so the UI does not
+          // get trapped behind a loading overlay if the network is slow.
+          supabase.auth.signOut().catch((signOutError) => {
+            console.warn("Dev reload sign-out failed", signOutError.message);
+          });
+
+          return;
+        }
+
+        if (isMounted) {
+          setSession(existingSession ?? null);
+          setDemoAccessEnabled(existingSession?.user?.email === DEMO_EMAIL);
+          setLoading(false);
+        }
+
+        await upsertProfile(existingSession ?? null);
+      } catch (error) {
+        console.warn("Auth initialisation failed", error);
 
         if (isMounted) {
           setSession(null);
           setDemoAccessEnabled(false);
           setLoading(false);
         }
-
-        return;
       }
-
-      const {
-        data: { session: existingSession },
-        error,
-      } = await supabase.auth.getSession();
-
-      if (error) {
-        console.warn("Unable to load existing Supabase session", error.message);
-      }
-
-      if (isMounted) {
-        setSession(existingSession ?? null);
-        setDemoAccessEnabled(existingSession?.user?.email === DEMO_EMAIL);
-        setLoading(false);
-      }
-
-      await upsertProfile(existingSession ?? null);
     }
 
     initialiseSecureEntry();
@@ -87,6 +115,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
       setSession(nextSession);
       setDemoAccessEnabled(nextSession?.user?.email === DEMO_EMAIL);
+      setLoading(false);
       await upsertProfile(nextSession);
     });
 
