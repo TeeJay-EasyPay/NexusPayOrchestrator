@@ -1,34 +1,41 @@
-import React from "react";
-import { StyleSheet, View, ViewStyle } from "react-native";
+import { usePathname } from "expo-router";
+import { View, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AppDropdownMenu } from "../navigation/AppDropdownMenu";
 import { AppMenu } from "../navigation/AppMenu";
-import { spacing } from "../../theme";
+import { colors } from "../../theme";
 
-type ScreenProps = {
-  children: React.ReactNode;
-  style?: ViewStyle;
-};
+const PUBLIC_ROUTES = new Set([
+  "/auth",
+  "/check-email",
+  "/account-created",
+]);
 
-export function Screen({ children, style }: ScreenProps) {
+export function Screen({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const showAppChrome = !PUBLIC_ROUTES.has(pathname);
+
   return (
-    <SafeAreaView style={[styles.container, style]}>
-      <AppDropdownMenu />
+    <SafeAreaView style={styles.safe}>
+      <View style={styles.container}>
+        {showAppChrome && <AppDropdownMenu />}
 
-      <View style={styles.content}>{children}</View>
+        <View style={styles.content}>{children}</View>
 
-      <AppMenu />
+        {showAppChrome && <AppMenu />}
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safe: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   container: {
     flex: 1,
-    backgroundColor: "#020713",
-    padding: spacing.md,
-    gap: spacing.md,
   },
   content: {
     flex: 1,
