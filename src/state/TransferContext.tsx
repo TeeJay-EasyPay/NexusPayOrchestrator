@@ -3,6 +3,7 @@ import { createTransferId } from "../lib/id";
 import { supabase } from "../lib/supabase";
 import { loadCompletedTransfers, saveCompletedTransfer } from "../services/transferService";
 import { saveRecipientFromTransfer } from "../services/recipientService";
+import { writeTransactionAuditLog } from "../services/transactionAuditService";
 import {
   FundingMethod,
   FundingStatus,
@@ -68,7 +69,7 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
   }
 
   const createTransfer = (amount: number) => {
-    setTransfer({
+    const newTransfer: Transfer = {
       id: createTransferId(),
       senderCurrency: "GBP",
       senderAmount: amount,
@@ -77,6 +78,19 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
       fundingStatus: "NOT_STARTED",
       status: "CREATED",
       createdAt: Date.now(),
+    };
+
+    setTransfer(newTransfer);
+
+    void writeTransactionAuditLog({
+      transactionId: newTransfer.id,
+      eventType: "TRANSFER_CREATED",
+      status: "SUCCESS",
+      message: "Transfer created and prepared for route orchestration.",
+      metadata: {
+        sender_currency: newTransfer.senderCurrency,
+        sender_amount: newTransfer.senderAmount,
+      },
     });
   };
 
@@ -95,6 +109,19 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
     setTransfer((currentTransfer) => {
       if (!currentTransfer) return currentTransfer;
 
+      void writeTransactionAuditLog({
+        transactionId: currentTransfer.id,
+        eventType: "ROUTES_GENERATED",
+        status: "SUCCESS",
+        message: "Route intelligence generated ranked transfer options.",
+        metadata: {
+          route_count: routes.length,
+          providers: routes.map((route) => route.provider),
+          best_route_provider: routes[0]?.provider,
+          best_route_score: routes[0]?.score,
+        },
+      });
+
       return {
         ...currentTransfer,
         routes,
@@ -107,6 +134,22 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
     setTransfer((currentTransfer) => {
       if (!currentTransfer) return currentTransfer;
 
+      void writeTransactionAuditLog({
+        transactionId: currentTransfer.id,
+        eventType: "ROUTE_SELECTED",
+        status: "SUCCESS",
+        message: "User selected a route for transfer execution.",
+        metadata: {
+          provider: route.provider,
+          rail: route.rail,
+          score: route.score,
+          fee: route.fee,
+          estimated_time: route.estimatedTime,
+          receive_amount: route.receiveAmount,
+          bridge_asset: route.bridgeAsset ?? null,
+        },
+      });
+
       return {
         ...currentTransfer,
         selectedRoute: route,
@@ -118,6 +161,17 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
   const setFundingMethod = (method: FundingMethod, fundingReference?: string) => {
     setTransfer((currentTransfer) => {
       if (!currentTransfer) return currentTransfer;
+
+      void writeTransactionAuditLog({
+        transactionId: currentTransfer.id,
+        eventType: "FUNDING_METHOD_SELECTED",
+        status: "SUCCESS",
+        message: "Funding method selected for transfer authorisation.",
+        metadata: {
+          funding_method: method,
+          funding_reference: fundingReference ?? null,
+        },
+      });
 
       return {
         ...currentTransfer,
@@ -132,6 +186,21 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
   const setFundingStatus = (status: FundingStatus) => {
     setTransfer((currentTransfer) => {
       if (!currentTransfer) return currentTransfer;
+
+      if (status === "AUTHORISED") {
+        void writeTransactionAuditLog({
+          transactionId: currentTransfer.id,
+          eventType: "FUNDING_AUTHORISED",
+          status: "SUCCESS",
+          message: "Funding source authorised successfully.",
+          metadata: {
+            funding_method: currentTransfer.fundingMethod ?? null,
+            funding_reference: currentTransfer.fundingReference ?? null,
+            authorised_amount: currentTransfer.senderAmount,
+            sender_currency: currentTransfer.senderCurrency,
+          },
+        });
+      }
 
       return {
         ...currentTransfer,
@@ -163,6 +232,20 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
         fundingStatus: currentTransfer.fundingStatus ?? "AUTHORISED",
         status: "COMPLETED",
       };
+
+      void writeTransactionAuditLog({
+        transactionId: completedTransfer.id,
+        eventType: "TRANSFER_COMPLETED",
+        status: "SUCCESS",
+        message: "Transfer marked complete by the NexusPay orchestration layer.",
+        metadata: {
+          final_status: completedTransfer.status,
+          selected_provider: completedTransfer.selectedRoute?.provider ?? null,
+          rail: completedTransfer.selectedRoute?.rail ?? null,
+          recipient_country: completedTransfer.recipient?.country ?? null,
+          recipient_currency: completedTransfer.recipient?.currency ?? null,
+        },
+      });
 
       saveCompletedTransfer(completedTransfer).then(() => {
         hydrateTransfers();
