@@ -572,7 +572,7 @@ export default function SendScreen() {
   };
 
   return (
-    <Screen style={{ backgroundColor: colors.background }}>
+    <Screen>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={{ gap: 20, paddingBottom: 40 }}>
           <View style={{ gap: 6 }}>
