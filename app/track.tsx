@@ -2,6 +2,7 @@ import { router } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Linking, Pressable, ScrollView, View } from "react-native";
 
+import { OperationalTimelineCard } from "../src/components/audit/OperationalTimelineCard";
 import { AppButton } from "../src/components/ui/AppButton";
 import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
@@ -831,6 +832,15 @@ export default function TrackScreen() {
             <AppButton title="Back home" onPress={() => router.push("/")} />
           ) : null}
         </View>
+
+        {transfer?.id ? (
+          <OperationalTimelineCard
+            transactionId={transfer.id}
+            refreshKey={activeStep}
+          />
+        ) : null}
+
+
       </ScrollView>
     </Screen>
   );
