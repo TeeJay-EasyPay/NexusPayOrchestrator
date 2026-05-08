@@ -7,6 +7,8 @@ import {
     RouteQuote,
 } from "../types/transfer";
 
+import { calculateAiRouteScore } from "./aiRouteIntelligence";
+
 type BuildRouteQuoteInput = {
   amount: number;
   currency: Currency;
@@ -221,16 +223,17 @@ export function buildOrchestratedRouteQuotes({
 
     const liquidityScore = getLiquidityScore(liquidityStatus);
 
-    const score = Math.max(
-      1,
-      Math.round(
-        route.reliability * 0.35 +
-          route.speedScore * 0.25 +
-          route.costScore * 0.2 +
-          liquidityScore * 0.2 -
-          liquidityPenalty
-      )
-    );
+    const aiScore = calculateAiRouteScore({
+      provider: route.provider,
+      routeFamily: route.routeFamily,
+      currency,
+      baseReliability: route.reliability,
+      speedScore: route.speedScore,
+      costScore: route.costScore,
+      liquidityScore,
+      liquidityPenalty,
+      amount,
+    });
 
     const settlementStages = buildSettlementStages(route, liquidityStatus);
 
@@ -248,7 +251,7 @@ export function buildOrchestratedRouteQuotes({
       fee,
 
       estimatedTime: route.estimatedTime,
-      score,
+      score: aiScore.score,
 
       speedScore: route.speedScore,
       costScore: route.costScore,
@@ -261,11 +264,30 @@ export function buildOrchestratedRouteQuotes({
         liquidityStatus === "AVAILABLE" || liquidityStatus === "NOT_REQUIRED",
       liquidityStatus,
 
-      partnerHealth: route.partnerHealth,
+      partnerHealth: aiScore.partnerHealth,
       partnerUptime: route.partnerUptime,
 
       orchestrationReason: route.orchestrationReason,
-      routeConfidence: score,
+      routeConfidence: aiScore.aiConfidence,
+
+      aiConfidence: aiScore.aiConfidence,
+      predictedFailureRisk: aiScore.predictedFailureRisk,
+      optimisationMode: aiScore.optimisationMode,
+      aiRecommendation: aiScore.aiRecommendation,
+      aiDecisionFactors: aiScore.aiDecisionFactors,
+
+      corridorHealthScore: aiScore.corridorHealth.healthScore,
+      corridorInsight: aiScore.corridorHealth.insight,
+
+      providerHistoricalSuccessRate:
+        aiScore.providerProfile.historicalSuccessRate,
+
+      providerAverageLatencyMinutes:
+        aiScore.providerProfile.averageLatencyMinutes,
+
+      providerRecentTrend:
+        aiScore.providerProfile.recentTrend,
+
       settlementStages,
 
       steps: settlementStages,
