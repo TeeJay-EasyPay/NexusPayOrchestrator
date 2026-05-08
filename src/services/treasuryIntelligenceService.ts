@@ -12,6 +12,40 @@ interface WriteTreasurySnapshotInput {
   treasurySignal: TreasuryIntelligenceSignal;
 }
 
+export type TreasuryLiquiditySnapshotRow = {
+  id: string;
+  transaction_id: string;
+  route_id: string;
+  user_id: string;
+  corridor: string;
+  recipient_currency: string;
+  provider: string;
+  rail: string;
+  bridge_asset: string | null;
+  corridor_liquidity_depth: string;
+  corridor_pressure: string;
+  corridor_capacity_score: number;
+  corridor_preferred_rail: string | null;
+  corridor_preferred_bridge_asset: string | null;
+  corridor_insight: string;
+  partner_liquidity_depth: string;
+  partner_pressure: string;
+  partner_capacity_score: number;
+  partner_settlement_capacity: string;
+  partner_insight: string;
+  rail_liquidity_depth: string;
+  rail_pressure: string;
+  rail_capacity_score: number;
+  rail_settlement_capacity: string;
+  rail_insight: string;
+  treasury_score: number;
+  treasury_pressure_penalty: number;
+  liquidity_recommendation: string;
+  decision_factors: string[];
+  snapshot_payload: Record<string, unknown>;
+  created_at: string;
+};
+
 export async function writeTreasuryLiquiditySnapshot({
   transactionId,
   routeId,
@@ -135,9 +169,38 @@ export async function loadTreasurySnapshots(transactionId: string) {
       return [];
     }
 
-    return data ?? [];
+    return (data ?? []) as TreasuryLiquiditySnapshotRow[];
   } catch (error) {
     console.warn("Treasury snapshot retrieval failed", error);
+    return [];
+  }
+}
+
+export async function loadRecentTreasurySnapshots(limit = 25) {
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return [];
+    }
+
+    const { data, error } = await supabase
+      .from("treasury_liquidity_snapshots")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.warn("Failed to load recent treasury snapshots", error.message);
+      return [];
+    }
+
+    return (data ?? []) as TreasuryLiquiditySnapshotRow[];
+  } catch (error) {
+    console.warn("Recent treasury snapshot retrieval failed", error);
     return [];
   }
 }
