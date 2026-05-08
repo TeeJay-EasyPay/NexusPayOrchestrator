@@ -6,6 +6,10 @@ import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
 import { Screen } from "../src/components/ui/Screen";
 import {
+  loadRecentRouteOperationalEvents,
+  RouteOperationalEventRow,
+} from "../src/services/routeOperationalEventService";
+import {
   loadRecentTreasurySnapshots,
   TreasuryLiquiditySnapshotRow,
 } from "../src/services/treasuryIntelligenceService";
@@ -70,6 +74,13 @@ function getOverallOperationalPressure(
       : 1;
 
   return getPressureFromWeight(Math.max(componentPressure, scorePressure));
+}
+
+function getSeverityColor(severity: RouteOperationalEventRow["severity"]) {
+  if (severity === "INFO") return "#16A34A";
+  if (severity === "WATCH") return "#0EA5E9";
+  if (severity === "DEGRADED") return "#F59E0B";
+  return "#DC2626";
 }
 
 function formatDate(date: string) {
@@ -142,20 +153,9 @@ function SnapshotCard({ item }: { item: TreasuryLiquiditySnapshotRow }) {
       </View>
 
       <View style={{ flexDirection: "row", gap: 8 }}>
-        <MiniMetric
-          label="Corridor"
-          value={`${item.corridor_capacity_score}/100`}
-        />
-
-        <MiniMetric
-          label="Partner"
-          value={`${item.partner_capacity_score}/100`}
-        />
-
-        <MiniMetric
-          label="Rail"
-          value={`${item.rail_capacity_score}/100`}
-        />
+        <MiniMetric label="Corridor" value={`${item.corridor_capacity_score}/100`} />
+        <MiniMetric label="Partner" value={`${item.partner_capacity_score}/100`} />
+        <MiniMetric label="Rail" value={`${item.rail_capacity_score}/100`} />
       </View>
 
       <View style={{ flexDirection: "row", gap: 8 }}>
@@ -206,8 +206,118 @@ function SnapshotCard({ item }: { item: TreasuryLiquiditySnapshotRow }) {
   );
 }
 
+function OperationalEventCard({ item }: { item: RouteOperationalEventRow }) {
+  const severityColor = getSeverityColor(item.severity);
+
+  return (
+    <View
+      style={{
+        padding: 16,
+        borderRadius: 22,
+        backgroundColor: "#FFFFFF",
+        borderWidth: 1,
+        borderColor: "#E2E8F0",
+        gap: 12,
+      }}
+    >
+      <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
+        <View style={{ flex: 1, gap: 4 }}>
+          <AppText variant="caption" color={colors.textDarkMuted}>
+            Orchestration event
+          </AppText>
+
+          <AppText variant="subheading" color={colors.textDarkPrimary}>
+            {item.event_type.replace(/_/g, " ")}
+          </AppText>
+
+          <AppText variant="caption" color={colors.textDarkSecondary}>
+            {item.provider} • {item.rail} • {item.corridor ?? "Corridor pending"}
+          </AppText>
+        </View>
+
+        <View
+          style={{
+            alignSelf: "flex-start",
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+            borderRadius: 999,
+            backgroundColor: severityColor,
+          }}
+        >
+          <AppText variant="caption" style={{ color: "#FFFFFF", fontWeight: "900" }}>
+            {item.severity}
+          </AppText>
+        </View>
+      </View>
+
+      <View
+        style={{
+          padding: 14,
+          borderRadius: 18,
+          backgroundColor: "#0B3F4A",
+          gap: 8,
+        }}
+      >
+        <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
+          <View style={{ flex: 1 }}>
+            <AppText variant="caption" color="#BFEAF1">
+              Degradation score
+            </AppText>
+
+            <AppText variant="title" color={colors.gold}>
+              {item.degradation_score}/100
+            </AppText>
+          </View>
+
+          <View style={{ flex: 1, alignItems: "flex-end" }}>
+            <AppText variant="caption" color="#BFEAF1">
+              Failover
+            </AppText>
+
+            <AppText variant="title" color="#FFFFFF">
+              {item.failover_recommended ? "YES" : "NO"}
+            </AppText>
+          </View>
+        </View>
+      </View>
+
+      <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
+        {item.message}
+      </AppText>
+
+      <View
+        style={{
+          padding: 12,
+          borderRadius: 18,
+          backgroundColor: "#F8FAFC",
+          borderWidth: 1,
+          borderColor: "#E2E8F0",
+          gap: 6,
+        }}
+      >
+        <AppText variant="caption" color={colors.textDarkMuted}>
+          Recommended orchestration action
+        </AppText>
+
+        <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
+          {item.preferred_action.replace(/_/g, " ")}
+        </AppText>
+
+        <AppText variant="caption" color={colors.textDarkSecondary}>
+          {item.recommendation}
+        </AppText>
+      </View>
+
+      <AppText variant="caption" color={colors.textDarkMuted}>
+        Event recorded {formatDate(item.created_at)}
+      </AppText>
+    </View>
+  );
+}
+
 export default function OperationsScreen() {
   const [snapshots, setSnapshots] = useState<TreasuryLiquiditySnapshotRow[]>([]);
+  const [events, setEvents] = useState<RouteOperationalEventRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -217,6 +327,7 @@ export default function OperationsScreen() {
         averageTreasuryScore: 0,
         highestPressure: "LOW" as OperationalPressure,
         activeCorridors: 0,
+        failoverEvents: events.filter((item) => item.failover_recommended).length,
       };
     }
 
@@ -225,27 +336,29 @@ export default function OperationsScreen() {
         snapshots.length
     );
 
-    const activeCorridors = new Set(
-      snapshots.map((item) => item.corridor)
-    ).size;
+    const activeCorridors = new Set(snapshots.map((item) => item.corridor)).size;
 
     const highestPressureWeight = Math.max(
-      ...snapshots.map((item) =>
-        getPressureWeight(getOverallOperationalPressure(item))
-      )
+      ...snapshots.map((item) => getPressureWeight(getOverallOperationalPressure(item)))
     );
 
     return {
       averageTreasuryScore,
       highestPressure: getPressureFromWeight(highestPressureWeight),
       activeCorridors,
+      failoverEvents: events.filter((item) => item.failover_recommended).length,
     };
-  }, [snapshots]);
+  }, [events, snapshots]);
 
-  const loadSnapshots = useCallback(async () => {
+  const loadTelemetry = useCallback(async () => {
     try {
-      const data = await loadRecentTreasurySnapshots(20);
-      setSnapshots(data);
+      const [snapshotData, eventData] = await Promise.all([
+        loadRecentTreasurySnapshots(20),
+        loadRecentRouteOperationalEvents(20),
+      ]);
+
+      setSnapshots(snapshotData);
+      setEvents(eventData);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -254,8 +367,8 @@ export default function OperationsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadSnapshots();
-    }, [loadSnapshots])
+      loadTelemetry();
+    }, [loadTelemetry])
   );
 
   return (
@@ -267,7 +380,7 @@ export default function OperationsScreen() {
             refreshing={refreshing}
             onRefresh={() => {
               setRefreshing(true);
-              loadSnapshots();
+              loadTelemetry();
             }}
           />
         }
@@ -301,47 +414,76 @@ export default function OperationsScreen() {
               </AppText>
 
               <AppText variant="title" color="#FFFFFF">
-                Treasury telemetry active
+                Active response telemetry
               </AppText>
             </View>
 
             <View style={{ flexDirection: "row", gap: 8 }}>
-              <MiniMetric
-                label="Treasury"
-                value={`${summary.averageTreasuryScore}/100`}
-              />
-
-              <MiniMetric
-                label="Pressure"
-                value={summary.highestPressure}
-              />
-
-              <MiniMetric
-                label="Corridors"
-                value={String(summary.activeCorridors)}
-              />
+              <MiniMetric label="Treasury" value={`${summary.averageTreasuryScore}/100`} />
+              <MiniMetric label="Pressure" value={summary.highestPressure} />
+              <MiniMetric label="Failovers" value={String(summary.failoverEvents)} />
             </View>
           </View>
 
-          {loading ? (
-            <AppCard>
-              <AppText variant="body" color={colors.textDarkSecondary}>
-                Loading treasury orchestration telemetry...
-              </AppText>
-            </AppCard>
-          ) : snapshots.length === 0 ? (
-            <AppCard>
-              <AppText variant="body" color={colors.textDarkSecondary}>
-                No treasury intelligence snapshots yet. Generate route intelligence first.
-              </AppText>
-            </AppCard>
-          ) : (
+          <AppCard>
             <View style={{ gap: 12 }}>
-              {snapshots.map((item) => (
-                <SnapshotCard key={item.id} item={item} />
-              ))}
+              <View style={{ gap: 4 }}>
+                <AppText variant="subheading" color={colors.textDarkPrimary}>
+                  Orchestration Event Stream
+                </AppText>
+
+                <AppText variant="caption" color={colors.textDarkMuted}>
+                  Route degradation, treasury watch and failover recommendations generated by the orchestration engine.
+                </AppText>
+              </View>
+
+              {loading ? (
+                <AppText variant="body" color={colors.textDarkSecondary}>
+                  Loading operational events...
+                </AppText>
+              ) : events.length === 0 ? (
+                <AppText variant="body" color={colors.textDarkSecondary}>
+                  No route operational events yet. Generate route intelligence first.
+                </AppText>
+              ) : (
+                <View style={{ gap: 12 }}>
+                  {events.map((item) => (
+                    <OperationalEventCard key={item.id} item={item} />
+                  ))}
+                </View>
+              )}
             </View>
-          )}
+          </AppCard>
+
+          <AppCard>
+            <View style={{ gap: 12 }}>
+              <View style={{ gap: 4 }}>
+                <AppText variant="subheading" color={colors.textDarkPrimary}>
+                  Treasury Snapshot History
+                </AppText>
+
+                <AppText variant="caption" color={colors.textDarkMuted}>
+                  Liquidity, pressure and route-capacity observations captured during route evaluation.
+                </AppText>
+              </View>
+
+              {loading ? (
+                <AppText variant="body" color={colors.textDarkSecondary}>
+                  Loading treasury orchestration telemetry...
+                </AppText>
+              ) : snapshots.length === 0 ? (
+                <AppText variant="body" color={colors.textDarkSecondary}>
+                  No treasury intelligence snapshots yet. Generate route intelligence first.
+                </AppText>
+              ) : (
+                <View style={{ gap: 12 }}>
+                  {snapshots.map((item) => (
+                    <SnapshotCard key={item.id} item={item} />
+                  ))}
+                </View>
+              )}
+            </View>
+          </AppCard>
         </View>
       </ScrollView>
     </Screen>
