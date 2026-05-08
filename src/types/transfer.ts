@@ -32,6 +32,8 @@ export type RouteFamily =
   | "DIGITAL_BRIDGE"
   | "BACKUP";
 
+export type RouteOptimisationMode = "BALANCED" | "SPEED" | "LOW_COST" | "RESILIENCE";
+
 export interface Recipient {
   name: string;
   firstName?: string;
@@ -93,6 +95,26 @@ export interface RouteQuote {
   settlementStages?: string[];
 
   routeConfidence?: number;
+
+  aiConfidence?: number;
+
+  predictedFailureRisk?: number;
+
+  optimisationMode?: RouteOptimisationMode;
+
+  aiRecommendation?: string;
+
+  aiDecisionFactors?: string[];
+
+  corridorHealthScore?: number;
+
+  corridorInsight?: string;
+
+  providerHistoricalSuccessRate?: number;
+
+  providerAverageLatencyMinutes?: number;
+
+  providerRecentTrend?: "IMPROVING" | "STABLE" | "DEGRADING";
 
   steps: string[];
 }
