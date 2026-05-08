@@ -12,6 +12,12 @@ const MENU_ITEMS = [
   { label: "Home", description: "Dashboard and corridor intelligence", route: "/", match: "/" },
   { label: "Send Money", description: "Create a new transfer", route: "/send", match: "/send" },
   { label: "Route Intelligence", description: "Compare ranked payment routes", route: "/routes", match: "/routes" },
+  {
+    label: "Operations Command Centre",
+    description: "Treasury telemetry and orchestration intelligence",
+    route: "/operations",
+    match: "/operations",
+  },
   { label: "Track Transfer", description: "Execution status and settlement proof", route: "/track", match: "/track" },
   { label: "Account & Profile", description: "Identity, security and limits", route: "/account", match: "/account" },
 ] as const;
@@ -38,8 +44,6 @@ export function AppDropdownMenu() {
           setIsOpen(false);
           lockApp();
           await signOut();
-          // AuthGate owns the redirect to /auth. Avoid a second manual replace,
-          // which causes the login screen to flash/reload twice.
         },
       },
     ]);
