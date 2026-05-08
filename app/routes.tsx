@@ -166,7 +166,7 @@ function RouteOptionCard({
               </AppText>
 
               <AppText variant="caption" color={colors.textDarkMuted}>
-                /100 score
+                /100 AI score
               </AppText>
             </View>
           </View>
@@ -197,35 +197,50 @@ function RouteOptionCard({
           <View style={{ flexDirection: "row", gap: 8 }}>
             <MiniStat label="Speed" value={route.estimatedTime} />
             <MiniStat label="Fee" value={`£${route.fee.toFixed(2)}`} />
-            <MiniStat label="Rail" value={route.rail} />
+            <MiniStat label="AI Confidence" value={`${route.aiConfidence ?? 0}/100`} />
           </View>
 
-          {route.bridgeAsset ? (
-            <View
-              style={{
-                padding: 13,
-                borderRadius: 18,
-                backgroundColor: "#F8FAFC",
-                borderWidth: 1,
-                borderColor: "#E2E8F0",
-                gap: 7,
-              }}
-            >
-              <AppText variant="caption" color={colors.textDarkMuted}>
-                Bridge settlement intelligence
-              </AppText>
+          <View
+            style={{
+              padding: 14,
+              borderRadius: 18,
+              backgroundColor: "#F8FAFC",
+              borderWidth: 1,
+              borderColor: "#E2E8F0",
+              gap: 8,
+            }}
+          >
+            <AppText variant="caption" color={colors.textDarkMuted}>
+              AI route intelligence
+            </AppText>
 
-              <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
-                {route.bridgeAsset} bridge • {route.liquidityStatus}
-              </AppText>
+            <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
+              {route.aiRecommendation}
+            </AppText>
 
-              <AppText variant="caption" color={colors.textDarkSecondary}>
-                Liquidity required: {(route.liquidityRequiredRlusd ?? 0).toFixed(2)} RLUSD
-              </AppText>
+            <AppText variant="caption" color={colors.textDarkSecondary}>
+              {route.corridorInsight}
+            </AppText>
+
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <MiniStat
+                label="Risk"
+                value={`${route.predictedFailureRisk?.toFixed(1) ?? "0.0"}%`}
+              />
+
+              <MiniStat
+                label="Corridor"
+                value={`${route.corridorHealthScore ?? 0}/100`}
+              />
+
+              <MiniStat
+                label="Trend"
+                value={route.providerRecentTrend ?? "STABLE"}
+              />
             </View>
-          ) : null}
+          </View>
 
-          {route.orchestrationReason ? (
+          {route.aiDecisionFactors && route.aiDecisionFactors.length > 0 ? (
             <View
               style={{
                 padding: 13,
@@ -233,11 +248,22 @@ function RouteOptionCard({
                 backgroundColor: isSelected ? "#FFFFFF" : "#F8FAFC",
                 borderWidth: 1,
                 borderColor: "#E2E8F0",
+                gap: 6,
               }}
             >
-              <AppText variant="caption" color={colors.textDarkSecondary}>
-                {route.orchestrationReason}
+              <AppText variant="caption" color={colors.textDarkMuted}>
+                AI decision factors
               </AppText>
+
+              {route.aiDecisionFactors.map((factor, factorIndex) => (
+                <AppText
+                  key={`${route.id}-${factorIndex}`}
+                  variant="caption"
+                  color={colors.textDarkSecondary}
+                >
+                  • {factor}
+                </AppText>
+              ))}
             </View>
           ) : null}
         </View>
@@ -359,77 +385,8 @@ export default function RoutesScreen() {
             </AppText>
 
             <AppText variant="body" color={colors.textSecondary}>
-              NexusPay has ranked available rails by cost, speed, liquidity and confidence.
+              NexusPay AI has ranked available rails by liquidity, reliability, payout risk and corridor health.
             </AppText>
-          </View>
-
-          <View
-            style={{
-              padding: 18,
-              borderRadius: 26,
-              backgroundColor: "#0B3F4A",
-              borderWidth: 1,
-              borderColor: "rgba(255,255,255,0.14)",
-              gap: 14,
-            }}
-          >
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                gap: 12,
-                alignItems: "flex-start",
-              }}
-            >
-              <View style={{ flex: 1 }}>
-                <AppText variant="caption" color="#BFEAF1">
-                  Transfer corridor
-                </AppText>
-
-                <AppText variant="title" color="#FFFFFF">
-                  GBP → {recipient.currency}
-                </AppText>
-              </View>
-
-              <View
-                style={{
-                  paddingHorizontal: 11,
-                  paddingVertical: 6,
-                  borderRadius: 999,
-                  backgroundColor: "rgba(214,168,79,0.22)",
-                }}
-              >
-                <AppText variant="caption" color={colors.gold} style={{ fontWeight: "900" }}>
-                  {activeRoutes.length} ROUTES
-                </AppText>
-              </View>
-            </View>
-
-            <View style={{ flexDirection: "row", gap: 8 }}>
-              <PreviewStat label="Sending" value={`£${transfer.senderAmount.toFixed(2)}`} />
-              <PreviewStat label="Best score" value={recommendedRoute ? `${recommendedRoute.score}/100` : "..."} />
-            </View>
-
-            <View
-              style={{
-                padding: 13,
-                borderRadius: 18,
-                backgroundColor: "rgba(255,255,255,0.10)",
-                gap: 4,
-              }}
-            >
-              <AppText variant="caption" color="#BFEAF1">
-                Recipient
-              </AppText>
-
-              <AppText variant="body" color="#FFFFFF" style={{ fontWeight: "900" }}>
-                {recipient.name || "Not provided"} • {recipient.country}
-              </AppText>
-
-              <AppText variant="caption" color="#BFEAF1">
-                {payoutLabel}
-              </AppText>
-            </View>
           </View>
 
           <View style={{ gap: 12 }}>
