@@ -6,7 +6,13 @@ import { AppButton } from "../src/components/ui/AppButton";
 import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
 import { Screen } from "../src/components/ui/Screen";
+import {
+  buildRouteOperationalEvent,
+} from "../src/lib/routeOperationalState";
 import { buildOrchestratedRouteQuotes } from "../src/lib/settlementOrchestrator";
+import {
+  writeRouteOperationalEvent,
+} from "../src/services/routeOperationalEventService";
 import { writeTreasuryLiquiditySnapshot } from "../src/services/treasuryIntelligenceService";
 import { useTransfer } from "../src/state/TransferContext";
 import { useWallet } from "../src/state/WalletContext";
@@ -343,16 +349,24 @@ export default function RoutesScreen() {
     generatedRoutes.forEach((route) => {
       const treasurySignal = route.treasurySnapshotPayload;
 
-      if (!treasurySignal) return;
+      if (treasurySignal) {
+        void writeTreasuryLiquiditySnapshot({
+          transactionId: transfer.id,
+          routeId: route.id,
+          provider: route.provider,
+          rail: route.rail,
+          currency: transfer.recipient.currency,
+          bridgeAsset: route.bridgeAsset,
+          treasurySignal: treasurySignal as never,
+        });
+      }
 
-      void writeTreasuryLiquiditySnapshot({
+      const operationalEvent = buildRouteOperationalEvent(route);
+
+      void writeRouteOperationalEvent({
         transactionId: transfer.id,
-        routeId: route.id,
-        provider: route.provider,
-        rail: route.rail,
-        currency: transfer.recipient.currency,
-        bridgeAsset: route.bridgeAsset,
-        treasurySignal: treasurySignal as never,
+        route,
+        event: operationalEvent,
       });
     });
   }, [transfer?.id, transfer?.recipient.currency, generatedRoutes]);
