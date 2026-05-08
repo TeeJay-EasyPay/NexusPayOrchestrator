@@ -7,6 +7,7 @@ import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
 import { Screen } from "../src/components/ui/Screen";
 import { buildOrchestratedRouteQuotes } from "../src/lib/settlementOrchestrator";
+import { writeTreasuryLiquiditySnapshot } from "../src/services/treasuryIntelligenceService";
 import { useTransfer } from "../src/state/TransferContext";
 import { useWallet } from "../src/state/WalletContext";
 import { colors } from "../src/theme";
@@ -240,6 +241,42 @@ function RouteOptionCard({
             </View>
           </View>
 
+          <View
+            style={{
+              padding: 14,
+              borderRadius: 18,
+              backgroundColor: "#FFF8E1",
+              borderWidth: 1,
+              borderColor: "#F3D58A",
+              gap: 8,
+            }}
+          >
+            <AppText variant="caption" color="#8A6218">
+              Treasury liquidity intelligence
+            </AppText>
+
+            <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
+              {route.treasuryRecommendation ?? "Treasury intelligence pending"}
+            </AppText>
+
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <MiniStat
+                label="Treasury"
+                value={`${route.treasuryScore ?? 0}/100`}
+              />
+
+              <MiniStat
+                label="Pressure"
+                value={route.treasuryCorridorPressure ?? "LOW"}
+              />
+
+              <MiniStat
+                label="Rail cap."
+                value={`${route.treasuryRailCapacityScore ?? 0}/100`}
+              />
+            </View>
+          </View>
+
           {route.aiDecisionFactors && route.aiDecisionFactors.length > 0 ? (
             <View
               style={{
@@ -272,28 +309,6 @@ function RouteOptionCard({
   );
 }
 
-function PreviewStat({ label, value }: { label: string; value: string }) {
-  return (
-    <View
-      style={{
-        flex: 1,
-        padding: 11,
-        borderRadius: 16,
-        backgroundColor: "rgba(255,255,255,0.10)",
-        gap: 4,
-      }}
-    >
-      <AppText variant="caption" color="#BFEAF1">
-        {label}
-      </AppText>
-
-      <AppText variant="body" color="#FFFFFF" style={{ fontWeight: "900" }}>
-        {value}
-      </AppText>
-    </View>
-  );
-}
-
 export default function RoutesScreen() {
   const { transfer, setRoutes, selectRoute } = useTransfer();
   const { simulatedRlusdBalance } = useWallet();
@@ -322,11 +337,30 @@ export default function RoutesScreen() {
     setRoutes(generatedRoutes);
   }, [shouldStoreGeneratedRoutes, generatedRoutes, setRoutes]);
 
+  useEffect(() => {
+    if (!transfer?.id || generatedRoutes.length === 0) return;
+
+    generatedRoutes.forEach((route) => {
+      const treasurySignal = route.treasurySnapshotPayload;
+
+      if (!treasurySignal) return;
+
+      void writeTreasuryLiquiditySnapshot({
+        transactionId: transfer.id,
+        routeId: route.id,
+        provider: route.provider,
+        rail: route.rail,
+        currency: transfer.recipient.currency,
+        bridgeAsset: route.bridgeAsset,
+        treasurySignal: treasurySignal as never,
+      });
+    });
+  }, [transfer?.id, transfer?.recipient.currency, generatedRoutes]);
+
   const activeRoutes =
     transfer?.routes && transfer.routes.length > 0 ? transfer.routes : generatedRoutes;
 
   const selectedRoute = activeRoutes.find((route) => route.id === selectedRouteId);
-  const recommendedRoute = activeRoutes[0];
 
   const handleSelectRoute = (route: RouteQuote) => {
     setSelectedRouteId(route.id);
@@ -365,11 +399,6 @@ export default function RoutesScreen() {
   }
 
   const recipient = transfer.recipient;
-
-  const payoutLabel =
-    recipient.payoutMethod === "BANK"
-      ? `${recipient.bankName} bank account`
-      : `${recipient.mobileWalletProvider} mobile wallet`;
 
   return (
     <Screen>
