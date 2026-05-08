@@ -72,13 +72,6 @@ function getOverallOperationalPressure(
   return getPressureFromWeight(Math.max(componentPressure, scorePressure));
 }
 
-function getPressureColor(pressure: string) {
-  if (pressure === "LOW") return "#16A34A";
-  if (pressure === "MEDIUM") return "#0EA5E9";
-  if (pressure === "HIGH") return "#F59E0B";
-  return "#DC2626";
-}
-
 function formatDate(date: string) {
   return new Date(date).toLocaleString([], {
     hour: "2-digit",
@@ -103,39 +96,18 @@ function SnapshotCard({ item }: { item: TreasuryLiquiditySnapshotRow }) {
         gap: 12,
       }}
     >
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          gap: 12,
-        }}
-      >
-        <View style={{ flex: 1, gap: 4 }}>
-          <AppText variant="caption" color={colors.textDarkMuted}>
-            Treasury orchestration snapshot
-          </AppText>
+      <View style={{ gap: 4 }}>
+        <AppText variant="caption" color={colors.textDarkMuted}>
+          Treasury orchestration snapshot
+        </AppText>
 
-          <AppText variant="subheading" color={colors.textDarkPrimary}>
-            {item.corridor}
-          </AppText>
+        <AppText variant="subheading" color={colors.textDarkPrimary}>
+          {item.corridor}
+        </AppText>
 
-          <AppText variant="caption" color={colors.textDarkSecondary}>
-            {item.provider} • {item.rail}
-          </AppText>
-        </View>
-
-        <View
-          style={{
-            paddingHorizontal: 12,
-            paddingVertical: 6,
-            borderRadius: 999,
-            backgroundColor: getPressureColor(overallPressure),
-          }}
-        >
-          <AppText variant="caption" style={{ color: "#FFFFFF", fontWeight: "900" }}>
-            {overallPressure}
-          </AppText>
-        </View>
+        <AppText variant="caption" color={colors.textDarkSecondary}>
+          {item.provider} • {item.rail}
+        </AppText>
       </View>
 
       <View
