@@ -11,6 +11,8 @@ import {
 } from "../src/services/treasuryIntelligenceService";
 import { colors } from "../src/theme";
 
+type OperationalPressure = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+
 function MiniMetric({ label, value }: { label: string; value: string }) {
   return (
     <View
@@ -35,6 +37,41 @@ function MiniMetric({ label, value }: { label: string; value: string }) {
   );
 }
 
+function getPressureWeight(pressure: string) {
+  if (pressure === "CRITICAL") return 4;
+  if (pressure === "HIGH") return 3;
+  if (pressure === "MEDIUM") return 2;
+  return 1;
+}
+
+function getPressureFromWeight(weight: number): OperationalPressure {
+  if (weight >= 4) return "CRITICAL";
+  if (weight >= 3) return "HIGH";
+  if (weight >= 2) return "MEDIUM";
+  return "LOW";
+}
+
+function getOverallOperationalPressure(
+  item: TreasuryLiquiditySnapshotRow
+): OperationalPressure {
+  const componentPressure = Math.max(
+    getPressureWeight(item.corridor_pressure),
+    getPressureWeight(item.partner_pressure),
+    getPressureWeight(item.rail_pressure)
+  );
+
+  const scorePressure =
+    item.treasury_score < 55
+      ? 4
+      : item.treasury_score < 70
+      ? 3
+      : item.treasury_score < 82
+      ? 2
+      : 1;
+
+  return getPressureFromWeight(Math.max(componentPressure, scorePressure));
+}
+
 function getPressureColor(pressure: string) {
   if (pressure === "LOW") return "#16A34A";
   if (pressure === "MEDIUM") return "#0EA5E9";
@@ -53,6 +90,8 @@ function formatDate(date: string) {
 }
 
 function SnapshotCard({ item }: { item: TreasuryLiquiditySnapshotRow }) {
+  const overallPressure = getOverallOperationalPressure(item);
+
   return (
     <View
       style={{
@@ -90,11 +129,11 @@ function SnapshotCard({ item }: { item: TreasuryLiquiditySnapshotRow }) {
             paddingHorizontal: 12,
             paddingVertical: 6,
             borderRadius: 999,
-            backgroundColor: getPressureColor(item.corridor_pressure),
+            backgroundColor: getPressureColor(overallPressure),
           }}
         >
           <AppText variant="caption" style={{ color: "#FFFFFF", fontWeight: "900" }}>
-            {item.corridor_pressure}
+            {overallPressure}
           </AppText>
         </View>
       </View>
@@ -120,11 +159,11 @@ function SnapshotCard({ item }: { item: TreasuryLiquiditySnapshotRow }) {
 
           <View style={{ alignItems: "flex-end" }}>
             <AppText variant="caption" color="#BFEAF1">
-              Route pressure
+              Overall pressure
             </AppText>
 
             <AppText variant="title" color="#FFFFFF">
-              {item.rail_pressure}
+              {overallPressure}
             </AppText>
           </View>
         </View>
@@ -145,6 +184,12 @@ function SnapshotCard({ item }: { item: TreasuryLiquiditySnapshotRow }) {
           label="Rail"
           value={`${item.rail_capacity_score}/100`}
         />
+      </View>
+
+      <View style={{ flexDirection: "row", gap: 8 }}>
+        <MiniMetric label="Corr. pressure" value={item.corridor_pressure} />
+        <MiniMetric label="Partner press." value={item.partner_pressure} />
+        <MiniMetric label="Rail pressure" value={item.rail_pressure} />
       </View>
 
       <View
@@ -198,7 +243,7 @@ export default function OperationsScreen() {
     if (snapshots.length === 0) {
       return {
         averageTreasuryScore: 0,
-        highestPressure: "LOW",
+        highestPressure: "LOW" as OperationalPressure,
         activeCorridors: 0,
       };
     }
@@ -212,19 +257,15 @@ export default function OperationsScreen() {
       snapshots.map((item) => item.corridor)
     ).size;
 
-    const highestPressure = snapshots.some(
-      (item) => item.corridor_pressure === "CRITICAL"
-    )
-      ? "CRITICAL"
-      : snapshots.some((item) => item.corridor_pressure === "HIGH")
-      ? "HIGH"
-      : snapshots.some((item) => item.corridor_pressure === "MEDIUM")
-      ? "MEDIUM"
-      : "LOW";
+    const highestPressureWeight = Math.max(
+      ...snapshots.map((item) =>
+        getPressureWeight(getOverallOperationalPressure(item))
+      )
+    );
 
     return {
       averageTreasuryScore,
-      highestPressure,
+      highestPressure: getPressureFromWeight(highestPressureWeight),
       activeCorridors,
     };
   }, [snapshots]);
