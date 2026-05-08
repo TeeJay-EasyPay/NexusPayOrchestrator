@@ -8,6 +8,7 @@ import {
 } from "../types/transfer";
 
 import { calculateAiRouteScore } from "./aiRouteIntelligence";
+import { getTreasuryIntelligence } from "./treasuryIntelligence";
 
 type BuildRouteQuoteInput = {
   amount: number;
@@ -223,6 +224,16 @@ export function buildOrchestratedRouteQuotes({
 
     const liquidityScore = getLiquidityScore(liquidityStatus);
 
+    const treasurySignal = getTreasuryIntelligence({
+      amount,
+      currency,
+      provider: route.provider,
+      rail: route.rail,
+      bridgeAsset: route.bridgeAsset,
+      simulatedRlusdBalance,
+      liquidityRequiredRlusd,
+    });
+
     const aiScore = calculateAiRouteScore({
       provider: route.provider,
       routeFamily: route.routeFamily,
@@ -231,7 +242,7 @@ export function buildOrchestratedRouteQuotes({
       speedScore: route.speedScore,
       costScore: route.costScore,
       liquidityScore,
-      liquidityPenalty,
+      liquidityPenalty: liquidityPenalty + treasurySignal.treasuryPressurePenalty,
       amount,
     });
 
@@ -274,7 +285,10 @@ export function buildOrchestratedRouteQuotes({
       predictedFailureRisk: aiScore.predictedFailureRisk,
       optimisationMode: aiScore.optimisationMode,
       aiRecommendation: aiScore.aiRecommendation,
-      aiDecisionFactors: aiScore.aiDecisionFactors,
+      aiDecisionFactors: [
+        ...aiScore.aiDecisionFactors,
+        ...treasurySignal.decisionFactors,
+      ],
 
       corridorHealthScore: aiScore.corridorHealth.healthScore,
       corridorInsight: aiScore.corridorHealth.insight,
@@ -287,6 +301,36 @@ export function buildOrchestratedRouteQuotes({
 
       providerRecentTrend:
         aiScore.providerProfile.recentTrend,
+
+      treasuryScore: treasurySignal.treasuryScore,
+      treasuryPressurePenalty: treasurySignal.treasuryPressurePenalty,
+      treasuryRecommendation: treasurySignal.liquidityRecommendation,
+      treasuryDecisionFactors: treasurySignal.decisionFactors,
+
+      treasuryCorridor: treasurySignal.corridor.corridor,
+      treasuryCorridorLiquidityDepth: treasurySignal.corridor.liquidityDepth,
+      treasuryCorridorPressure: treasurySignal.corridor.pressure,
+      treasuryCorridorCapacityScore:
+        treasurySignal.corridor.availableCapacityScore,
+      treasuryCorridorPreferredRail: treasurySignal.corridor.preferredRail,
+      treasuryCorridorPreferredBridgeAsset:
+        treasurySignal.corridor.preferredBridgeAsset,
+
+      treasuryPartnerLiquidityDepth: treasurySignal.partner.liquidityDepth,
+      treasuryPartnerPressure: treasurySignal.partner.pressure,
+      treasuryPartnerCapacityScore:
+        treasurySignal.partner.availableCapacityScore,
+      treasuryPartnerSettlementCapacity:
+        treasurySignal.partner.settlementCapacity,
+
+      treasuryRailLiquidityDepth: treasurySignal.rail.liquidityDepth,
+      treasuryRailPressure: treasurySignal.rail.pressure,
+      treasuryRailCapacityScore:
+        treasurySignal.rail.availableCapacityScore,
+      treasuryRailSettlementCapacity:
+        treasurySignal.rail.settlementCapacity,
+
+      treasurySnapshotPayload: treasurySignal as unknown as Record<string, unknown>,
 
       settlementStages,
 
