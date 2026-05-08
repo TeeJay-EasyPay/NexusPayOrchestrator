@@ -34,6 +34,10 @@ export type RouteFamily =
 
 export type RouteOptimisationMode = "BALANCED" | "SPEED" | "LOW_COST" | "RESILIENCE";
 
+export type TreasuryLiquidityDepth = "HIGH" | "MEDIUM" | "LOW" | "CONSTRAINED";
+export type TreasuryLiquidityPressure = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+export type TreasurySignalStatus = "STRONG" | "STABLE" | "WATCH" | "DEGRADED";
+
 export interface Recipient {
   name: string;
   firstName?: string;
@@ -115,6 +119,44 @@ export interface RouteQuote {
   providerAverageLatencyMinutes?: number;
 
   providerRecentTrend?: "IMPROVING" | "STABLE" | "DEGRADING";
+
+  treasuryScore?: number;
+
+  treasuryPressurePenalty?: number;
+
+  treasuryRecommendation?: string;
+
+  treasuryDecisionFactors?: string[];
+
+  treasuryCorridor?: string;
+
+  treasuryCorridorLiquidityDepth?: TreasuryLiquidityDepth;
+
+  treasuryCorridorPressure?: TreasuryLiquidityPressure;
+
+  treasuryCorridorCapacityScore?: number;
+
+  treasuryCorridorPreferredRail?: RailType;
+
+  treasuryCorridorPreferredBridgeAsset?: Currency;
+
+  treasuryPartnerLiquidityDepth?: TreasuryLiquidityDepth;
+
+  treasuryPartnerPressure?: TreasuryLiquidityPressure;
+
+  treasuryPartnerCapacityScore?: number;
+
+  treasuryPartnerSettlementCapacity?: TreasurySignalStatus;
+
+  treasuryRailLiquidityDepth?: TreasuryLiquidityDepth;
+
+  treasuryRailPressure?: TreasuryLiquidityPressure;
+
+  treasuryRailCapacityScore?: number;
+
+  treasuryRailSettlementCapacity?: TreasurySignalStatus;
+
+  treasurySnapshotPayload?: Record<string, unknown>;
 
   steps: string[];
 }
