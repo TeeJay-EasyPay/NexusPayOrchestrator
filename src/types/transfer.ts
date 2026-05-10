@@ -38,6 +38,10 @@ export type TreasuryLiquidityDepth = "HIGH" | "MEDIUM" | "LOW" | "CONSTRAINED";
 export type TreasuryLiquidityPressure = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 export type TreasurySignalStatus = "STRONG" | "STABLE" | "WATCH" | "DEGRADED";
 
+export type ProviderMode = "MOCK" | "SANDBOX" | "LIVE";
+export type ProviderHealthStatus = "HEALTHY" | "WATCH" | "DEGRADED" | "OFFLINE";
+export type OrchestrationSafetyStatus = "PASS" | "WATCH" | "BLOCK" | "FAILOVER";
+
 export interface Recipient {
   name: string;
   firstName?: string;
@@ -157,6 +161,44 @@ export interface RouteQuote {
   treasuryRailSettlementCapacity?: TreasurySignalStatus;
 
   treasurySnapshotPayload?: Record<string, unknown>;
+
+  providerAdapterId?: string;
+
+  providerMode?: ProviderMode;
+
+  providerHealthScore?: number;
+
+  providerHealthStatus?: ProviderHealthStatus;
+
+  providerTimeoutMs?: number;
+
+  providerMaxRetries?: number;
+
+  providerRetryBackoffMs?: number[];
+
+  providerIdempotencyKey?: string;
+
+  providerQuoteIssuedAt?: number;
+
+  providerQuoteExpiresAt?: number;
+
+  providerQuoteTtlSeconds?: number;
+
+  providerQuoteExpired?: boolean;
+
+  providerReference?: string;
+
+  providerExecutionModeDescription?: string;
+
+  orchestrationSafetyScore?: number;
+
+  orchestrationSafetyStatus?: OrchestrationSafetyStatus;
+
+  orchestrationSafetyReason?: string;
+
+  failoverRecommended?: boolean;
+
+  failoverRouteId?: string;
 
   steps: string[];
 }
