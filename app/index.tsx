@@ -398,7 +398,7 @@ export default function HomeScreen() {
             <View style={{ gap: 12 }}>
               <View style={{ gap: 4 }}>
                 <AppText variant="subheading" color={colors.textDarkPrimary}>
-                  Corridor Command Centre (CCC)
+                  Corridor Command Centre (LIVE OTA)
                 </AppText>
 
                 <AppText variant="caption" color={colors.textDarkMuted}>
