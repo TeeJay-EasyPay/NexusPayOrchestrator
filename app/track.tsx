@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Linking, Pressable, ScrollView, View } from "react-native";
 
 import { OperationalTimelineCard } from "../src/components/audit/OperationalTimelineCard";
@@ -8,60 +8,14 @@ import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
 import { Screen } from "../src/components/ui/Screen";
 import {
-  executeXrplTestnetSettlement,
-  XrplSettlementResult,
-} from "../src/lib/xrplSettlement";
-import { writeAuditLog } from "../src/services/auditLog";
-import { createPayout, getPayoutStatus } from "../src/services/payout/payoutAdapter";
-import { PayoutResult, PayoutStatus } from "../src/services/payout/payoutTypes";
+  ExecutionSnapshot,
+  ExecutionStep,
+  runTransferExecution,
+} from "../src/services/execution/executionEngine";
+import { PayoutStatus } from "../src/services/payout/payoutTypes";
 import { useTransfer } from "../src/state/TransferContext";
 import { useWallet } from "../src/state/WalletContext";
 import { colors } from "../src/theme";
-
-type TimelineStep = {
-  title: string;
-  description: string;
-};
-
-function buildTimelineSteps(routeSteps: string[]): TimelineStep[] {
-  if (routeSteps.length > 0) {
-    return routeSteps.map((step) => ({
-      title: step,
-      description: "Completed by the NexusPay orchestration layer.",
-    }));
-  }
-
-  return [
-    {
-      title: "Transfer created",
-      description: "The transfer has been created and prepared for routing.",
-    },
-    {
-      title: "Compliance checks complete",
-      description: "Basic payout and transfer checks have passed.",
-    },
-    {
-      title: "Liquidity partner selected",
-      description: "NexusPay selected the best available settlement route.",
-    },
-    {
-      title: "Settlement initiated",
-      description: "Funds are moving through the selected route.",
-    },
-    {
-      title: "Payout submitted to partner",
-      description: "The final-leg payout request has been accepted by the payout adapter.",
-    },
-    {
-      title: "Recipient payout processing",
-      description: "The local payout partner is preparing recipient delivery.",
-    },
-    {
-      title: "Transfer completed",
-      description: "The recipient payout has been marked as complete.",
-    },
-  ];
-}
 
 function formatCurrency(value: number | undefined, currency: string) {
   const safeValue = value ?? 0;
@@ -101,6 +55,33 @@ function payoutStatusLabel(status: PayoutStatus) {
   if (status === "PAID_OUT") return "Paid into destination account";
   if (status === "FAILED") return "Payout failed";
   return "Not started";
+}
+
+function executionStepColor(status: ExecutionStep["status"]) {
+  if (status === "DONE") return "#16A34A";
+  if (status === "RUNNING") return colors.gold;
+  if (status === "FAILED") return "#DC2626";
+  if (status === "SKIPPED") return "#94A3B8";
+  return "#E5E7EB";
+}
+
+function executionStepSymbol(step: ExecutionStep, index: number) {
+  if (step.status === "DONE") return "✓";
+  if (step.status === "FAILED") return "!";
+  if (step.status === "SKIPPED") return "–";
+  return String(index + 1);
+}
+
+function metadataLines(metadata?: Record<string, unknown>) {
+  if (!metadata) return [];
+
+  return Object.entries(metadata)
+    .filter(([, value]) => value !== null && value !== undefined && value !== "")
+    .slice(0, 4)
+    .map(([key, value]) => {
+      const safeValue = typeof value === "object" ? JSON.stringify(value) : String(value);
+      return `${key.replace(/_/g, " ")}: ${safeValue}`;
+    });
 }
 
 function ProgressBar({ value }: { value: number }) {
@@ -176,26 +157,14 @@ export default function TrackScreen() {
   const { transfer, startTransfer, completeTransfer } = useTransfer();
   const { debitGbp, refreshXrpBalance } = useWallet();
 
-  const [activeStep, setActiveStep] = useState(0);
+  const [executionSnapshot, setExecutionSnapshot] = useState<ExecutionSnapshot | null>(null);
   const [completedAt, setCompletedAt] = useState<string | null>(null);
-  const [xrplStatus, setXrplStatus] = useState<"NOT_REQUIRED" | "PENDING" | "COMPLETED" | "FAILED">("NOT_REQUIRED");
-  const [xrplProof, setXrplProof] = useState<XrplSettlementResult | null>(null);
-  const [payout, setPayout] = useState<PayoutResult | null>(null);
-  const [payoutStatus, setPayoutStatus] = useState<PayoutStatus>("NOT_STARTED");
 
   const hasStartedRef = useRef(false);
   const hasDebitedWalletRef = useRef(false);
   const hasCompletedRef = useRef(false);
-  const hasStartedXrplRef = useRef(false);
-  const hasStartedPayoutRef = useRef(false);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const selectedRoute = transfer?.selectedRoute;
-  const recipient = transfer?.recipient;
-
-  const timelineSteps = useMemo(() => {
-    return buildTimelineSteps(selectedRoute?.settlementStages ?? selectedRoute?.steps ?? []);
-  }, [selectedRoute?.id]);
 
   useEffect(() => {
     if (!transfer || !selectedRoute) return;
@@ -209,148 +178,23 @@ export default function TrackScreen() {
       hasDebitedWalletRef.current = true;
     }
 
-    timerRef.current = setInterval(() => {
-      setActiveStep((currentStep) => {
-        if (currentStep >= timelineSteps.length - 1) {
-          if (timerRef.current) clearInterval(timerRef.current);
-          return currentStep;
-        }
-
-        return currentStep + 1;
+    async function executeTransfer() {
+      const result = await runTransferExecution({
+        transfer,
+        selectedRoute,
+        refreshXrpBalance,
+        onSnapshot: setExecutionSnapshot,
       });
-    }, 1400);
 
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [transfer?.id, selectedRoute?.id]);
-
-  useEffect(() => {
-    if (!transfer || !selectedRoute) return;
-    if (selectedRoute.rail !== "HYBRID") return;
-    if (hasStartedXrplRef.current) return;
-
-    hasStartedXrplRef.current = true;
-    setXrplStatus("PENDING");
-
-    async function runXrplSettlement() {
-      try {
-        const proof = await executeXrplTestnetSettlement({
-          gbpAmount: transfer?.senderAmount ?? 0,
-        });
-
-        setXrplProof(proof);
-        setXrplStatus("COMPLETED");
-        await refreshXrpBalance();
-      } catch (error) {
-        console.error("XRPL settlement failed", error);
-        setXrplStatus("FAILED");
+      if (result.completed && !hasCompletedRef.current) {
+        hasCompletedRef.current = true;
+        completeTransfer();
+        setCompletedAt(new Date().toLocaleTimeString());
       }
     }
 
-    runXrplSettlement();
-  }, [transfer?.id, selectedRoute?.id, refreshXrpBalance]);
-
-  useEffect(() => {
-    if (!transfer || !selectedRoute || !recipient) return;
-    if (hasStartedPayoutRef.current) return;
-
-    const shouldStartPayout = activeStep >= Math.max(timelineSteps.length - 2, 0);
-    if (!shouldStartPayout) return;
-
-    const payoutTransfer = transfer;
-    const payoutRoute = selectedRoute;
-    const payoutRecipient = recipient;
-
-    hasStartedPayoutRef.current = true;
-
-    async function runPayout() {
-      try {
-        setPayoutStatus("INITIATED");
-
-        await writeAuditLog({
-          eventType: "PAYOUT_INITIATED",
-          entityType: "transfer",
-          entityId: payoutTransfer.id,
-          metadata: {
-            provider_mode: "mock_sandbox",
-            amount: payoutRoute.receiveAmount,
-            currency: payoutRecipient.currency,
-            country: payoutRecipient.country,
-            payout_method: payoutRecipient.payoutMethod,
-          },
-        });
-
-        const result = await createPayout({
-          transferId: payoutTransfer.id,
-          amount: payoutRoute.receiveAmount,
-          currency: payoutRecipient.currency,
-          country: payoutRecipient.country,
-          recipient: payoutRecipient,
-          payoutMethod: payoutRecipient.payoutMethod,
-        });
-
-        setPayout(result);
-        setPayoutStatus("PROCESSING");
-
-        await writeAuditLog({
-          eventType: "PAYOUT_PROCESSING",
-          entityType: "transfer",
-          entityId: payoutTransfer.id,
-          metadata: {
-            payout_reference: result.payoutReference,
-            provider: result.providerName,
-            destination: result.destinationLabel,
-          },
-        });
-
-        const finalStatus = await getPayoutStatus(result.payoutReference);
-
-        setTimeout(async () => {
-          setPayoutStatus(finalStatus);
-
-          await writeAuditLog({
-            eventType: finalStatus === "PAID_OUT" ? "PAYOUT_COMPLETED" : "PAYOUT_FAILED",
-            entityType: "transfer",
-            entityId: payoutTransfer.id,
-            metadata: {
-              payout_reference: result.payoutReference,
-              provider: result.providerName,
-              final_status: finalStatus,
-            },
-          });
-        }, 1200);
-      } catch (error) {
-        console.error("Payout execution failed", error);
-        setPayoutStatus("FAILED");
-
-        await writeAuditLog({
-          eventType: "PAYOUT_FAILED",
-          entityType: "transfer",
-          entityId: payoutTransfer.id,
-          metadata: {
-            provider_mode: "mock_sandbox",
-            error: String(error),
-          },
-        });
-      }
-    }
-
-    runPayout();
-  }, [activeStep, timelineSteps.length, transfer?.id, selectedRoute?.id, recipient?.name]);
-
-  useEffect(() => {
-    if (!transfer || !selectedRoute) return;
-    if (hasCompletedRef.current) return;
-
-    const isFinalStep = activeStep >= timelineSteps.length - 1;
-
-    if (isFinalStep) {
-      hasCompletedRef.current = true;
-      completeTransfer();
-      setCompletedAt(new Date().toLocaleTimeString());
-    }
-  }, [activeStep, timelineSteps.length, transfer?.id, selectedRoute?.id, completeTransfer]);
+    executeTransfer();
+  }, [transfer?.id, selectedRoute?.id, startTransfer, debitGbp, refreshXrpBalance, completeTransfer]);
 
   if (!transfer || !selectedRoute) {
     return (
@@ -380,16 +224,24 @@ export default function TrackScreen() {
 
   const safeRecipient = transfer.recipient;
   const recipientCurrency = safeRecipient?.currency ?? "PHP";
+  const activeRoute = executionSnapshot?.activeRoute ?? selectedRoute;
+  const executionSteps = executionSnapshot?.steps ?? [];
+  const activeStep = executionSnapshot?.activeStepIndex ?? 0;
+  const progressPercent = executionSnapshot?.progressPercent ?? 0;
+  const isCompleted = executionSnapshot?.state === "COMPLETED";
+  const isFailed = executionSnapshot?.state === "FAILED";
+  const isHybridRoute = activeRoute.rail === "HYBRID";
+  const payout = executionSnapshot?.payout ?? null;
+  const payoutStatus = executionSnapshot?.payoutStatus ?? "NOT_STARTED";
+  const xrplStatus = executionSnapshot?.xrplStatus ?? (isHybridRoute ? "PENDING" : "NOT_REQUIRED");
+  const xrplProof = executionSnapshot?.xrplProof;
+  const humanStatus = executionSnapshot?.humanStatus ?? "Preparing execution engine...";
+  const executionTelemetry = executionSnapshot?.telemetry ?? {};
+  const telemetrySummary = metadataLines(executionTelemetry);
 
   const payoutLabel = safeRecipient?.payoutMethod === "BANK"
     ? `${safeRecipient?.bankName ?? "Selected bank"} bank account`
     : `${safeRecipient?.mobileWalletProvider ?? "Selected wallet"} mobile wallet`;
-
-  const isCompleted = activeStep >= timelineSteps.length - 1;
-  const isHybridRoute = selectedRoute.rail === "HYBRID";
-  const progressPercent = timelineSteps.length > 1
-    ? Math.round((activeStep / (timelineSteps.length - 1)) * 100)
-    : 100;
 
   return (
     <Screen>
@@ -399,7 +251,7 @@ export default function TrackScreen() {
             <AppText variant="caption" color={colors.gold}>NexusPay execution layer</AppText>
             <AppText variant="title" color={colors.textPrimary}>Track Transfer</AppText>
             <AppText variant="body" color={colors.textSecondary}>
-              NexusPay is coordinating settlement, bridge proof and payout delivery.
+              NexusPay is coordinating settlement, bridge proof and payout delivery through the execution engine.
             </AppText>
           </View>
 
@@ -417,7 +269,7 @@ export default function TrackScreen() {
               <View style={{ flex: 1 }}>
                 <AppText variant="caption" color="#BFEAF1">Execution status</AppText>
                 <AppText variant="title" color="#FFFFFF">
-                  {isCompleted ? "Delivered" : "In motion"}
+                  {isCompleted ? "Delivered" : isFailed ? "Attention needed" : "In motion"}
                 </AppText>
               </View>
 
@@ -428,17 +280,19 @@ export default function TrackScreen() {
                   borderRadius: 999,
                   backgroundColor: isCompleted
                     ? "rgba(22,163,74,0.22)"
+                    : isFailed
+                    ? "rgba(220,38,38,0.22)"
                     : "rgba(214,168,79,0.22)",
                 }}
               >
                 <AppText
                   variant="caption"
                   style={{
-                    color: isCompleted ? "#86EFAC" : colors.gold,
+                    color: isCompleted ? "#86EFAC" : isFailed ? "#FCA5A5" : colors.gold,
                     fontWeight: "900",
                   }}
                 >
-                  {isCompleted ? "COMPLETED" : `${progressPercent}% COMPLETE`}
+                  {isCompleted ? "COMPLETED" : isFailed ? "FAILED" : `${progressPercent}% COMPLETE`}
                 </AppText>
               </View>
             </View>
@@ -447,7 +301,7 @@ export default function TrackScreen() {
 
             <View style={{ flexDirection: "row", gap: 8 }}>
               <HeroMetric label="Sending" value={`£${(transfer.senderAmount ?? 0).toFixed(2)}`} />
-              <HeroMetric label="Receiving" value={formatCurrency(selectedRoute.receiveAmount, recipientCurrency)} />
+              <HeroMetric label="Receiving" value={formatCurrency(activeRoute.receiveAmount, recipientCurrency)} />
             </View>
 
             <View
@@ -460,13 +314,29 @@ export default function TrackScreen() {
             >
               <AppText variant="caption" color="#BFEAF1">Active execution stage</AppText>
               <AppText variant="body" color="#FFFFFF" style={{ fontWeight: "900" }}>
-                {timelineSteps[activeStep]?.title ?? "Preparing transfer route"}
+                {executionSteps[activeStep]?.title ?? "Preparing execution engine"}
               </AppText>
               <AppText variant="caption" color="#BFEAF1">
-                Ref NPX-{transfer.id.slice(-6)} • {selectedRoute.provider ?? "Selected route"}
+                {humanStatus}
+              </AppText>
+              <AppText variant="caption" color="#BFEAF1">
+                Ref NPX-{transfer.id.slice(-6)} • {activeRoute.provider ?? "Selected route"}
               </AppText>
             </View>
           </View>
+
+          {executionSnapshot?.failoverUsed ? (
+            <AppCard>
+              <View style={{ gap: 8 }}>
+                <AppText variant="subheading" color={colors.textDarkPrimary}>
+                  Safe failover activated
+                </AppText>
+                <AppText variant="caption" color={colors.textDarkSecondary}>
+                  NexusPay rerouted this transfer from {selectedRoute.provider} to {activeRoute.provider} after the primary execution path became unavailable.
+                </AppText>
+              </View>
+            </AppCard>
+          ) : null}
 
           <AppCard>
             <View style={{ gap: 14 }}>
@@ -481,9 +351,15 @@ export default function TrackScreen() {
               </View>
 
               <View style={{ flexDirection: "row", gap: 8 }}>
-                <DetailMetric label="Route score" value={`${selectedRoute.score ?? 0}/100`} />
-                <DetailMetric label="Rail" value={selectedRoute.rail} />
-                <DetailMetric label="ETA" value={selectedRoute.estimatedTime ?? "Live"} />
+                <DetailMetric label="Route score" value={`${activeRoute.score ?? 0}/100`} />
+                <DetailMetric label="Rail" value={activeRoute.rail} />
+                <DetailMetric label="ETA" value={activeRoute.estimatedTime ?? "Live"} />
+              </View>
+
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <DetailMetric label="Provider" value={activeRoute.provider ?? "Route engine"} />
+                <DetailMetric label="Retries" value={String(executionTelemetry.provider_max_retries ?? activeRoute.providerMaxRetries ?? 0)} />
+                <DetailMetric label="Timeout" value={`${executionTelemetry.provider_timeout_ms ?? activeRoute.providerTimeoutMs ?? 0}ms`} />
               </View>
 
               <View
@@ -520,95 +396,113 @@ export default function TrackScreen() {
           <AppCard>
             <View style={{ gap: 14 }}>
               <AppText variant="subheading" color={colors.textDarkPrimary}>
-                Transfer timeline
+                Execution state machine
               </AppText>
 
-              {timelineSteps.map((step, index) => {
-                const isActive = index === activeStep;
-                const isDone = index < activeStep;
-                const isFuture = index > activeStep;
+              {executionSteps.length === 0 ? (
+                <View
+                  style={{
+                    padding: 14,
+                    borderRadius: 18,
+                    backgroundColor: "#F8FAFC",
+                    borderWidth: 1,
+                    borderColor: "#E2E8F0",
+                  }}
+                >
+                  <AppText variant="caption" color={colors.textDarkSecondary}>
+                    Waiting for execution engine snapshot...
+                  </AppText>
+                </View>
+              ) : (
+                executionSteps.map((step, index) => {
+                  const color = executionStepColor(step.status);
+                  const isActive = step.status === "RUNNING";
+                  const isFuture = step.status === "PENDING";
 
-                return (
-                  <View
-                    key={`${step.title}-${index}`}
-                    style={{
-                      flexDirection: "row",
-                      gap: 12,
-                      opacity: isFuture ? 0.45 : 1,
-                    }}
-                  >
-                    <View style={{ alignItems: "center" }}>
-                      <View
-                        style={{
-                          width: 32,
-                          height: 32,
-                          borderRadius: 16,
-                          alignItems: "center",
-                          justifyContent: "center",
-                          backgroundColor: isDone
-                            ? "#16A34A"
-                            : isActive
-                            ? colors.gold
-                            : "#E5E7EB",
-                        }}
-                      >
-                        <AppText
-                          variant="caption"
-                          style={{
-                            color: isFuture ? colors.textDarkPrimary : "#FFFFFF",
-                            fontWeight: "900",
-                          }}
-                        >
-                          {isDone ? "✓" : index + 1}
-                        </AppText>
-                      </View>
-
-                      {index < timelineSteps.length - 1 ? (
+                  return (
+                    <View
+                      key={`${step.id}-${index}`}
+                      style={{
+                        flexDirection: "row",
+                        gap: 12,
+                        opacity: isFuture ? 0.45 : 1,
+                      }}
+                    >
+                      <View style={{ alignItems: "center" }}>
                         <View
                           style={{
-                            width: 2,
-                            height: 38,
-                            backgroundColor: isDone ? "#16A34A" : "#E5E7EB",
-                          }}
-                        />
-                      ) : null}
-                    </View>
-
-                    <View style={{ flex: 1, gap: 4, paddingBottom: 12 }}>
-                      <AppText
-                        variant="body"
-                        color={colors.textDarkPrimary}
-                        style={{ fontWeight: isActive ? "900" : "700" }}
-                      >
-                        {step.title}
-                      </AppText>
-
-                      <AppText variant="caption" color={colors.textDarkSecondary}>
-                        {step.description}
-                      </AppText>
-
-                      {isActive && !isCompleted ? (
-                        <View
-                          style={{
-                            alignSelf: "flex-start",
-                            paddingHorizontal: 9,
-                            paddingVertical: 4,
-                            borderRadius: 999,
-                            backgroundColor: colors.goldSoft,
+                            width: 32,
+                            height: 32,
+                            borderRadius: 16,
+                            alignItems: "center",
+                            justifyContent: "center",
+                            backgroundColor: step.status === "PENDING" ? "#E5E7EB" : color,
                           }}
                         >
                           <AppText
                             variant="caption"
-                            style={{ color: "#8A6218", fontWeight: "900" }}
+                            style={{
+                              color: step.status === "PENDING" ? colors.textDarkPrimary : "#FFFFFF",
+                              fontWeight: "900",
+                            }}
                           >
-                            Processing now
+                            {executionStepSymbol(step, index)}
                           </AppText>
                         </View>
-                      ) : null}
+
+                        {index < executionSteps.length - 1 ? (
+                          <View
+                            style={{
+                              width: 2,
+                              height: step.telemetry ? 54 : 38,
+                              backgroundColor: step.status === "DONE" ? "#16A34A" : "#E5E7EB",
+                            }}
+                          />
+                        ) : null}
+                      </View>
+
+                      <View style={{ flex: 1, gap: 4, paddingBottom: 12 }}>
+                        <AppText
+                          variant="body"
+                          color={colors.textDarkPrimary}
+                          style={{ fontWeight: isActive ? "900" : "700" }}
+                        >
+                          {step.title}
+                        </AppText>
+
+                        <AppText variant="caption" color={colors.textDarkSecondary}>
+                          {step.description}
+                        </AppText>
+
+                        {step.attempt > 0 ? (
+                          <AppText variant="caption" color={colors.textDarkMuted}>
+                            Attempt {step.attempt}{step.provider ? ` • ${step.provider}` : ""}
+                          </AppText>
+                        ) : null}
+
+                        {isActive ? (
+                          <View
+                            style={{
+                              alignSelf: "flex-start",
+                              paddingHorizontal: 9,
+                              paddingVertical: 4,
+                              borderRadius: 999,
+                              backgroundColor: colors.goldSoft,
+                            }}
+                          >
+                            <AppText
+                              variant="caption"
+                              style={{ color: "#8A6218", fontWeight: "900" }}
+                            >
+                              Processing now
+                            </AppText>
+                          </View>
+                        ) : null}
+                      </View>
                     </View>
-                  </View>
-                );
-              })}
+                  );
+                })
+              )}
             </View>
           </AppCard>
 
@@ -664,12 +558,12 @@ export default function TrackScreen() {
                 </AppText>
 
                 <AppText variant="caption" color={colors.textDarkSecondary}>
-                  Fee £{(selectedRoute.fee ?? 0).toFixed(2)} • Recipient receives {formatCurrency(selectedRoute.receiveAmount, recipientCurrency)}
+                  Fee £{(activeRoute.fee ?? 0).toFixed(2)} • Recipient receives {formatCurrency(activeRoute.receiveAmount, recipientCurrency)}
                 </AppText>
 
-                {selectedRoute.bridgeAsset ? (
+                {activeRoute.bridgeAsset ? (
                   <AppText variant="caption" color={colors.textDarkSecondary}>
-                    Bridge asset: {selectedRoute.bridgeAsset} • Liquidity required {(selectedRoute.liquidityRequiredRlusd ?? 0).toFixed(2)} RLUSD
+                    Bridge asset: {activeRoute.bridgeAsset} • Liquidity required {(activeRoute.liquidityRequiredRlusd ?? 0).toFixed(2)} RLUSD
                   </AppText>
                 ) : null}
               </View>
@@ -761,7 +655,7 @@ export default function TrackScreen() {
                     Payout execution
                   </AppText>
                   <AppText variant="caption" color={colors.textDarkSecondary}>
-                    Final-leg payout handled through the provider-agnostic adapter.
+                    Final-leg payout handled through the provider-agnostic execution engine.
                   </AppText>
                 </View>
 
@@ -793,7 +687,7 @@ export default function TrackScreen() {
                   }}
                 >
                   <AppText variant="caption" color={colors.textDarkSecondary}>
-                    Waiting for final-leg payout trigger...
+                    Waiting for final-leg payout trigger from the execution engine...
                   </AppText>
                 </View>
               ) : (
@@ -828,6 +722,44 @@ export default function TrackScreen() {
             </View>
           </AppCard>
 
+          <AppCard>
+            <View style={{ gap: 12 }}>
+              <View style={{ gap: 4 }}>
+                <AppText variant="subheading" color={colors.textDarkPrimary}>
+                  Provider execution telemetry
+                </AppText>
+                <AppText variant="caption" color={colors.textDarkSecondary}>
+                  Runtime metadata emitted by the execution engine for operational observability.
+                </AppText>
+              </View>
+
+              {telemetrySummary.length === 0 ? (
+                <AppText variant="caption" color={colors.textDarkSecondary}>
+                  Telemetry will appear once the execution engine emits its first snapshot.
+                </AppText>
+              ) : (
+                <View style={{ gap: 6 }}>
+                  {telemetrySummary.map((line) => (
+                    <View
+                      key={line}
+                      style={{
+                        padding: 10,
+                        borderRadius: 14,
+                        backgroundColor: "#F8FAFC",
+                        borderWidth: 1,
+                        borderColor: "#E2E8F0",
+                      }}
+                    >
+                      <AppText variant="caption" color={colors.textDarkSecondary}>
+                        {line}
+                      </AppText>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          </AppCard>
+
           {isCompleted ? (
             <AppButton title="Back home" onPress={() => router.push("/")} />
           ) : null}
@@ -836,11 +768,9 @@ export default function TrackScreen() {
         {transfer?.id ? (
           <OperationalTimelineCard
             transactionId={transfer.id}
-            refreshKey={activeStep}
+            refreshKey={`${executionSnapshot?.state ?? "pending"}-${executionSnapshot?.progressPercent ?? 0}`}
           />
         ) : null}
-
-
       </ScrollView>
     </Screen>
   );
