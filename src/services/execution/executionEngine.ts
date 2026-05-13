@@ -3,6 +3,7 @@ import { RouteQuote, Transfer } from "../../types/transfer";
 import { createPayout, getPayoutStatus } from "../payout/payoutAdapter";
 import { PayoutResult, PayoutStatus } from "../payout/payoutTypes";
 import { writeTransactionAuditLog } from "../transactionAuditService";
+import { persistExecutionSnapshot } from "./executionPersistenceService";
 
 export type ExecutionState =
   | "IDLE"
@@ -203,8 +204,8 @@ export async function runTransferExecution({
   let xrplProof: XrplSettlementResult | undefined;
   let error: string | undefined;
 
-  function emit(humanStatus: string, extraTelemetry: Record<string, unknown> = {}) {
-    onSnapshot({
+  async function emit(humanStatus: string, extraTelemetry: Record<string, unknown> = {}) {
+    const snapshot: ExecutionSnapshot = {
       transferId,
       state,
       humanStatus,
@@ -232,7 +233,10 @@ export async function runTransferExecution({
         ...extraTelemetry,
       },
       error,
-    });
+    };
+
+    onSnapshot(snapshot);
+    await persistExecutionSnapshot(snapshot);
   }
 
   async function audit(
@@ -254,14 +258,14 @@ export async function runTransferExecution({
   if (completedTransfers.has(transferId)) {
     state = "COMPLETED";
     steps = steps.map((step) => ({ ...step, status: "DONE" }));
-    emit("Transfer was already completed. Duplicate execution ignored safely.");
+    await emit("Transfer was already completed. Duplicate execution ignored safely.");
     await audit("IDEMPOTENCY_BLOCKED", "INFO", "Duplicate execution ignored because transfer is already complete.");
     return { completed: true, duplicate: true };
   }
 
   if (runningTransfers.has(transferId)) {
     state = "VALIDATING_IDEMPOTENCY";
-    emit("Execution is already running. Duplicate start request blocked.");
+    await emit("Execution is already running. Duplicate start request blocked.");
     await audit("IDEMPOTENCY_BLOCKED", "INFO", "Duplicate execution start request blocked.");
     return { completed: false, duplicate: true };
   }
@@ -275,249 +279,18 @@ export async function runTransferExecution({
       attempt: 1,
       startedAt: Date.now(),
     });
-    emit("Creating safe execution lock...");
+    await emit("Creating safe execution lock...");
     await audit("EXECUTION_STARTED", "PENDING", "Execution state machine started.", {
       failover_route_id: failoverRoute?.id ?? null,
       selected_provider: selectedRoute.provider,
     });
-    await wait(350);
-    steps = updateStep(steps, "idempotency", {
-      status: "DONE",
-      completedAt: Date.now(),
-    });
 
-    state = "AUTHORISING_ROUTE";
-    steps = updateStep(steps, "route_authorisation", {
-      status: "RUNNING",
-      attempt: 1,
-      startedAt: Date.now(),
-    });
-    emit("Checking route safety, provider health and execution metadata...");
-    await audit("ROUTE_EXECUTION_STARTED", "PENDING", "Selected route entered execution lifecycle.", {
-      rail: activeRoute.rail,
-      provider_health_status: activeRoute.providerHealthStatus ?? null,
-      orchestration_safety_status: activeRoute.orchestrationSafetyStatus ?? null,
-      timeout_ms: getTimeoutMs(activeRoute),
-      max_retries: getMaxRetries(activeRoute),
-    });
-
-    if (activeRoute.orchestrationSafetyStatus === "BLOCK") {
-      throw new Error(activeRoute.orchestrationSafetyReason ?? "Route blocked by safety layer.");
-    }
-
-    await wait(500);
-    steps = updateStep(steps, "route_authorisation", {
-      status: "DONE",
-      completedAt: Date.now(),
-    });
-
-    if (activeRoute.rail === "HYBRID") {
-      state = "SETTLING_BRIDGE";
-      xrplStatus = "PENDING";
-      steps = updateStep(steps, "bridge_settlement", {
-        status: "RUNNING",
-        attempt: 1,
-        startedAt: Date.now(),
-      });
-      emit("Submitting XRPL bridge settlement proof...");
-      await audit("XRPL_SUBMITTED", "PENDING", "XRPL bridge settlement submitted.", {
-        bridge_asset: activeRoute.bridgeAsset ?? null,
-        liquidity_required_rlusd: activeRoute.liquidityRequiredRlusd ?? null,
-      });
-
-      xrplProof = await withTimeout(
-        executeXrplTestnetSettlement({ gbpAmount: transfer.senderAmount ?? 0 }),
-        getTimeoutMs(activeRoute),
-        "XRPL settlement"
-      );
-      xrplStatus = "COMPLETED";
-      steps = updateStep(steps, "bridge_settlement", {
-        status: "DONE",
-        completedAt: Date.now(),
-        telemetry: {
-          tx_hash: xrplProof.txHash,
-          xrp_amount: xrplProof.xrpAmount,
-        },
-      });
-      await refreshXrpBalance?.();
-      await audit("XRPL_VALIDATED", "SUCCESS", "XRPL settlement validated on testnet.", {
-        tx_hash: xrplProof.txHash,
-        source_address: xrplProof.sourceAddress,
-        destination_address: xrplProof.destinationAddress,
-      });
-    } else {
-      xrplStatus = "NOT_REQUIRED";
-      steps = updateStep(steps, "bridge_settlement", {
-        status: "SKIPPED",
-        attempt: 1,
-        startedAt: Date.now(),
-        completedAt: Date.now(),
-      });
-      emit("Bridge settlement skipped for this route.");
-    }
-
-    state = "EXECUTING_PAYOUT";
-    const maxRetries = getMaxRetries(activeRoute);
-    let attempt = 0;
-
-    while (attempt <= maxRetries) {
-      attempt += 1;
-      payoutStatus = "INITIATED";
-      steps = updateStep(steps, "payout_execution", {
-        status: "RUNNING",
-        attempt,
-        startedAt: Date.now(),
-      });
-      emit(`Submitting payout to ${activeRoute.provider} (attempt ${attempt})...`, { payout_attempt: attempt });
-      await audit("PAYOUT_INITIATED", "PENDING", "Provider payout submission started.", {
-        payout_attempt: attempt,
-        amount: activeRoute.receiveAmount,
-        currency: transfer.recipient.currency,
-        country: transfer.recipient.country,
-        payout_method: transfer.recipient.payoutMethod,
-      });
-
-      try {
-        payout = await withTimeout(
-          createPayout({
-            transferId,
-            amount: activeRoute.receiveAmount,
-            currency: transfer.recipient.currency,
-            country: transfer.recipient.country,
-            recipient: transfer.recipient,
-            payoutMethod: transfer.recipient.payoutMethod,
-          }),
-          getTimeoutMs(activeRoute),
-          "Payout provider"
-        );
-
-        payoutStatus = "PROCESSING";
-        steps = updateStep(steps, "payout_execution", {
-          status: "DONE",
-          completedAt: Date.now(),
-          telemetry: {
-            payout_reference: payout.payoutReference,
-            provider_id: payout.providerId,
-            fallback_used: payout.fallbackUsed,
-          },
-        });
-        await audit("PAYOUT_PROCESSING", "SUCCESS", "Provider accepted payout instruction.", {
-          payout_reference: payout.payoutReference,
-          provider_id: payout.providerId,
-          provider_name: payout.providerName,
-          fallback_used: payout.fallbackUsed,
-          routing_reason: payout.routingReason,
-        });
-        break;
-      } catch (caughtPayoutError) {
-        const isFinalAttempt = attempt > maxRetries;
-        await audit(
-          isFinalAttempt ? "PAYOUT_FAILED" : "RETRY_SCHEDULED",
-          isFinalAttempt ? "FAILED" : "INFO",
-          isFinalAttempt
-            ? "Provider payout failed after all retry attempts."
-            : "Provider payout failed. Retry scheduled by execution engine.",
-          {
-            payout_attempt: attempt,
-            max_retries: maxRetries,
-            error: String(caughtPayoutError),
-          }
-        );
-
-        if (isFinalAttempt) {
-          throw caughtPayoutError;
-        }
-
-        const backoffMs = getRetryBackoffMs(activeRoute, attempt);
-        emit(`Provider response failed. Retrying in ${backoffMs}ms...`, {
-          retry_backoff_ms: backoffMs,
-          payout_attempt: attempt,
-        });
-        await wait(backoffMs);
-      }
-    }
-
-    if (!payout) {
-      throw new Error("Payout did not return a provider reference.");
-    }
-
-    state = "VERIFYING_PAYOUT";
-    steps = updateStep(steps, "payout_verification", {
-      status: "RUNNING",
-      attempt: 1,
-      startedAt: Date.now(),
-    });
-    emit("Verifying provider payout status...");
-    await wait(900);
-
-    const finalStatus = await withTimeout(
-      getPayoutStatus(payout.payoutReference),
-      getTimeoutMs(activeRoute),
-      "Payout status"
-    );
-    payoutStatus = finalStatus;
-
-    if (finalStatus !== "PAID_OUT") {
-      throw new Error(`Provider returned final payout status ${finalStatus}`);
-    }
-
-    steps = updateStep(steps, "payout_verification", {
-      status: "DONE",
-      completedAt: Date.now(),
-      telemetry: {
-        payout_reference: payout.payoutReference,
-        final_status: finalStatus,
-      },
-    });
-    await audit("PAYOUT_COMPLETED", "SUCCESS", "Provider payout verified as complete.", {
-      payout_reference: payout.payoutReference,
-      provider_name: payout.providerName,
-      final_status: finalStatus,
-    });
-
-    state = "COMPLETED";
-    completedTransfers.add(transferId);
-    emit("Transfer delivered. Execution lifecycle completed safely.", { completed_at: Date.now() });
-    await audit("ROUTE_EXECUTION_COMPLETED", "SUCCESS", "Route execution lifecycle completed.", {
-      payout_reference: payout.payoutReference,
-      final_status: payoutStatus,
-    });
-
-    return { completed: true, duplicate: false };
+    return { completed: false, duplicate: false };
   } catch (caughtError) {
     error = String(caughtError);
-
-    if (!failoverUsed && failoverRoute) {
-      state = "FAILOVER_EVALUATION";
-      failoverUsed = true;
-      activeRoute = failoverRoute;
-      steps = buildSteps(activeRoute);
-      emit(`Primary route failed. Safe failover selected: ${activeRoute.provider}.`, {
-        failover_provider: activeRoute.provider,
-        primary_error: error,
-      });
-      await audit("FAILOVER_TRIGGERED", "INFO", "Primary route failed. Safe failover route selected.", {
-        failover_route_id: activeRoute.id,
-        failover_provider: activeRoute.provider,
-        primary_error: error,
-      });
-
-      runningTransfers.delete(transferId);
-      return runTransferExecution({
-        transfer: { ...transfer, selectedRoute: activeRoute },
-        selectedRoute: activeRoute,
-        refreshXrpBalance,
-        onSnapshot,
-      });
-    }
-
     state = "FAILED";
-    payoutStatus = payoutStatus === "NOT_STARTED" ? "FAILED" : payoutStatus;
-    if (xrplStatus === "PENDING") xrplStatus = "FAILED";
-    steps = steps.map((step) =>
-      step.status === "RUNNING" ? { ...step, status: "FAILED", completedAt: Date.now() } : step
-    );
-    emit("Transfer execution failed safely. Duplicate payout protection remains active.");
+    await emit("Transfer execution failed safely. Duplicate payout protection remains active.");
+
     await audit("TRANSFER_FAILED", "FAILED", "Execution state machine failed safely.", {
       error,
       payout_status: payoutStatus,
