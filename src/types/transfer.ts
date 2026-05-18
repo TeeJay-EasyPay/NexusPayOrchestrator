@@ -42,6 +42,20 @@ export type ProviderMode = "MOCK" | "SANDBOX" | "LIVE";
 export type ProviderHealthStatus = "HEALTHY" | "WATCH" | "DEGRADED" | "OFFLINE";
 export type OrchestrationSafetyStatus = "PASS" | "WATCH" | "BLOCK" | "FAILOVER";
 
+export type TransferStatus =
+  | "CREATED"
+  | "ROUTES_FETCHED"
+  | "ROUTE_SELECTED"
+  | "FUNDING_SELECTED"
+  | "FUNDING_AUTHORISED"
+  | "IN_PROGRESS"
+  | "RECONNECTING"
+  | "VERIFYING_STATUS"
+  | "RECONCILING_PROVIDER"
+  | "RESUMING_EXECUTION"
+  | "COMPLETED"
+  | "FAILED";
+
 export interface Recipient {
   name: string;
   firstName?: string;
@@ -73,131 +87,68 @@ export interface RouteQuote {
   score: number;
 
   bridgeAsset?: Currency;
-
   liquidityRequiredRlusd?: number;
-
   liquidityAvailable?: boolean;
-
   liquidityStatus?: LiquidityStatus;
-
   routeFamily?: RouteFamily;
-
   routeRankLabel?: string;
-
   evaluatedRoutesCount?: number;
-
   partnerHealth?: PartnerHealth;
-
   partnerUptime?: number;
-
   speedScore?: number;
-
   costScore?: number;
-
   liquidityScore?: number;
-
   reliabilityScore?: number;
-
   orchestrationReason?: string;
-
   settlementStages?: string[];
-
   routeConfidence?: number;
-
   aiConfidence?: number;
-
   predictedFailureRisk?: number;
-
   optimisationMode?: RouteOptimisationMode;
-
   aiRecommendation?: string;
-
   aiDecisionFactors?: string[];
-
   corridorHealthScore?: number;
-
   corridorInsight?: string;
-
   providerHistoricalSuccessRate?: number;
-
   providerAverageLatencyMinutes?: number;
-
   providerRecentTrend?: "IMPROVING" | "STABLE" | "DEGRADING";
-
   treasuryScore?: number;
-
   treasuryPressurePenalty?: number;
-
   treasuryRecommendation?: string;
-
   treasuryDecisionFactors?: string[];
-
   treasuryCorridor?: string;
-
   treasuryCorridorLiquidityDepth?: TreasuryLiquidityDepth;
-
   treasuryCorridorPressure?: TreasuryLiquidityPressure;
-
   treasuryCorridorCapacityScore?: number;
-
   treasuryCorridorPreferredRail?: RailType;
-
   treasuryCorridorPreferredBridgeAsset?: Currency;
-
   treasuryPartnerLiquidityDepth?: TreasuryLiquidityDepth;
-
   treasuryPartnerPressure?: TreasuryLiquidityPressure;
-
   treasuryPartnerCapacityScore?: number;
-
   treasuryPartnerSettlementCapacity?: TreasurySignalStatus;
-
   treasuryRailLiquidityDepth?: TreasuryLiquidityDepth;
-
   treasuryRailPressure?: TreasuryLiquidityPressure;
-
   treasuryRailCapacityScore?: number;
-
   treasuryRailSettlementCapacity?: TreasurySignalStatus;
-
   treasurySnapshotPayload?: Record<string, unknown>;
-
   providerAdapterId?: string;
-
   providerMode?: ProviderMode;
-
   providerHealthScore?: number;
-
   providerHealthStatus?: ProviderHealthStatus;
-
   providerTimeoutMs?: number;
-
   providerMaxRetries?: number;
-
   providerRetryBackoffMs?: number[];
-
   providerIdempotencyKey?: string;
-
   providerQuoteIssuedAt?: number;
-
   providerQuoteExpiresAt?: number;
-
   providerQuoteTtlSeconds?: number;
-
   providerQuoteExpired?: boolean;
-
   providerReference?: string;
-
   providerExecutionModeDescription?: string;
-
   orchestrationSafetyScore?: number;
-
   orchestrationSafetyStatus?: OrchestrationSafetyStatus;
-
   orchestrationSafetyReason?: string;
-
   failoverRecommended?: boolean;
-
   failoverRouteId?: string;
 
   steps: string[];
@@ -205,29 +156,15 @@ export interface RouteQuote {
 
 export interface Transfer {
   id: string;
-
   senderCurrency: Currency;
   senderAmount: number;
-
   recipient: Recipient;
-
   routes: RouteQuote[];
   selectedRoute?: RouteQuote;
-
   fundingMethod?: FundingMethod;
   fundingStatus?: FundingStatus;
   fundingReference?: string;
   fundingAuthorisedAt?: number;
-
-  status:
-    | "CREATED"
-    | "ROUTES_FETCHED"
-    | "ROUTE_SELECTED"
-    | "FUNDING_SELECTED"
-    | "FUNDING_AUTHORISED"
-    | "IN_PROGRESS"
-    | "COMPLETED"
-    | "FAILED";
-
+  status: TransferStatus;
   createdAt: number;
 }
