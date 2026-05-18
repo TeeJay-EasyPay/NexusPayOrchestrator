@@ -23,7 +23,8 @@
       "package": "com.nexuspay.orchestrator"
     },
     "web": {
-      "output": "static",
+      "bundler": "metro",
+      "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
@@ -53,7 +54,6 @@
       }
     },
     "runtimeVersion": "1.0.0",
-    
     "updates": {
       "url": "https://u.expo.dev/35f8cdd6-557f-493d-b065-52d6121f62d3",
       "enabled": true,
