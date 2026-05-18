@@ -23,19 +23,11 @@ function splitRecipientName(fullName: string) {
   const parts = fullName.trim().split(/\s+/).filter(Boolean);
 
   if (parts.length === 0) {
-    return {
-      firstName: "",
-      middleName: "",
-      surname: "",
-    };
+    return { firstName: "", middleName: "", surname: "" };
   }
 
   if (parts.length === 1) {
-    return {
-      firstName: parts[0],
-      middleName: "",
-      surname: "",
-    };
+    return { firstName: parts[0], middleName: "", surname: "" };
   }
 
   return {
@@ -59,8 +51,7 @@ function normalizeRecipient(row: any): Recipient {
     toCleanString(snapshot.name) || toCleanString(row.recipient_name) || "Recipient";
   const splitName = splitRecipientName(recipientName);
 
-  const hasStructuredName =
-    snapshot.firstName || snapshot.middleName || snapshot.surname;
+  const hasStructuredName = snapshot.firstName || snapshot.middleName || snapshot.surname;
 
   const payoutMethod = toPayoutMethod(snapshot.payoutMethod ?? row.payout_method);
   const country =
@@ -112,7 +103,7 @@ function buildSelectedRoutePayload(transfer: Transfer) {
   };
 }
 
-export async function saveCompletedTransfer(transfer: Transfer) {
+export async function saveTransferProgress(transfer: Transfer) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -121,31 +112,36 @@ export async function saveCompletedTransfer(transfer: Transfer) {
     return;
   }
 
-  const recipient = transfer.recipient;
+  const recipient = transfer.recipient ?? ({} as Recipient);
   const routePayload = buildSelectedRoutePayload(transfer);
+  const now = new Date().toISOString();
 
   const { error } = await supabase.from("transfers").upsert({
     id: transfer.id,
     user_id: user.id,
     sender_currency: transfer.senderCurrency,
     sender_amount: transfer.senderAmount,
-    recipient_country: recipient.country,
-    recipient_currency: recipient.currency,
-    recipient_name: recipient.name,
-    payout_method: recipient.payoutMethod,
+    recipient_country: recipient.country ?? "Destination",
+    recipient_currency: recipient.currency ?? "PHP",
+    recipient_name: recipient.name ?? "Recipient",
+    payout_method: recipient.payoutMethod ?? "BANK",
     payout_provider:
       recipient.payoutMethod === "BANK"
         ? recipient.bankName ?? null
         : recipient.mobileWalletProvider ?? null,
     selected_route: routePayload,
     status: transfer.status,
-    updated_at: new Date().toISOString(),
-    completed_at: transfer.status === "COMPLETED" ? new Date().toISOString() : null,
+    updated_at: now,
+    completed_at: transfer.status === "COMPLETED" ? now : null,
   });
 
   if (error) {
-    console.warn("Failed to persist completed transfer", error.message);
+    console.warn("Failed to persist transfer progress", error.message);
   }
+}
+
+export async function saveCompletedTransfer(transfer: Transfer) {
+  await saveTransferProgress({ ...transfer, status: "COMPLETED" });
 }
 
 export async function loadCompletedTransfers(): Promise<Transfer[]> {
