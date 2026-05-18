@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, View } from "react-native";
 
+import { supabase } from "../../lib/supabase";
 import { loadTransactionAuditLogs } from "../../services/transactionAuditService";
 import { colors } from "../../theme";
 import { AppCard } from "../ui/AppCard";
@@ -54,6 +55,13 @@ function metadataSummary(metadata?: Record<string, unknown> | null) {
     });
 }
 
+function mergeAuditLog(rows: TransactionAuditLogRow[], incoming: TransactionAuditLogRow) {
+  const withoutDuplicate = rows.filter((row) => row.id !== incoming.id);
+  return [...withoutDuplicate, incoming].sort(
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  );
+}
+
 export function OperationalTimelineCard({
   transactionId,
   refreshKey,
@@ -63,6 +71,7 @@ export function OperationalTimelineCard({
 }) {
   const [logs, setLogs] = useState<TransactionAuditLogRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [realtimeStatus, setRealtimeStatus] = useState("Connecting");
 
   const refresh = useCallback(async () => {
     if (!transactionId) return;
@@ -77,6 +86,39 @@ export function OperationalTimelineCard({
     refresh();
   }, [refresh, refreshKey]);
 
+  useEffect(() => {
+    if (!transactionId) return;
+
+    setRealtimeStatus("Connecting");
+
+    const channel = supabase
+      .channel(`audit_timeline_${transactionId}_${Date.now()}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "transaction_audit_logs",
+          filter: `transaction_id=eq.${transactionId}`,
+        },
+        (payload) => {
+          const incoming = payload.new as TransactionAuditLogRow;
+          setLogs((current) => mergeAuditLog(current, incoming));
+          setRealtimeStatus("Live");
+        }
+      )
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") setRealtimeStatus("Live");
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          setRealtimeStatus("Manual refresh fallback");
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [transactionId]);
+
   return (
     <AppCard>
       <View style={{ gap: 14 }}>
@@ -87,8 +129,28 @@ export function OperationalTimelineCard({
             </AppText>
 
             <AppText variant="caption" color={colors.textDarkSecondary}>
-              Persistent Supabase audit trail for this transfer.
+              Persistent Supabase audit trail with realtime streaming enabled.
             </AppText>
+
+            <View
+              style={{
+                alignSelf: "flex-start",
+                paddingHorizontal: 9,
+                paddingVertical: 4,
+                borderRadius: 999,
+                backgroundColor: realtimeStatus === "Live" ? "#DCFCE7" : colors.goldSoft,
+              }}
+            >
+              <AppText
+                variant="caption"
+                style={{
+                  color: realtimeStatus === "Live" ? "#166534" : "#8A6218",
+                  fontWeight: "900",
+                }}
+              >
+                {realtimeStatus}
+              </AppText>
+            </View>
           </View>
 
           <Pressable
@@ -118,7 +180,7 @@ export function OperationalTimelineCard({
             }}
           >
             <AppText variant="caption" color={colors.textDarkSecondary}>
-              No audit events loaded yet. Events appear as the transfer progresses.
+              No audit events loaded yet. Events appear live as the transfer progresses.
             </AppText>
           </View>
         ) : (
