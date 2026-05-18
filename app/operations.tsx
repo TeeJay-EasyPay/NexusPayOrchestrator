@@ -1,10 +1,16 @@
 import { useFocusEffect } from "expo-router";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { RefreshControl, ScrollView, View } from "react-native";
 
 import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
 import { Screen } from "../src/components/ui/Screen";
+import {
+  PersistedExecutionSession,
+  loadRecoverableExecutionSessions,
+} from "../src/services/execution/executionPersistenceService";
+import { subscribeToRecentExecutionSessions } from "../src/services/execution/executionRealtimeService";
+import { buildProviderExecutionMetrics } from "../src/services/intelligence/providerExecutionIntelligence";
 import {
   loadRecentRouteOperationalEvents,
   RouteOperationalEventRow,
@@ -83,6 +89,12 @@ function getSeverityColor(severity: RouteOperationalEventRow["severity"]) {
   return "#DC2626";
 }
 
+function executionStateColor(state: string) {
+  if (state === "COMPLETED") return "#16A34A";
+  if (state === "FAILED") return "#DC2626";
+  return colors.gold;
+}
+
 function formatDate(date: string) {
   return new Date(date).toLocaleString([], {
     hour: "2-digit",
@@ -91,6 +103,18 @@ function formatDate(date: string) {
     day: "2-digit",
     month: "short",
   });
+}
+
+function upsertSession(
+  sessions: PersistedExecutionSession[],
+  incoming: PersistedExecutionSession
+) {
+  const filtered = sessions.filter((item) => item.id !== incoming.id);
+  return [incoming, ...filtered]
+    .sort((a, b) =>
+      new Date(b.updated_at ?? 0).getTime() - new Date(a.updated_at ?? 0).getTime()
+    )
+    .slice(0, 12);
 }
 
 function SnapshotCard({ item }: { item: TreasuryLiquiditySnapshotRow }) {
@@ -181,22 +205,6 @@ function SnapshotCard({ item }: { item: TreasuryLiquiditySnapshotRow }) {
         <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
           {item.liquidity_recommendation}
         </AppText>
-      </View>
-
-      <View style={{ gap: 4 }}>
-        <AppText variant="caption" color={colors.textDarkMuted}>
-          Decision factors
-        </AppText>
-
-        {item.decision_factors?.map((factor, index) => (
-          <AppText
-            key={`${item.id}-${index}`}
-            variant="caption"
-            color={colors.textDarkSecondary}
-          >
-            • {factor}
-          </AppText>
-        ))}
       </View>
 
       <AppText variant="caption" color={colors.textDarkMuted}>
@@ -315,11 +323,121 @@ function OperationalEventCard({ item }: { item: RouteOperationalEventRow }) {
   );
 }
 
+function ExecutionSessionCard({ item }: { item: PersistedExecutionSession }) {
+  const color = executionStateColor(item.state);
+  const progress = Math.max(0, Math.min(100, item.progress_percent ?? 0));
+
+  return (
+    <View
+      style={{
+        padding: 16,
+        borderRadius: 22,
+        backgroundColor: "#FFFFFF",
+        borderWidth: 1,
+        borderColor: "#E2E8F0",
+        gap: 12,
+      }}
+    >
+      <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
+        <View style={{ flex: 1, gap: 4 }}>
+          <AppText variant="caption" color={colors.textDarkMuted}>
+            Live execution session
+          </AppText>
+
+          <AppText variant="subheading" color={colors.textDarkPrimary}>
+            {item.active_provider ?? "Execution engine"}
+          </AppText>
+
+          <AppText variant="caption" color={colors.textDarkSecondary}>
+            {item.human_status ?? "Runtime state captured"}
+          </AppText>
+        </View>
+
+        <View
+          style={{
+            alignSelf: "flex-start",
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+            borderRadius: 999,
+            backgroundColor: `${color}22`,
+          }}
+        >
+          <AppText variant="caption" style={{ color, fontWeight: "900" }}>
+            {item.state}
+          </AppText>
+        </View>
+      </View>
+
+      <View
+        style={{
+          height: 8,
+          borderRadius: 999,
+          overflow: "hidden",
+          backgroundColor: "rgba(15,23,42,0.08)",
+        }}
+      >
+        <View
+          style={{
+            width: `${progress}%`,
+            height: "100%",
+            backgroundColor: colors.gold,
+          }}
+        />
+      </View>
+
+      <View style={{ flexDirection: "row", gap: 8 }}>
+        <MiniMetric label="Progress" value={`${progress}%`} />
+        <MiniMetric label="XRPL" value={item.xrpl_status ?? "N/A"} />
+        <MiniMetric label="Payout" value={item.payout_status ?? "N/A"} />
+      </View>
+
+      <AppText variant="caption" color={colors.textDarkMuted}>
+        Updated {item.updated_at ? formatDate(item.updated_at) : "just now"}
+      </AppText>
+    </View>
+  );
+}
+
 export default function OperationsScreen() {
   const [snapshots, setSnapshots] = useState<TreasuryLiquiditySnapshotRow[]>([]);
   const [events, setEvents] = useState<RouteOperationalEventRow[]>([]);
+  const [executionSessions, setExecutionSessions] = useState<PersistedExecutionSession[]>([]);
+  const [realtimeStatus, setRealtimeStatus] = useState("Connecting");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function hydrateRecoverableExecutions() {
+      const recovered = await loadRecoverableExecutionSessions();
+      if (mounted) {
+        setExecutionSessions(recovered);
+      }
+    }
+
+    hydrateRecoverableExecutions();
+
+    const unsubscribe = subscribeToRecentExecutionSessions({
+      onSession: (session) => {
+        setRealtimeStatus("Live");
+        setExecutionSessions((current) => upsertSession(current, session));
+      },
+      onError: () => setRealtimeStatus("Manual refresh fallback"),
+    });
+
+    return () => {
+      mounted = false;
+      unsubscribe();
+    };
+  }, []);
+
+  const providerMetrics = useMemo(() => {
+    return executionSessions
+      .filter((session) => Boolean(session.snapshot?.activeRoute))
+      .slice(0, 4)
+      .map((session) => buildProviderExecutionMetrics(session.snapshot.activeRoute));
+  }, [executionSessions]);
 
   const summary = useMemo(() => {
     if (snapshots.length === 0) {
@@ -328,6 +446,9 @@ export default function OperationsScreen() {
         highestPressure: "LOW" as OperationalPressure,
         activeCorridors: 0,
         failoverEvents: events.filter((item) => item.failover_recommended).length,
+        activeExecutions: executionSessions.filter(
+          (item) => item.state !== "COMPLETED" && item.state !== "FAILED"
+        ).length,
       };
     }
 
@@ -347,18 +468,26 @@ export default function OperationsScreen() {
       highestPressure: getPressureFromWeight(highestPressureWeight),
       activeCorridors,
       failoverEvents: events.filter((item) => item.failover_recommended).length,
+      activeExecutions: executionSessions.filter(
+        (item) => item.state !== "COMPLETED" && item.state !== "FAILED"
+      ).length,
     };
-  }, [events, snapshots]);
+  }, [events, executionSessions, snapshots]);
 
   const loadTelemetry = useCallback(async () => {
     try {
-      const [snapshotData, eventData] = await Promise.all([
+      const [snapshotData, eventData, executionData] = await Promise.all([
         loadRecentTreasurySnapshots(20),
         loadRecentRouteOperationalEvents(20),
+        loadRecoverableExecutionSessions(),
       ]);
 
       setSnapshots(snapshotData);
       setEvents(eventData);
+      setExecutionSessions((current) => {
+        const merged = executionData.reduce(upsertSession, current);
+        return merged;
+      });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -396,7 +525,7 @@ export default function OperationsScreen() {
             </AppText>
 
             <AppText variant="body" color={colors.textSecondary}>
-              Live orchestration telemetry, treasury intelligence and liquidity observability.
+              Live execution telemetry, treasury intelligence and adaptive provider observability.
             </AppText>
           </View>
 
@@ -421,9 +550,113 @@ export default function OperationsScreen() {
             <View style={{ flexDirection: "row", gap: 8 }}>
               <MiniMetric label="Treasury" value={`${summary.averageTreasuryScore}/100`} />
               <MiniMetric label="Pressure" value={summary.highestPressure} />
-              <MiniMetric label="Failovers" value={String(summary.failoverEvents)} />
+              <MiniMetric label="Active exec." value={String(summary.activeExecutions)} />
             </View>
           </View>
+
+          <AppCard>
+            <View style={{ gap: 12 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
+                <View style={{ flex: 1, gap: 4 }}>
+                  <AppText variant="subheading" color={colors.textDarkPrimary}>
+                    Realtime Execution Feed
+                  </AppText>
+
+                  <AppText variant="caption" color={colors.textDarkMuted}>
+                    Live execution_sessions stream from Supabase Realtime.
+                  </AppText>
+                </View>
+
+                <View
+                  style={{
+                    alignSelf: "flex-start",
+                    paddingHorizontal: 10,
+                    paddingVertical: 5,
+                    borderRadius: 999,
+                    backgroundColor: realtimeStatus === "Live" ? "#DCFCE7" : colors.goldSoft,
+                  }}
+                >
+                  <AppText
+                    variant="caption"
+                    style={{
+                      color: realtimeStatus === "Live" ? "#166534" : "#8A6218",
+                      fontWeight: "900",
+                    }}
+                  >
+                    {realtimeStatus}
+                  </AppText>
+                </View>
+              </View>
+
+              {executionSessions.length === 0 ? (
+                <AppText variant="body" color={colors.textDarkSecondary}>
+                  Waiting for execution activity. Start a transfer to see live orchestration sessions here.
+                </AppText>
+              ) : (
+                <View style={{ gap: 12 }}>
+                  {executionSessions.map((item) => (
+                    <ExecutionSessionCard key={item.id} item={item} />
+                  ))}
+                </View>
+              )}
+            </View>
+          </AppCard>
+
+          <AppCard>
+            <View style={{ gap: 12 }}>
+              <View style={{ gap: 4 }}>
+                <AppText variant="subheading" color={colors.textDarkPrimary}>
+                  Provider Execution Intelligence
+                </AppText>
+
+                <AppText variant="caption" color={colors.textDarkMuted}>
+                  Adaptive provider reliability, latency and failover-risk scoring from live route execution.
+                </AppText>
+              </View>
+
+              {providerMetrics.length === 0 ? (
+                <AppText variant="body" color={colors.textDarkSecondary}>
+                  Provider intelligence will populate once execution snapshots contain active route telemetry.
+                </AppText>
+              ) : (
+                <View style={{ gap: 12 }}>
+                  {providerMetrics.map((metric) => (
+                    <View
+                      key={metric.provider}
+                      style={{
+                        padding: 16,
+                        borderRadius: 22,
+                        backgroundColor: "#FFFFFF",
+                        borderWidth: 1,
+                        borderColor: "#E2E8F0",
+                        gap: 12,
+                      }}
+                    >
+                      <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
+                        <View style={{ flex: 1 }}>
+                          <AppText variant="subheading" color={colors.textDarkPrimary}>
+                            {metric.provider}
+                          </AppText>
+                          <AppText variant="caption" color={colors.textDarkSecondary}>
+                            {metric.recommendation}
+                          </AppText>
+                        </View>
+                        <AppText variant="caption" style={{ color: colors.gold, fontWeight: "900" }}>
+                          Health {metric.healthScore}/100
+                        </AppText>
+                      </View>
+
+                      <View style={{ flexDirection: "row", gap: 8 }}>
+                        <MiniMetric label="Success" value={`${metric.successRate}%`} />
+                        <MiniMetric label="Latency" value={`${metric.averageLatencyMinutes}m`} />
+                        <MiniMetric label="Failover" value={`${metric.failoverRisk}%`} />
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          </AppCard>
 
           <AppCard>
             <View style={{ gap: 12 }}>
