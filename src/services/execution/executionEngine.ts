@@ -1,12 +1,17 @@
 import { executeXrplTestnetSettlement, XrplSettlementResult } from "../../lib/xrplSettlement";
-import { RouteQuote, Transfer } from "../../types/transfer";
+import { RouteQuote, Transfer, TransferStatus } from "../../types/transfer";
 import { createPayout, getPayoutStatus } from "../payout/payoutAdapter";
 import { PayoutResult, PayoutStatus } from "../payout/payoutTypes";
 import { writeTransactionAuditLog } from "../transactionAuditService";
+import { saveTransferProgress } from "../transferService";
 import { persistExecutionSnapshot } from "./executionPersistenceService";
 
 export type ExecutionState =
   | "IDLE"
+  | "RECONNECTING"
+  | "VERIFYING_STATUS"
+  | "RECONCILING_PROVIDER"
+  | "RESUMING_EXECUTION"
   | "VALIDATING_IDEMPOTENCY"
   | "AUTHORISING_ROUTE"
   | "SETTLING_BRIDGE"
@@ -55,6 +60,7 @@ type RunExecutionInput = {
   selectedRoute: RouteQuote;
   refreshXrpBalance?: () => Promise<void>;
   onSnapshot: (snapshot: ExecutionSnapshot) => void;
+  resumeFromSnapshot?: ExecutionSnapshot | null;
 };
 
 const runningTransfers = new Set<string>();
@@ -93,6 +99,20 @@ function createIdempotencyKey(transfer: Transfer, route: RouteQuote) {
 function getErrorMessage(caughtError: unknown) {
   if (caughtError instanceof Error) return caughtError.message;
   return String(caughtError);
+}
+
+function isTerminalState(state: ExecutionState) {
+  return state === "COMPLETED" || state === "FAILED";
+}
+
+function mapExecutionStateToTransferStatus(state: ExecutionState): TransferStatus {
+  if (state === "COMPLETED") return "COMPLETED";
+  if (state === "FAILED") return "FAILED";
+  if (state === "RECONNECTING") return "RECONNECTING";
+  if (state === "VERIFYING_STATUS") return "VERIFYING_STATUS";
+  if (state === "RECONCILING_PROVIDER") return "RECONCILING_PROVIDER";
+  if (state === "RESUMING_EXECUTION") return "RESUMING_EXECUTION";
+  return "IN_PROGRESS";
 }
 
 function findFailoverRoute(transfer: Transfer, selectedRoute: RouteQuote) {
@@ -197,6 +217,24 @@ function activeIndexForSteps(steps: ExecutionStep[]) {
   return steps.length - 1;
 }
 
+function normalizeRunningSteps(steps: ExecutionStep[]) {
+  return steps.map((step) =>
+    step.status === "RUNNING"
+      ? {
+          ...step,
+          status: "PENDING" as ExecutionStepStatus,
+        }
+      : step
+  );
+}
+
+function assertNoUnresolvedStepsBeforeCompletion(steps: ExecutionStep[]) {
+  const unresolved = steps.filter((step) => step.status === "PENDING" || step.status === "RUNNING");
+  if (unresolved.length > 0) {
+    throw new Error(`Cannot complete execution while steps are unresolved: ${unresolved.map((step) => step.id).join(", ")}`);
+  }
+}
+
 async function writeExecutionAudit(
   transferId: string,
   eventType: Parameters<typeof writeTransactionAuditLog>[0]["eventType"],
@@ -218,19 +256,24 @@ export async function runTransferExecution({
   selectedRoute,
   refreshXrpBalance,
   onSnapshot,
+  resumeFromSnapshot,
 }: RunExecutionInput) {
   const transferId = transfer.id;
   const idempotencyKey = createIdempotencyKey(transfer, selectedRoute);
   const failoverRoute = findFailoverRoute(transfer, selectedRoute);
+  const isRecoveryRun = Boolean(resumeFromSnapshot && !isTerminalState(resumeFromSnapshot.state));
 
   let state: ExecutionState = "IDLE";
-  let activeRoute = selectedRoute;
-  let failoverUsed = false;
-  let steps = buildSteps(activeRoute);
-  let payout: PayoutResult | undefined;
-  let payoutStatus: PayoutStatus = "NOT_STARTED";
-  let xrplStatus: ExecutionSnapshot["xrplStatus"] = activeRoute.rail === "HYBRID" ? "PENDING" : "NOT_REQUIRED";
-  let xrplProof: XrplSettlementResult | undefined;
+  let activeRoute = resumeFromSnapshot?.activeRoute ?? selectedRoute;
+  let failoverUsed = resumeFromSnapshot?.failoverUsed ?? false;
+  let steps = resumeFromSnapshot?.steps?.length
+    ? normalizeRunningSteps(resumeFromSnapshot.steps)
+    : buildSteps(activeRoute);
+  let payout: PayoutResult | undefined = resumeFromSnapshot?.payout;
+  let payoutStatus: PayoutStatus = resumeFromSnapshot?.payoutStatus ?? "NOT_STARTED";
+  let xrplStatus: ExecutionSnapshot["xrplStatus"] =
+    resumeFromSnapshot?.xrplStatus ?? (activeRoute.rail === "HYBRID" ? "PENDING" : "NOT_REQUIRED");
+  let xrplProof: XrplSettlementResult | undefined = resumeFromSnapshot?.xrplProof;
   let error: string | undefined;
 
   async function emit(humanStatus: string, extraTelemetry: Record<string, unknown> = {}) {
@@ -259,6 +302,8 @@ export async function runTransferExecution({
         route_score: activeRoute.score,
         orchestration_safety_status: activeRoute.orchestrationSafetyStatus ?? null,
         failover_recommended: activeRoute.failoverRecommended ?? false,
+        recovery_run: isRecoveryRun,
+        execution_checkpoint: steps[activeIndexForSteps(steps)]?.id ?? null,
         ...extraTelemetry,
       },
       error,
@@ -266,6 +311,11 @@ export async function runTransferExecution({
 
     onSnapshot(snapshot);
     await persistExecutionSnapshot(snapshot);
+    await saveTransferProgress({
+      ...transfer,
+      selectedRoute: activeRoute,
+      status: mapExecutionStateToTransferStatus(state),
+    });
   }
 
   async function audit(
@@ -280,160 +330,208 @@ export async function runTransferExecution({
       active_route_id: activeRoute.id,
       active_provider: activeRoute.provider,
       failover_used: failoverUsed,
+      recovery_run: isRecoveryRun,
       ...metadata,
     });
   }
 
-  async function runRouteLifecycle() {
-    state = "AUTHORISING_ROUTE";
-    steps = updateStep(steps, "route_authorisation", {
-      status: "RUNNING",
-      attempt: 1,
-      startedAt: Date.now(),
-      provider: activeRoute.provider,
-    });
-    await emit(`Authorising ${activeRoute.provider} route metadata...`);
-    await audit("ROUTE_EXECUTION_STARTED", "PENDING", "Route execution checks started.", {
-      route_id: activeRoute.id,
-      provider_health_status: activeRoute.providerHealthStatus ?? null,
-      orchestration_safety_status: activeRoute.orchestrationSafetyStatus ?? null,
-    });
+  async function runRecoveryPrelude() {
+    if (!isRecoveryRun) return;
 
+    state = "RECONNECTING";
+    await emit("Execution interrupted. Reconnecting to orchestration runtime...", {
+      recovered_from_state: resumeFromSnapshot?.state,
+    });
+    await wait(400);
+
+    state = "VERIFYING_STATUS";
+    await emit("Verifying latest transaction state before resuming execution...", {
+      recovered_progress_percent: resumeFromSnapshot?.progressPercent ?? null,
+    });
+    await wait(500);
+
+    state = "RECONCILING_PROVIDER";
+    await emit("Reconciling provider and payout state from the latest persisted checkpoint...", {
+      payout_reference: payout?.payoutReference ?? null,
+      payout_status: payoutStatus,
+      xrpl_status: xrplStatus,
+    });
+    await wait(500);
+
+    state = "RESUMING_EXECUTION";
+    await emit("Resuming execution from the safest available checkpoint...", {
+      checkpoint: steps[activeIndexForSteps(steps)]?.id ?? null,
+    });
+    await audit("ROUTE_EXECUTION_STARTED", "INFO", "Execution recovery and reconciliation started.", {
+      recovered_from_state: resumeFromSnapshot?.state,
+      recovered_progress_percent: resumeFromSnapshot?.progressPercent ?? null,
+    });
     await wait(350);
+  }
 
-    if (activeRoute.orchestrationSafetyStatus === "BLOCK") {
-      throw new Error(`${activeRoute.provider} route is blocked by orchestration safety checks.`);
-    }
+  async function runRouteLifecycle() {
+    const routeAuthorised = steps.find((step) => step.id === "route_authorisation")?.status === "DONE";
 
-    steps = completeStep(steps, "route_authorisation", {
-      provider_health_status: activeRoute.providerHealthStatus ?? null,
-      orchestration_safety_status: activeRoute.orchestrationSafetyStatus ?? null,
-    });
-    await emit(`${activeRoute.provider} route authorised.`);
-
-    state = "SETTLING_BRIDGE";
-
-    if (activeRoute.rail === "HYBRID") {
-      xrplStatus = "PENDING";
-      steps = updateStep(steps, "bridge_settlement", {
+    if (!routeAuthorised) {
+      state = "AUTHORISING_ROUTE";
+      steps = updateStep(steps, "route_authorisation", {
         status: "RUNNING",
         attempt: 1,
         startedAt: Date.now(),
         provider: activeRoute.provider,
       });
-      await emit("Submitting XRPL testnet bridge settlement...");
-      await audit("XRPL_SUBMITTED", "PENDING", "XRPL bridge settlement submitted.", {
-        bridge_asset: activeRoute.bridgeAsset ?? null,
-        send_amount_gbp: transfer.senderAmount,
+      await emit(`Authorising ${activeRoute.provider} route metadata...`);
+      await audit("ROUTE_EXECUTION_STARTED", "PENDING", "Route execution checks started.", {
+        route_id: activeRoute.id,
+        provider_health_status: activeRoute.providerHealthStatus ?? null,
+        orchestration_safety_status: activeRoute.orchestrationSafetyStatus ?? null,
       });
 
-      try {
-        xrplProof = await withTimeout(
-          executeXrplTestnetSettlement({ gbpAmount: transfer.senderAmount ?? 0 }),
-          Math.max(getTimeoutMs(activeRoute), 15000),
-          "XRPL settlement"
-        );
-        xrplStatus = "COMPLETED";
-        steps = completeStep(steps, "bridge_settlement", {
-          tx_hash: xrplProof.txHash,
-          xrp_amount: xrplProof.xrpAmount,
-          settlement_rate: xrplProof.settlementRate,
-        });
-        await refreshXrpBalance?.();
-        await emit("XRPL bridge proof validated on testnet.", {
-          xrpl_tx_hash: xrplProof.txHash,
-        });
-        await audit("XRPL_VALIDATED", "SUCCESS", "XRPL bridge settlement validated.", {
-          tx_hash: xrplProof.txHash,
-          xrp_amount: xrplProof.xrpAmount,
-        });
-      } catch (caughtError) {
-        xrplStatus = "FAILED";
-        const xrplError = getErrorMessage(caughtError);
-        steps = failStep(steps, "bridge_settlement", { error: xrplError });
-        throw new Error(`XRPL settlement failed: ${xrplError}`);
+      await wait(350);
+
+      if (activeRoute.orchestrationSafetyStatus === "BLOCK") {
+        throw new Error(`${activeRoute.provider} route is blocked by orchestration safety checks.`);
       }
-    } else {
-      xrplStatus = "NOT_REQUIRED";
-      steps = skipStep(steps, "bridge_settlement", {
-        reason: "Route rail does not require XRPL bridge settlement.",
+
+      steps = completeStep(steps, "route_authorisation", {
+        provider_health_status: activeRoute.providerHealthStatus ?? null,
+        orchestration_safety_status: activeRoute.orchestrationSafetyStatus ?? null,
       });
-      await emit("Bridge settlement skipped for this fiat route.");
+      await emit(`${activeRoute.provider} route authorised.`);
     }
 
-    state = "EXECUTING_PAYOUT";
-    const maxRetries = getMaxRetries(activeRoute);
-    const totalAttempts = maxRetries + 1;
+    const bridgeStep = steps.find((step) => step.id === "bridge_settlement");
+    const bridgeResolved = bridgeStep?.status === "DONE" || bridgeStep?.status === "SKIPPED";
 
-    for (let attempt = 1; attempt <= totalAttempts; attempt += 1) {
-      steps = updateStep(steps, "payout_execution", {
-        status: "RUNNING",
-        attempt,
-        startedAt: Date.now(),
-        provider: activeRoute.provider,
-      });
-      payoutStatus = attempt === 1 ? "NOT_STARTED" : payoutStatus;
-      await emit(`Submitting payout via ${activeRoute.provider}...`, {
-        payout_attempt: attempt,
-        payout_total_attempts: totalAttempts,
-      });
-      await audit("PAYOUT_INITIATED", "PENDING", "Provider payout submission started.", {
-        attempt,
-        total_attempts: totalAttempts,
-      });
+    if (!bridgeResolved) {
+      state = "SETTLING_BRIDGE";
 
-      try {
-        payout = await withTimeout(
-          createPayout({
-            transferId,
-            amount: activeRoute.receiveAmount,
-            currency: transfer.recipient.currency,
-            country: transfer.recipient.country,
-            recipient: transfer.recipient,
-            payoutMethod: transfer.recipient.payoutMethod,
-            payoutProviderName: activeRoute.provider,
-          }),
-          getTimeoutMs(activeRoute),
-          `${activeRoute.provider} payout submission`
-        );
-
-        payoutStatus = payout.status;
-        steps = completeStep(steps, "payout_execution", {
-          payout_reference: payout.payoutReference,
-          provider_id: payout.providerId,
-          fallback_used: payout.fallbackUsed ?? false,
+      if (activeRoute.rail === "HYBRID") {
+        xrplStatus = "PENDING";
+        steps = updateStep(steps, "bridge_settlement", {
+          status: "RUNNING",
+          attempt: 1,
+          startedAt: Date.now(),
+          provider: activeRoute.provider,
         });
-        await emit("Provider payout accepted by adapter.", {
-          payout_reference: payout.payoutReference,
-          payout_provider_id: payout.providerId,
+        await emit("Submitting XRPL testnet bridge settlement...");
+        await audit("XRPL_SUBMITTED", "PENDING", "XRPL bridge settlement submitted.", {
+          bridge_asset: activeRoute.bridgeAsset ?? null,
+          send_amount_gbp: transfer.senderAmount,
         });
-        break;
-      } catch (caughtError) {
-        const payoutError = getErrorMessage(caughtError);
 
-        if (attempt < totalAttempts) {
-          const backoffMs = getRetryBackoffMs(activeRoute, attempt);
-          await audit("RETRY_SCHEDULED", "INFO", "Provider payout submission retry scheduled.", {
-            attempt,
-            next_attempt: attempt + 1,
-            backoff_ms: backoffMs,
-            error: payoutError,
+        try {
+          xrplProof = await withTimeout(
+            executeXrplTestnetSettlement({ gbpAmount: transfer.senderAmount ?? 0 }),
+            Math.max(getTimeoutMs(activeRoute), 15000),
+            "XRPL settlement"
+          );
+          xrplStatus = "COMPLETED";
+          steps = completeStep(steps, "bridge_settlement", {
+            tx_hash: xrplProof.txHash,
+            xrp_amount: xrplProof.xrpAmount,
+            settlement_rate: xrplProof.settlementRate,
           });
-          await emit(`Provider submission attempt ${attempt} failed. Retrying safely...`, {
-            payout_attempt: attempt,
-            retry_backoff_ms: backoffMs,
-            error: payoutError,
+          await refreshXrpBalance?.();
+          await emit("XRPL bridge proof validated on testnet.", {
+            xrpl_tx_hash: xrplProof.txHash,
           });
-          await wait(backoffMs);
-          continue;
+          await audit("XRPL_VALIDATED", "SUCCESS", "XRPL bridge settlement validated.", {
+            tx_hash: xrplProof.txHash,
+            xrp_amount: xrplProof.xrpAmount,
+          });
+        } catch (caughtError) {
+          xrplStatus = "FAILED";
+          const xrplError = getErrorMessage(caughtError);
+          steps = failStep(steps, "bridge_settlement", { error: xrplError });
+          throw new Error(`XRPL settlement failed: ${xrplError}`);
         }
-
-        payoutStatus = "FAILED";
-        steps = failStep(steps, "payout_execution", {
-          attempt,
-          error: payoutError,
+      } else {
+        xrplStatus = "NOT_REQUIRED";
+        steps = skipStep(steps, "bridge_settlement", {
+          reason: "Route rail does not require XRPL bridge settlement.",
         });
-        throw new Error(`Payout submission failed: ${payoutError}`);
+        await emit("XRPL avoided because this route does not require a bridge settlement leg.");
+      }
+    }
+
+    const payoutExecutionDone = steps.find((step) => step.id === "payout_execution")?.status === "DONE";
+
+    if (!payoutExecutionDone || !payout) {
+      state = "EXECUTING_PAYOUT";
+      const maxRetries = getMaxRetries(activeRoute);
+      const totalAttempts = maxRetries + 1;
+
+      for (let attempt = 1; attempt <= totalAttempts; attempt += 1) {
+        steps = updateStep(steps, "payout_execution", {
+          status: "RUNNING",
+          attempt,
+          startedAt: Date.now(),
+          provider: activeRoute.provider,
+        });
+        payoutStatus = attempt === 1 ? "NOT_STARTED" : payoutStatus;
+        await emit(`Submitting payout via ${activeRoute.provider}...`, {
+          payout_attempt: attempt,
+          payout_total_attempts: totalAttempts,
+        });
+        await audit("PAYOUT_INITIATED", "PENDING", "Provider payout submission started.", {
+          attempt,
+          total_attempts: totalAttempts,
+        });
+
+        try {
+          payout = await withTimeout(
+            createPayout({
+              transferId,
+              amount: activeRoute.receiveAmount,
+              currency: transfer.recipient.currency,
+              country: transfer.recipient.country,
+              recipient: transfer.recipient,
+              payoutMethod: transfer.recipient.payoutMethod,
+              payoutProviderName: activeRoute.provider,
+            }),
+            getTimeoutMs(activeRoute),
+            `${activeRoute.provider} payout submission`
+          );
+
+          payoutStatus = payout.status;
+          steps = completeStep(steps, "payout_execution", {
+            payout_reference: payout.payoutReference,
+            provider_id: payout.providerId,
+            fallback_used: payout.fallbackUsed ?? false,
+          });
+          await emit("Provider payout accepted by adapter.", {
+            payout_reference: payout.payoutReference,
+            payout_provider_id: payout.providerId,
+          });
+          break;
+        } catch (caughtError) {
+          const payoutError = getErrorMessage(caughtError);
+
+          if (attempt < totalAttempts) {
+            const backoffMs = getRetryBackoffMs(activeRoute, attempt);
+            await audit("RETRY_SCHEDULED", "INFO", "Provider payout submission retry scheduled.", {
+              attempt,
+              next_attempt: attempt + 1,
+              backoff_ms: backoffMs,
+              error: payoutError,
+            });
+            await emit(`Provider submission attempt ${attempt} failed. Retrying safely...`, {
+              payout_attempt: attempt,
+              retry_backoff_ms: backoffMs,
+              error: payoutError,
+            });
+            await wait(backoffMs);
+            continue;
+          }
+
+          payoutStatus = "FAILED";
+          steps = failStep(steps, "payout_execution", {
+            attempt,
+            error: payoutError,
+          });
+          throw new Error(`Payout submission failed: ${payoutError}`);
+        }
       }
     }
 
@@ -441,65 +539,75 @@ export async function runTransferExecution({
       throw new Error("Payout adapter did not return a payout reference.");
     }
 
-    state = "VERIFYING_PAYOUT";
-    payoutStatus = payoutStatus === "INITIATED" ? "PROCESSING" : payoutStatus;
-    steps = updateStep(steps, "payout_verification", {
-      status: "RUNNING",
-      attempt: 1,
-      startedAt: Date.now(),
-      provider: activeRoute.provider,
-    });
-    await emit("Verifying destination payout status...", {
-      payout_reference: payout.payoutReference,
-    });
-    await audit("PAYOUT_PROCESSING", "PENDING", "Provider payout verification started.", {
-      payout_reference: payout.payoutReference,
-    });
+    const payoutVerified = steps.find((step) => step.id === "payout_verification")?.status === "DONE";
 
-    payoutStatus = await withTimeout(
-      getPayoutStatus(payout.payoutReference),
-      getTimeoutMs(activeRoute),
-      `${activeRoute.provider} payout verification`
-    );
+    if (!payoutVerified) {
+      state = "VERIFYING_PAYOUT";
+      payoutStatus = payoutStatus === "INITIATED" ? "PROCESSING" : payoutStatus;
+      steps = updateStep(steps, "payout_verification", {
+        status: "RUNNING",
+        attempt: 1,
+        startedAt: Date.now(),
+        provider: activeRoute.provider,
+      });
+      await emit("Verifying destination payout status...", {
+        payout_reference: payout.payoutReference,
+      });
+      await audit("PAYOUT_PROCESSING", "PENDING", "Provider payout verification started.", {
+        payout_reference: payout.payoutReference,
+      });
 
-    if (payoutStatus !== "PAID_OUT") {
-      steps = failStep(steps, "payout_verification", {
+      payoutStatus = await withTimeout(
+        getPayoutStatus(payout.payoutReference),
+        getTimeoutMs(activeRoute),
+        `${activeRoute.provider} payout verification`
+      );
+
+      if (payoutStatus !== "PAID_OUT") {
+        steps = failStep(steps, "payout_verification", {
+          payout_reference: payout.payoutReference,
+          payout_status: payoutStatus,
+        });
+        throw new Error(`Payout verification returned ${payoutStatus}.`);
+      }
+
+      payout = {
+        ...payout,
+        status: payoutStatus,
+        updatedAt: new Date().toISOString(),
+      };
+      steps = completeStep(steps, "payout_verification", {
         payout_reference: payout.payoutReference,
         payout_status: payoutStatus,
       });
-      throw new Error(`Payout verification returned ${payoutStatus}.`);
+      await emit("Destination payout verified successfully.", {
+        payout_reference: payout.payoutReference,
+        payout_status: payoutStatus,
+      });
+      await audit("PAYOUT_COMPLETED", "SUCCESS", "Provider payout completed.", {
+        payout_reference: payout.payoutReference,
+        payout_status: payoutStatus,
+      });
     }
-
-    payout = {
-      ...payout,
-      status: payoutStatus,
-      updatedAt: new Date().toISOString(),
-    };
-    steps = completeStep(steps, "payout_verification", {
-      payout_reference: payout.payoutReference,
-      payout_status: payoutStatus,
-    });
-    await emit("Destination payout verified successfully.", {
-      payout_reference: payout.payoutReference,
-      payout_status: payoutStatus,
-    });
-    await audit("PAYOUT_COMPLETED", "SUCCESS", "Provider payout completed.", {
-      payout_reference: payout.payoutReference,
-      payout_status: payoutStatus,
-    });
   }
 
   if (completedTransfers.has(transferId)) {
+    state = "VERIFYING_STATUS";
+    await emit("Transfer was already completed. Verifying persisted terminal state before rendering completion.");
     state = "COMPLETED";
-    steps = steps.map((step) => ({ ...step, status: "DONE", completedAt: step.completedAt ?? Date.now() }));
+    steps = steps.map((step) =>
+      step.status === "PENDING" || step.status === "RUNNING"
+        ? { ...step, status: "SKIPPED", completedAt: step.completedAt ?? Date.now() }
+        : step
+    );
     await emit("Transfer was already completed. Duplicate execution ignored safely.");
     await audit("IDEMPOTENCY_BLOCKED", "INFO", "Duplicate execution ignored because transfer is already complete.");
     return { completed: true, duplicate: true };
   }
 
   if (runningTransfers.has(transferId)) {
-    state = "VALIDATING_IDEMPOTENCY";
-    await emit("Execution is already running. Duplicate start request blocked.");
+    state = "VERIFYING_STATUS";
+    await emit("Execution is already running. Duplicate start request blocked while latest state is verified.");
     await audit("IDEMPOTENCY_BLOCKED", "INFO", "Duplicate execution start request blocked.");
     return { completed: false, duplicate: true };
   }
@@ -507,6 +615,8 @@ export async function runTransferExecution({
   runningTransfers.add(transferId);
 
   try {
+    await runRecoveryPrelude();
+
     state = "VALIDATING_IDEMPOTENCY";
     steps = updateStep(steps, "idempotency", {
       status: "RUNNING",
@@ -566,13 +676,9 @@ export async function runTransferExecution({
       await runRouteLifecycle();
     }
 
+    assertNoUnresolvedStepsBeforeCompletion(steps);
     state = "COMPLETED";
     completedTransfers.add(transferId);
-    steps = steps.map((step) =>
-      step.status === "PENDING" || step.status === "RUNNING"
-        ? { ...step, status: "DONE", completedAt: Date.now() }
-        : step
-    );
     await emit("Transfer completed. Settlement and payout lifecycle finished.");
     await audit("ROUTE_EXECUTION_COMPLETED", "SUCCESS", "Route execution completed.", {
       active_route_id: activeRoute.id,
