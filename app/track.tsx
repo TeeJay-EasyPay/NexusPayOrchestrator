@@ -12,6 +12,8 @@ import {
   ExecutionStep,
   runTransferExecution,
 } from "../src/services/execution/executionEngine";
+import { loadExecutionSession } from "../src/services/execution/executionPersistenceService";
+import { subscribeToExecutionSession } from "../src/services/execution/executionRealtimeService";
 import { PayoutStatus } from "../src/services/payout/payoutTypes";
 import { useTransfer } from "../src/state/TransferContext";
 import { useWallet } from "../src/state/WalletContext";
@@ -159,12 +161,53 @@ export default function TrackScreen() {
 
   const [executionSnapshot, setExecutionSnapshot] = useState<ExecutionSnapshot | null>(null);
   const [completedAt, setCompletedAt] = useState<string | null>(null);
+  const [realtimeStatus, setRealtimeStatus] = useState("Connecting");
 
   const hasStartedRef = useRef(false);
   const hasDebitedWalletRef = useRef(false);
   const hasCompletedRef = useRef(false);
 
   const selectedRoute = transfer?.selectedRoute;
+
+  function applyExecutionSnapshot(snapshot: ExecutionSnapshot) {
+    setExecutionSnapshot(snapshot);
+
+    if (snapshot.state === "COMPLETED" && !hasCompletedRef.current) {
+      hasCompletedRef.current = true;
+      completeTransfer();
+      setCompletedAt(new Date().toLocaleTimeString());
+    }
+  }
+
+  useEffect(() => {
+    if (!transfer?.id) return;
+
+    let mounted = true;
+
+    async function hydrateExistingSession() {
+      const persisted = await loadExecutionSession(transfer.id);
+      if (mounted && persisted?.snapshot) {
+        applyExecutionSnapshot(persisted.snapshot);
+      }
+    }
+
+    hydrateExistingSession();
+
+    const unsubscribe = subscribeToExecutionSession({
+      transferId: transfer.id,
+      onSession: () => setRealtimeStatus("Live"),
+      onSnapshot: (snapshot) => {
+        setRealtimeStatus("Live");
+        applyExecutionSnapshot(snapshot);
+      },
+      onError: () => setRealtimeStatus("Manual refresh fallback"),
+    });
+
+    return () => {
+      mounted = false;
+      unsubscribe();
+    };
+  }, [transfer?.id]);
 
   useEffect(() => {
     if (!transfer || !selectedRoute) return;
@@ -183,7 +226,7 @@ export default function TrackScreen() {
         transfer,
         selectedRoute,
         refreshXrpBalance,
-        onSnapshot: setExecutionSnapshot,
+        onSnapshot: applyExecutionSnapshot,
       });
 
       if (result.completed && !hasCompletedRef.current) {
@@ -312,7 +355,12 @@ export default function TrackScreen() {
                 gap: 4,
               }}
             >
-              <AppText variant="caption" color="#BFEAF1">Active execution stage</AppText>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
+                <AppText variant="caption" color="#BFEAF1">Active execution stage</AppText>
+                <AppText variant="caption" color={realtimeStatus === "Live" ? "#86EFAC" : colors.gold} style={{ fontWeight: "900" }}>
+                  {realtimeStatus}
+                </AppText>
+              </View>
               <AppText variant="body" color="#FFFFFF" style={{ fontWeight: "900" }}>
                 {executionSteps[activeStep]?.title ?? "Preparing execution engine"}
               </AppText>
@@ -508,127 +556,57 @@ export default function TrackScreen() {
 
           <AppCard>
             <View style={{ gap: 12 }}>
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  gap: 12,
-                  alignItems: "center",
-                }}
-              >
+              <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
                 <View style={{ flex: 1 }}>
                   <AppText variant="subheading" color={colors.textDarkPrimary}>
                     Settlement proof
                   </AppText>
-
                   <AppText variant="caption" color={colors.textDarkSecondary}>
                     Transfer reference and XRPL testnet proof where applicable.
                   </AppText>
                 </View>
-
-                <View
-                  style={{
-                    paddingHorizontal: 10,
-                    paddingVertical: 5,
-                    borderRadius: 999,
-                    backgroundColor: `${statusColor(xrplStatus)}22`,
-                  }}
-                >
-                  <AppText
-                    variant="caption"
-                    style={{ color: statusColor(xrplStatus), fontWeight: "900" }}
-                  >
+                <View style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: `${statusColor(xrplStatus)}22` }}>
+                  <AppText variant="caption" style={{ color: statusColor(xrplStatus), fontWeight: "900" }}>
                     {isHybridRoute ? xrplStatus : "FIAT"}
                   </AppText>
                 </View>
               </View>
 
-              <View
-                style={{
-                  padding: 14,
-                  borderRadius: 18,
-                  backgroundColor: "#F8FAFC",
-                  borderWidth: 1,
-                  borderColor: "#E2E8F0",
-                  gap: 7,
-                }}
-              >
+              <View style={{ padding: 14, borderRadius: 18, backgroundColor: "#F8FAFC", borderWidth: 1, borderColor: "#E2E8F0", gap: 7 }}>
                 <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
                   Fiat payout reference: NPX-{transfer.id.slice(-6)}
                 </AppText>
-
                 <AppText variant="caption" color={colors.textDarkSecondary}>
                   Fee £{(activeRoute.fee ?? 0).toFixed(2)} • Recipient receives {formatCurrency(activeRoute.receiveAmount, recipientCurrency)}
                 </AppText>
-
-                {activeRoute.bridgeAsset ? (
-                  <AppText variant="caption" color={colors.textDarkSecondary}>
-                    Bridge asset: {activeRoute.bridgeAsset} • Liquidity required {(activeRoute.liquidityRequiredRlusd ?? 0).toFixed(2)} RLUSD
-                  </AppText>
-                ) : null}
               </View>
 
               {isHybridRoute ? (
                 <View style={{ gap: 8 }}>
                   <AppText variant="caption" color={colors.textDarkSecondary}>
-                    XRPL status:{" "}
-                    {xrplStatus === "PENDING"
-                      ? "Submitting calculated testnet settlement..."
-                      : xrplStatus === "COMPLETED"
-                      ? "Validated on XRPL Testnet"
-                      : xrplStatus === "FAILED"
-                      ? "XRPL settlement failed"
-                      : "Not started"}
+                    XRPL status: {xrplStatus === "PENDING" ? "Submitting calculated testnet settlement..." : xrplStatus === "COMPLETED" ? "Validated on XRPL Testnet" : xrplStatus === "FAILED" ? "XRPL settlement failed" : "Not started"}
                   </AppText>
 
                   {xrplProof ? (
                     <View style={{ gap: 8 }}>
                       <View style={{ flexDirection: "row", gap: 8 }}>
                         <DetailMetric label="XRP settled" value={`${xrplProof?.xrpAmount ?? "0"} XRP`} />
-                        <DetailMetric
-                          label="Rate"
-                          value={(xrplProof?.settlementRate ?? 0).toFixed(4)}
-                        />
+                        <DetailMetric label="Rate" value={(xrplProof?.settlementRate ?? 0).toFixed(4)} />
                       </View>
-
-                      <AppText variant="caption" color={colors.textDarkSecondary}>
-                        TX hash: {shorten(xrplProof?.txHash)}
-                      </AppText>
 
                       {xrplProof.txHash ? (
                         <Pressable
-                          onPress={() =>
-                            Linking.openURL(getXrplTestnetTransactionUrl(xrplProof.txHash))
-                          }
-                          style={{
-                            padding: 12,
-                            borderRadius: 16,
-                            backgroundColor: "#EAF3FF",
-                            borderWidth: 1,
-                            borderColor: "#B8D9FF",
-                            gap: 4,
-                          }}
+                          onPress={() => Linking.openURL(getXrplTestnetTransactionUrl(xrplProof.txHash))}
+                          style={{ padding: 12, borderRadius: 16, backgroundColor: "#EAF3FF", borderWidth: 1, borderColor: "#B8D9FF", gap: 4 }}
                         >
-                          <AppText
-                            variant="caption"
-                            style={{ fontWeight: "900", color: "#0B63CE" }}
-                          >
+                          <AppText variant="caption" style={{ fontWeight: "900", color: "#0B63CE" }}>
                             View on XRPL Testnet Explorer
                           </AppText>
-
                           <AppText variant="caption" style={{ color: "#24527A" }}>
                             {shorten(xrplProof.txHash)}
                           </AppText>
                         </Pressable>
                       ) : null}
-
-                      <AppText variant="caption" color={colors.textDarkSecondary}>
-                        From: {shorten(xrplProof?.sourceAddress)}
-                      </AppText>
-
-                      <AppText variant="caption" color={colors.textDarkSecondary}>
-                        To: {shorten(xrplProof?.destinationAddress)}
-                      </AppText>
                     </View>
                   ) : null}
                 </View>
@@ -642,14 +620,7 @@ export default function TrackScreen() {
 
           <AppCard>
             <View style={{ gap: 12 }}>
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  gap: 12,
-                }}
-              >
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
                 <View style={{ flex: 1 }}>
                   <AppText variant="subheading" color={colors.textDarkPrimary}>
                     Payout execution
@@ -658,34 +629,15 @@ export default function TrackScreen() {
                     Final-leg payout handled through the provider-agnostic execution engine.
                   </AppText>
                 </View>
-
-                <View
-                  style={{
-                    paddingHorizontal: 10,
-                    paddingVertical: 5,
-                    borderRadius: 999,
-                    backgroundColor: `${payoutStatusColor(payoutStatus)}22`,
-                  }}
-                >
-                  <AppText
-                    variant="caption"
-                    style={{ color: payoutStatusColor(payoutStatus), fontWeight: "900" }}
-                  >
+                <View style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: `${payoutStatusColor(payoutStatus)}22` }}>
+                  <AppText variant="caption" style={{ color: payoutStatusColor(payoutStatus), fontWeight: "900" }}>
                     {payoutStatus}
                   </AppText>
                 </View>
               </View>
 
               {!payout ? (
-                <View
-                  style={{
-                    padding: 14,
-                    borderRadius: 18,
-                    backgroundColor: "#F8FAFC",
-                    borderWidth: 1,
-                    borderColor: "#E2E8F0",
-                  }}
-                >
+                <View style={{ padding: 14, borderRadius: 18, backgroundColor: "#F8FAFC", borderWidth: 1, borderColor: "#E2E8F0" }}>
                   <AppText variant="caption" color={colors.textDarkSecondary}>
                     Waiting for final-leg payout trigger from the execution engine...
                   </AppText>
@@ -696,17 +648,7 @@ export default function TrackScreen() {
                     <DetailMetric label="Provider" value={payout.providerName} />
                     <DetailMetric label="ETA" value={payout.estimatedArrival} />
                   </View>
-
-                  <View
-                    style={{
-                      padding: 14,
-                      borderRadius: 18,
-                      backgroundColor: payoutStatus === "PAID_OUT" ? "#DCFCE7" : "#FEF3C7",
-                      borderWidth: 1,
-                      borderColor: payoutStatus === "PAID_OUT" ? "#86EFAC" : "#F1D99B",
-                      gap: 6,
-                    }}
-                  >
+                  <View style={{ padding: 14, borderRadius: 18, backgroundColor: payoutStatus === "PAID_OUT" ? "#DCFCE7" : "#FEF3C7", borderWidth: 1, borderColor: payoutStatus === "PAID_OUT" ? "#86EFAC" : "#F1D99B", gap: 6 }}>
                     <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
                       {payoutStatusLabel(payoutStatus)}
                     </AppText>
@@ -740,16 +682,7 @@ export default function TrackScreen() {
               ) : (
                 <View style={{ gap: 6 }}>
                   {telemetrySummary.map((line) => (
-                    <View
-                      key={line}
-                      style={{
-                        padding: 10,
-                        borderRadius: 14,
-                        backgroundColor: "#F8FAFC",
-                        borderWidth: 1,
-                        borderColor: "#E2E8F0",
-                      }}
-                    >
+                    <View key={line} style={{ padding: 10, borderRadius: 14, backgroundColor: "#F8FAFC", borderWidth: 1, borderColor: "#E2E8F0" }}>
                       <AppText variant="caption" color={colors.textDarkSecondary}>
                         {line}
                       </AppText>
