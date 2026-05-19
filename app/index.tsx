@@ -1,6 +1,7 @@
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import { ScrollView, View } from "react-native";
+import AICorridorIntelligenceCard from "../src/components/intelligence/AICorridorIntelligenceCard";
 
 import { RecentTransactionHistoryCard } from "../src/components/transactions/RecentTransactionHistoryCard";
 import { AppButton } from "../src/components/ui/AppButton";
@@ -333,6 +334,8 @@ export default function HomeScreen() {
               </View>
             </View>
 
+            <AICorridorIntelligenceCard />
+
             <AppButton title="Start Transfer" onPress={() => router.push("/send")} />
           </View>
 
@@ -398,7 +401,7 @@ export default function HomeScreen() {
             <View style={{ gap: 12 }}>
               <View style={{ gap: 4 }}>
                 <AppText variant="subheading" color={colors.textDarkPrimary}>
-                  Corridor Command Centre (CCC OTA RESOLVED)
+                  Global Corridor Intelligence
                 </AppText>
 
                 <AppText variant="caption" color={colors.textDarkMuted}>
@@ -476,7 +479,8 @@ export default function HomeScreen() {
           </AppCard>
 
           <AppButton title="Start Transfer" onPress={() => router.push("/send")} />
-
+          
+                  
           <AppButton
             title="View Route Intelligence"
             variant="secondary"
