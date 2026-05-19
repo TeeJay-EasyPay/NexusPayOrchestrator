@@ -36,6 +36,85 @@ interface WriteTransactionAuditLogInput {
   metadata?: Record<string, unknown>;
 }
 
+const SUCCESSOR_EVENT_MAP: Partial<
+  Record<TransactionAuditEventType, TransactionAuditEventType[]>
+> = {
+  ROUTE_EXECUTION_COMPLETED: ["EXECUTION_STARTED", "ROUTE_EXECUTION_STARTED"],
+  XRPL_VALIDATED: ["XRPL_SUBMITTED"],
+  PAYOUT_COMPLETED: ["PAYOUT_INITIATED", "PAYOUT_PROCESSING"],
+  TRANSFER_COMPLETED: [
+    "EXECUTION_STARTED",
+    "ROUTE_EXECUTION_STARTED",
+    "PAYOUT_INITIATED",
+    "PAYOUT_PROCESSING",
+  ],
+  TRANSFER_FAILED: [
+    "EXECUTION_STARTED",
+    "ROUTE_EXECUTION_STARTED",
+    "XRPL_SUBMITTED",
+    "PAYOUT_INITIATED",
+    "PAYOUT_PROCESSING",
+  ],
+  PAYOUT_FAILED: ["PAYOUT_INITIATED", "PAYOUT_PROCESSING"],
+};
+
+async function getCurrentUserId() {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  return user?.id ?? null;
+}
+
+export async function resolvePendingAuditEvents({
+  transactionId,
+  eventTypes,
+  resolvedStatus = "SUCCESS",
+  resolutionMessage,
+  metadata,
+}: {
+  transactionId: string;
+  eventTypes: TransactionAuditEventType[];
+  resolvedStatus?: Exclude<TransactionAuditStatus, "PENDING">;
+  resolutionMessage?: string;
+  metadata?: Record<string, unknown>;
+}) {
+  try {
+    const userId = await getCurrentUserId();
+
+    if (!userId || eventTypes.length === 0) {
+      return;
+    }
+
+    const patch: Record<string, unknown> = {
+      status: resolvedStatus,
+      metadata: {
+        resolved_by_successor: true,
+        resolved_at: new Date().toISOString(),
+        ...(metadata ?? {}),
+      },
+    };
+
+    if (resolutionMessage) {
+      patch.message = resolutionMessage;
+    }
+
+    const { error } = await supabase
+      .from("transaction_audit_logs")
+      .update(patch)
+      .eq("user_id", userId)
+      .eq("transaction_id", transactionId)
+      .eq("status", "PENDING")
+      .in("event_type", eventTypes);
+
+    if (error) {
+      console.warn("Pending audit event resolution failed", error.message);
+    }
+  } catch (error) {
+    console.warn("Pending audit event resolution failed", error);
+  }
+}
+
 export async function writeTransactionAuditLog({
   transactionId,
   eventType,
@@ -44,17 +123,32 @@ export async function writeTransactionAuditLog({
   metadata,
 }: WriteTransactionAuditLogInput) {
   try {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const userId = await getCurrentUserId();
 
-    if (!user) {
+    if (!userId) {
       return;
+    }
+
+    const successorEvents = SUCCESSOR_EVENT_MAP[eventType] ?? [];
+
+    if (status === "SUCCESS" || status === "FAILED") {
+      await resolvePendingAuditEvents({
+        transactionId,
+        eventTypes: successorEvents,
+        resolvedStatus: status === "FAILED" ? "FAILED" : "SUCCESS",
+        resolutionMessage:
+          status === "FAILED"
+            ? "Lifecycle event resolved by downstream failure."
+            : "Lifecycle event resolved by downstream successful milestone.",
+        metadata: {
+          resolved_by_event_type: eventType,
+        },
+      });
     }
 
     const { error } = await supabase.from("transaction_audit_logs").insert({
       transaction_id: transactionId,
-      user_id: user.id,
+      user_id: userId,
       event_type: eventType,
       status,
       message,
@@ -71,18 +165,16 @@ export async function writeTransactionAuditLog({
 
 export async function loadTransactionAuditLogs(transactionId: string) {
   try {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const userId = await getCurrentUserId();
 
-    if (!user) {
+    if (!userId) {
       return [];
     }
 
     const { data, error } = await supabase
       .from("transaction_audit_logs")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .eq("transaction_id", transactionId)
       .order("created_at", { ascending: true });
 
