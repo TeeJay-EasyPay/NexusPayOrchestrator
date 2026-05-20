@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 
 import { AppCard } from "../ui/AppCard";
@@ -8,6 +8,10 @@ import {
   loadTelemetryIntelligence,
   TelemetryIntelligenceSummary,
 } from "../../services/intelligence/telemetryIntelligenceService";
+
+import {
+  buildExecutiveInsight,
+} from "../../services/intelligence/executiveInsightService";
 
 export default function AICorridorIntelligenceCard() {
   const [telemetry, setTelemetry] =
@@ -41,6 +45,26 @@ export default function AICorridorIntelligenceCard() {
     };
   }, []);
 
+  const executiveInsight = useMemo(() => {
+    if (!telemetry) {
+      return null;
+    }
+
+    return buildExecutiveInsight({
+      transfersAnalysed: telemetry.transferCount,
+      completedTransfers: telemetry.completedCount,
+      successRate: telemetry.successRate,
+      mostActiveCorridor: telemetry.mostActiveCorridor,
+      highestConfidenceCorridor:
+        telemetry.highestConfidenceCorridor,
+      averageRouteScore: telemetry.averageRouteScore,
+      routeConfidence:
+        telemetry.averageRouteConfidence,
+      xrplUtilisation:
+        telemetry.xrplUtilisationPercent,
+    });
+  }, [telemetry]);
+
   return (
     <AppCard style={styles.card}>
       <AppText variant="heading">
@@ -55,12 +79,41 @@ export default function AICorridorIntelligenceCard() {
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator />
+
           <AppText style={styles.loadingText}>
             Analysing telemetry...
           </AppText>
         </View>
       ) : telemetry ? (
         <>
+          {executiveInsight && (
+            <>
+              <View style={styles.insightPanel}>
+                <AppText variant="subheading">
+                  Executive Insight
+                </AppText>
+
+                <AppText style={styles.executiveText}>
+                  {executiveInsight.summary}
+                </AppText>
+              </View>
+
+              <View style={styles.recommendationPanel}>
+                <AppText variant="subheading">
+                  Recommendation
+                </AppText>
+
+                <AppText>
+                  {executiveInsight.recommendation}
+                </AppText>
+
+                <AppText style={styles.riskText}>
+                  Risk Level: {executiveInsight.riskLevel}
+                </AppText>
+              </View>
+            </>
+          )}
+
           <View style={styles.section}>
             <AppText variant="subheading">
               Operational Intelligence
@@ -118,9 +171,9 @@ export default function AICorridorIntelligenceCard() {
             />
           </View>
 
-          <View style={styles.insightPanel}>
+          <View style={styles.telemetryPanel}>
             <AppText variant="subheading">
-              Executive Insight
+              Supporting Telemetry Signals
             </AppText>
 
             {telemetry.insights.map((insight) => (
@@ -137,17 +190,6 @@ export default function AICorridorIntelligenceCard() {
                 </AppText>
               </View>
             ))}
-          </View>
-
-          <View style={styles.recommendationPanel}>
-            <AppText variant="subheading">
-              Recommendation
-            </AppText>
-
-            <AppText>
-              Continue building telemetry history to improve predictive
-              corridor analysis and future AI-driven route optimisation.
-            </AppText>
           </View>
         </>
       ) : (
@@ -197,7 +239,7 @@ const styles = StyleSheet.create({
   },
 
   section: {
-    marginTop: 18,
+    marginTop: 20,
   },
 
   metricRow: {
@@ -212,9 +254,33 @@ const styles = StyleSheet.create({
 
   insightPanel: {
     marginTop: 20,
-    padding: 14,
+    padding: 16,
     borderRadius: 16,
     backgroundColor: "#F4F7FB",
+  },
+
+  executiveText: {
+    marginTop: 8,
+    lineHeight: 24,
+  },
+
+  recommendationPanel: {
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: "#FAF6EA",
+  },
+
+  riskText: {
+    marginTop: 12,
+    fontWeight: "700",
+  },
+
+  telemetryPanel: {
+    marginTop: 20,
+    padding: 14,
+    borderRadius: 16,
+    backgroundColor: "#F7F8FA",
   },
 
   insightRow: {
@@ -227,12 +293,5 @@ const styles = StyleSheet.create({
 
   insightText: {
     marginTop: 4,
-  },
-
-  recommendationPanel: {
-    marginTop: 16,
-    padding: 14,
-    borderRadius: 16,
-    backgroundColor: "#FAF6EA",
   },
 });
