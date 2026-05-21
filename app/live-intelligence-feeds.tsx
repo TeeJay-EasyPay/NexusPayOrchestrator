@@ -116,41 +116,50 @@ export default function LiveIntelligenceFeedsScreen() {
         )}
       </View>
 
-      {/* TREASURY */}
+      {/* Corridor Liquidity Intelligence */}
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Treasury Intelligence</Text>
+<View style={styles.card}>
+  <Text style={styles.cardTitle}>
+    Corridor Liquidity Intelligence
+  </Text>
 
-        {feeds?.treasury.length ? (
-          feeds.treasury.map((item) => (
-            <View key={item.currency} style={styles.row}>
-              <View>
-                <Text style={styles.label}>
-                  {item.currency}
-                </Text>
+  {feeds?.treasury.length ? (
+    feeds.treasury.map((item) => (
+      <View
+        key={`${item.corridor}-${item.asOf}`}
+        style={styles.treasuryCard}
+      >
+        <Text style={styles.corridorTitle}>
+          {item.corridor}
+        </Text>
 
-                <Text style={styles.meta}>
-                  {item.source}
-                </Text>
-              </View>
+        <Text style={styles.metric}>
+          Liquidity Health: {item.liquidityHealth}
+        </Text>
 
-              <View style={styles.right}>
-                <Text style={styles.value}>
-                  {item.availableBalance.toLocaleString()}
-                </Text>
+        <Text style={styles.metric}>
+          Market Status: {item.marketStatus}
+        </Text>
 
-                <Text style={styles.live}>
-                  LIVE
-                </Text>
-              </View>
-            </View>
-          ))
-        ) : (
-          <Text style={styles.empty}>
-            No treasury intelligence available.
-          </Text>
-        )}
+        <Text style={styles.metric}>
+          FX Stability: {item.fxStability}
+        </Text>
+
+        <Text style={styles.recommendation}>
+          Recommendation: {item.recommendation}
+        </Text>
+
+        <Text style={styles.insight}>
+          {item.insight}
+        </Text>
       </View>
+    ))
+  ) : (
+    <Text style={styles.empty}>
+      No corridor liquidity intelligence available.
+    </Text>
+  )}
+</View>
 
       {/* MARKET HOURS */}
 
@@ -309,8 +318,41 @@ const styles = StyleSheet.create({
   },
 
   footer: {
-    color: "#94A3B8",
-    textAlign: "center",
-    marginTop: 8,
-  },
+  color: "#94A3B8",
+  textAlign: "center",
+  marginTop: 8,
+},
+
+treasuryCard: {
+  backgroundColor: "#F8FAFC",
+  borderRadius: 16,
+  padding: 14,
+  marginTop: 12,
+  borderWidth: 1,
+  borderColor: "#E2E8F0",
+},
+
+corridorTitle: {
+  color: "#0F172A",
+  fontSize: 16,
+  fontWeight: "800",
+  marginBottom: 8,
+},
+
+metric: {
+  color: "#334155",
+  marginBottom: 4,
+},
+
+recommendation: {
+  color: "#0369A1",
+  fontWeight: "700",
+  marginTop: 8,
+},
+
+insight: {
+  color: "#475569",
+  marginTop: 6,
+  lineHeight: 20,
+},
 });

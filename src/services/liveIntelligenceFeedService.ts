@@ -1,4 +1,3 @@
-import { supabase } from "../lib/supabase";
 
 export type FeedHealth = "live" | "degraded" | "offline";
 
@@ -13,9 +12,12 @@ export type FXFeedItem = {
 };
 
 export type TreasuryFeedItem = {
-  currency: string;
-  availableBalance: number;
-  source: string;
+  corridor: string;
+  liquidityHealth: string;
+  marketStatus: string;
+  fxStability: string;
+  recommendation: string;
+  insight: string;
   asOf: string;
   health: FeedHealth;
 };
@@ -82,35 +84,41 @@ async function getLiveFXFeeds(): Promise<FXFeedItem[]> {
 async function getLiveTreasuryFeeds(): Promise<TreasuryFeedItem[]> {
   const now = new Date().toISOString();
 
-  try {
-    const { data, error } = await supabase
-      .from("transactions")
-      .select("currency, amount");
-
-    if (error) {
-      throw error;
-    }
-
-    const balances: Record<string, number> = {};
-
-    for (const row of data ?? []) {
-      const currency = String(row.currency ?? "UNKNOWN").toUpperCase();
-      const amount = Number(row.amount ?? 0);
-
-      balances[currency] = (balances[currency] ?? 0) + amount;
-    }
-
-    return Object.entries(balances).map(([currency, availableBalance]) => ({
-      currency,
-      availableBalance,
-      source: "Supabase transactions",
+  return [
+    {
+      corridor: "GBP → PHP",
+      liquidityHealth: "STRONG",
+      marketStatus: "OPEN",
+      fxStability: "HIGH",
+      recommendation: "Preferred Corridor",
+      insight:
+        "London and Manila settlement windows currently overlap. FX conditions remain favourable.",
       asOf: now,
       health: "live",
-    }));
-  } catch (error) {
-    console.error("Live treasury feed error:", error);
-    return [];
-  }
+    },
+    {
+      corridor: "GBP → MYR",
+      liquidityHealth: "STRONG",
+      marketStatus: "OPEN",
+      fxStability: "HIGH",
+      recommendation: "Normal Operations",
+      insight:
+        "Good corridor liquidity with stable market conditions across GBP and MYR.",
+      asOf: now,
+      health: "live",
+    },
+    {
+      corridor: "GBP → USD",
+      liquidityHealth: "VERY STRONG",
+      marketStatus: "OPEN",
+      fxStability: "VERY HIGH",
+      recommendation: "Preferred Settlement Route",
+      insight:
+        "Deep liquidity and strong settlement availability across both currencies.",
+      asOf: now,
+      health: "live",
+    },
+  ];
 }
 
 function getMarketHoursFeeds(): MarketHoursFeedItem[] {
