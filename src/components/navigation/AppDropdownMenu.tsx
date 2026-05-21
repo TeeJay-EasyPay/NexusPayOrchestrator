@@ -40,6 +40,12 @@ const MENU_ITEMS = [
     match: "/live-intelligence-feeds",
   },
   {
+  label: "Nexus AI",
+  description: "AI configuration, intelligence controls and sensitivity",
+  route: "/nexus-ai",
+  match: "/nexus-ai",
+  },
+  {
     label: "Track Transfer",
     description: "Execution status and settlement proof",
     route: "/track",
