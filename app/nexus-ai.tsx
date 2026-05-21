@@ -20,30 +20,50 @@ import {
 export default function NexusAIScreen() {
   const router = useRouter();
 
-  const [settings, setSettings] = useState<NexusAISettings | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [infoOpen, setInfoOpen] = useState(false);
+    const [settings, setSettings] = useState<NexusAISettings | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [infoOpen, setInfoOpen] = useState(false);
+    const [debugMessage, setDebugMessage] = useState("Starting...");
 
   useEffect(() => {
     loadSettings();
   }, []);
 
-  async function loadSettings() {
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+async function loadSettings() {
+  try {
+    setDebugMessage("Getting authenticated user...");
 
-      if (!user) return;
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-      const result = await getNexusAISettings(user.id);
-      setSettings(result);
-    } catch (error) {
-      console.error("Failed to load Nexus AI settings", error);
-    } finally {
+    if (!user) {
+      setDebugMessage("No authenticated user found.");
       setLoading(false);
+      return;
     }
+
+    setDebugMessage(`User found: ${user.id}`);
+
+    setDebugMessage("Loading Nexus AI settings from Supabase...");
+
+    const result = await getNexusAISettings(user.id);
+
+    setDebugMessage("Settings loaded successfully.");
+
+    setSettings(result);
+  } catch (error: any) {
+    console.error("Failed to load Nexus AI settings", error);
+
+    setDebugMessage(
+      error?.message ||
+        JSON.stringify(error) ||
+        "Unknown error loading Nexus AI settings"
+    );
+  } finally {
+    setLoading(false);
   }
+}
 
   async function updateSetting(updates: Partial<NexusAISettings>) {
     if (!settings) return;
@@ -68,13 +88,41 @@ export default function NexusAIScreen() {
 
   const disabled = !settings?.master_enabled;
 
-  if (loading || !settings) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.loadingText}>Loading Nexus AI settings...</Text>
-      </View>
-    );
-  }
+ if (loading || !settings) {
+  return (
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: "#07111f",
+        alignItems: "center",
+        justifyContent: "center",
+        paddingHorizontal: 24,
+      }}
+    >
+      <Text
+        style={{
+          color: "#E2E8F0",
+          fontSize: 18,
+          fontWeight: "600",
+          textAlign: "center",
+        }}
+      >
+        Loading Nexus AI settings...
+      </Text>
+
+      <Text
+        style={{
+          color: "#94A3B8",
+          marginTop: 16,
+          textAlign: "center",
+          lineHeight: 22,
+        }}
+      >
+        {debugMessage}
+      </Text>
+    </View>
+  );
+}
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
