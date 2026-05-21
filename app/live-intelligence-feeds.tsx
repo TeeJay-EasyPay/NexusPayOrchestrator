@@ -1,21 +1,23 @@
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
 import { AppDropdownMenu } from "../src/components/navigation/AppDropdownMenu";
 import { AppButton } from "../src/components/ui/AppButton";
 import {
-    getLiveIntelligenceFeeds,
-    LiveIntelligenceFeeds,
+  getLiveIntelligenceFeeds,
+  LiveIntelligenceFeeds,
 } from "../src/services/liveIntelligenceFeedService";
 import { colors } from "../src/theme";
+
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function LiveIntelligenceFeedsScreen() {
   const router = useRouter();
@@ -58,6 +60,10 @@ export default function LiveIntelligenceFeedsScreen() {
   }
 
   return (
+  <SafeAreaView
+    style={{ flex: 1, backgroundColor: "#07111F" }}
+    edges={["top"]}
+  >
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
@@ -189,8 +195,10 @@ export default function LiveIntelligenceFeedsScreen() {
           ? new Date(feeds.refreshedAt).toLocaleString()
           : ""}
       </Text>
-    </ScrollView>
-  );
+        </ScrollView>
+  </SafeAreaView>
+);
+
 }
 
 const styles = StyleSheet.create({
