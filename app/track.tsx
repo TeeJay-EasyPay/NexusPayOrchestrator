@@ -180,16 +180,19 @@ export default function TrackScreen() {
   }
 
   useEffect(() => {
-    if (!transfer?.id) return;
+  if (!transfer?.id) return;
 
-    let mounted = true;
+  const transferId = transfer.id;
 
-    async function hydrateExistingSession() {
-      const persisted = await loadExecutionSession(transfer.id);
-      if (mounted && persisted?.snapshot) {
-        applyExecutionSnapshot(persisted.snapshot);
-      }
+  let mounted = true;
+
+  async function hydrateExistingSession() {
+    const persisted = await loadExecutionSession(transferId);
+
+    if (mounted && persisted?.snapshot) {
+      applyExecutionSnapshot(persisted.snapshot);
     }
+  }
 
     hydrateExistingSession();
 
@@ -210,34 +213,45 @@ export default function TrackScreen() {
   }, [transfer?.id]);
 
   useEffect(() => {
-    if (!transfer || !selectedRoute) return;
-    if (hasStartedRef.current) return;
+  if (!transfer || !selectedRoute) return;
 
-    hasStartedRef.current = true;
-    startTransfer();
+  const currentTransfer = transfer;
+  const currentRoute = selectedRoute;
 
-    if (!hasDebitedWalletRef.current) {
-      debitGbp(transfer.senderAmount ?? 0);
-      hasDebitedWalletRef.current = true;
+  if (hasStartedRef.current) return;
+
+  hasStartedRef.current = true;
+  startTransfer();
+
+  if (!hasDebitedWalletRef.current) {
+    debitGbp(currentTransfer.senderAmount ?? 0);
+    hasDebitedWalletRef.current = true;
+  }
+
+  async function executeTransfer() {
+    const result = await runTransferExecution({
+      transfer: currentTransfer,
+      selectedRoute: currentRoute,
+      refreshXrpBalance,
+      onSnapshot: applyExecutionSnapshot,
+    });
+
+    if (result.completed && !hasCompletedRef.current) {
+      hasCompletedRef.current = true;
+      completeTransfer();
+      setCompletedAt(new Date().toLocaleTimeString());
     }
+  }
 
-    async function executeTransfer() {
-      const result = await runTransferExecution({
-        transfer,
-        selectedRoute,
-        refreshXrpBalance,
-        onSnapshot: applyExecutionSnapshot,
-      });
-
-      if (result.completed && !hasCompletedRef.current) {
-        hasCompletedRef.current = true;
-        completeTransfer();
-        setCompletedAt(new Date().toLocaleTimeString());
-      }
-    }
-
-    executeTransfer();
-  }, [transfer?.id, selectedRoute?.id, startTransfer, debitGbp, refreshXrpBalance, completeTransfer]);
+  executeTransfer();
+}, [
+  transfer?.id,
+  selectedRoute?.id,
+  startTransfer,
+  debitGbp,
+  refreshXrpBalance,
+  completeTransfer,
+]);
 
   if (!transfer || !selectedRoute) {
     return (
