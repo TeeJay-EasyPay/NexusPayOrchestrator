@@ -1,21 +1,8 @@
 # NexusPay Orchestrator Project Map
 
-This document maps the repository into the parts an AI architect needs to understand the system without reading every source file.
+This file is the current architecture map for the repository. It reflects the live screens, service layers, Supabase tables, and deployment configuration as implemented now, not an aspirational design.
 
-## Overview
-
-NexusPay Orchestrator is an Expo Router mobile/web app that simulates an intelligent cross-border payment platform. The app is built around a layered flow:
-
-1. Authenticate and unlock the device.
-2. Create a transfer and capture the recipient.
-3. Generate ranked routes from FX, treasury, provider, and corridor intelligence.
-4. Choose a funding source and authorise it.
-5. Execute the transfer through a state machine.
-6. Persist audit, operational, treasury, and execution telemetry to Supabase.
-
-The codebase is intentionally split into UI screens, reusable components, state providers, service layers, and domain intelligence modules.
-
-## Folder Structure
+## 1. Current Folder Structure
 
 ```text
 .
@@ -110,14 +97,15 @@ The codebase is intentionally split into UI screens, reusable components, state 
 │  │  ├─ transactionAuditService.ts
 │  │  ├─ transferService.ts
 │  │  ├─ treasuryIntelligenceService.ts
+│  │  ├─ intelligence/
+│  │  │  ├─ executiveInsightService.ts
+│  │  │  ├─ providerExecutionIntelligence.ts
+│  │  │  └─ telemetryIntelligenceService.ts
 │  │  ├─ execution/
 │  │  │  ├─ executionEngine.ts
 │  │  │  ├─ executionPersistenceService.ts
 │  │  │  ├─ executionRealtimeService.ts
 │  │  │  └─ executionRecoveryService.ts
-│  │  ├─ intelligence/
-│  │  │  ├─ providerExecutionIntelligence.ts
-│  │  │  └─ telemetryIntelligenceService.ts
 │  │  └─ payout/
 │  │     ├─ payoutAdapter.ts
 │  │     ├─ payoutPartnerDirectory.ts
@@ -158,966 +146,209 @@ The codebase is intentionally split into UI screens, reusable components, state 
 └─ tsconfig.json
 ```
 
-Generated build output such as dist/ exists in the workspace, but it is not part of the source architecture map.
+The repo is an Expo Router app with a strong separation between screens, state providers, orchestration engines, and persistence services. The live runtime is intentionally simulation-first, but the data model already anticipates real payment, execution, and operational telemetry.
+
+## 2. Screens and Navigation Routes
+
+| Route | Screen | Visible in menus | Role |
+|---|---|---:|---|
+| `/` | [app/index.tsx](app/index.tsx) | Yes | Home dashboard with corridor intelligence, FX health, and telemetry summary |
+| `/auth` | [app/auth.tsx](app/auth.tsx) | No | Supabase sign-in/sign-up and demo access gate |
+| `/check-email` | [app/check-email.tsx](app/check-email.tsx) | No | Post-sign-up confirmation screen |
+| `/account-created` | [app/account-created.tsx](app/account-created.tsx) | No | Post-confirmation landing screen |
+| `/account` | [app/account.tsx](app/account.tsx) | Yes | Identity, security, verification, and sign-out screen |
+| `/send` | [app/send.tsx](app/send.tsx) | Yes | Transfer creation, recipient capture, and initial transfer setup |
+| `/routes` | [app/routes.tsx](app/routes.tsx) | Yes | Ranked route selection and orchestration decision screen |
+| `/funding` | [app/funding.tsx](app/funding.tsx) | No | Funding authorisation screen after route selection |
+| `/track` | [app/track.tsx](app/track.tsx) | Yes | Execution state machine, XRPL proof, payout tracking, and completion view |
+| `/operations` | [app/operations.tsx](app/operations.tsx) | Dropdown only | Operational command centre for treasury and execution telemetry |
+| `/payment-methods` | [app/payment-methods.tsx](app/payment-methods.tsx) | No | Payment method management screen |
+| `/quote` | [app/quote.tsx](app/quote.tsx) | No | Older standalone route estimator, not wired into the main flow |
+| `/xrpl-test` | [app/xrpl-test.tsx](app/xrpl-test.tsx) | No | XRPL connectivity utility screen |
+
+`app/_layout.tsx` is the root shell. It installs the provider stack and wraps the router in [AuthGate](src/components/auth/AuthGate.tsx). The public screens are `auth`, `check-email`, and `account-created`; [Screen](src/components/ui/Screen.tsx) suppresses the app chrome on those routes.
+
+The global menu surfaces are split in two places:
+
+- [AppMenu](src/components/navigation/AppMenu.tsx) provides the bottom navigation for Home, Send, Routes, Track, and Account.
+- [AppDropdownMenu](src/components/navigation/AppDropdownMenu.tsx) adds a top-level menu that also exposes Operations and sign-out.
+
+## 3. Services and Responsibilities
+
+### Persistence and lifecycle services
+
+| Module | Responsibility |
+|---|---|
+| [src/services/auditLog.ts](src/services/auditLog.ts) | Writes high-level audit events to `audit_logs` for auth and recipient activity |
+| [src/services/transactionAuditService.ts](src/services/transactionAuditService.ts) | Writes transfer-scoped lifecycle events to `transaction_audit_logs`, resolves pending milestones, and reads the event trail |
+| [src/services/transferService.ts](src/services/transferService.ts) | Persists transfer drafts and completed transfers to `transfers`, then rehydrates transfer history |
+| [src/services/recipientService.ts](src/services/recipientService.ts) | Saves recipients to `recipients`, reads saved recipients, and falls back to transfer history when needed |
+| [src/services/routeOperationalEventService.ts](src/services/routeOperationalEventService.ts) | Persists route degradation/failover events to `route_operational_events` and reads recent events for operations |
+| [src/services/treasuryIntelligenceService.ts](src/services/treasuryIntelligenceService.ts) | Writes and reads treasury snapshots in `treasury_liquidity_snapshots` |
+| [src/services/execution/executionPersistenceService.ts](src/services/execution/executionPersistenceService.ts) | Upserts execution snapshots into `execution_sessions` and loads recoverable sessions |
+| [src/services/execution/executionRealtimeService.ts](src/services/execution/executionRealtimeService.ts) | Subscribes to realtime changes on `execution_sessions` |
+| [src/services/execution/executionRecoveryService.ts](src/services/execution/executionRecoveryService.ts) | Reads recoverable execution snapshots from `execution_sessions` |
+
+### Intelligence services
+
+| Module | Responsibility |
+|---|---|
+| [src/services/intelligence/telemetryIntelligenceService.ts](src/services/intelligence/telemetryIntelligenceService.ts) | Aggregates transfers, execution sessions, and audit logs into an operational intelligence summary |
+| [src/services/intelligence/executiveInsightService.ts](src/services/intelligence/executiveInsightService.ts) | Converts telemetry summaries into executive-level narrative, recommendation, and risk level |
+| [src/services/intelligence/providerExecutionIntelligence.ts](src/services/intelligence/providerExecutionIntelligence.ts) | Derives provider health, failover risk, and recommendation from a route quote |
+
+### Orchestration and execution engines
+
+| Module | Responsibility |
+|---|---|
+| [src/lib/settlementOrchestrator.ts](src/lib/settlementOrchestrator.ts) | Builds ranked route quotes by combining AI scoring, treasury signals, provider templates, and liquidity status |
+| [src/lib/aiRouteIntelligence.ts](src/lib/aiRouteIntelligence.ts) | Pure AI-like route scoring heuristics and corridor health signals |
+| [src/lib/treasuryIntelligence.ts](src/lib/treasuryIntelligence.ts) | Pure treasury heuristics for corridor, partner, and rail liquidity signals |
+| [src/lib/routeOperationalState.ts](src/lib/routeOperationalState.ts) | Derives route degradation/failover events from route quote metadata |
+| [src/services/execution/executionEngine.ts](src/services/execution/executionEngine.ts) | Orchestrates the transfer state machine, XRPL bridge step, payout step, retries, failover, and snapshot persistence |
+| [src/services/payout/payoutAdapter.ts](src/services/payout/payoutAdapter.ts) | Chooses the payout backend, currently defaulting to mock fallback unless Nium sandbox credentials are present |
+| [src/services/payout/payoutRoutingEngine.ts](src/services/payout/payoutRoutingEngine.ts) | Scores payout partners and selects the best supported partner |
+| [src/services/payout/payoutPartnerDirectory.ts](src/services/payout/payoutPartnerDirectory.ts) | Static directory of payout partner capabilities |
+| [src/services/payout/mockPayoutProvider.ts](src/services/payout/mockPayoutProvider.ts) | Mock payout backend used by default |
+| [src/services/payout/providers/niumSandboxProvider.ts](src/services/payout/providers/niumSandboxProvider.ts) | Credential-gated Nium sandbox connector |
+
+### XRPL and wallet helpers
+
+| Module | Responsibility |
+|---|---|
+| [src/lib/xrplClient.ts](src/lib/xrplClient.ts) | Singleton XRPL testnet client manager |
+| [src/lib/xrplWallet.ts](src/lib/xrplWallet.ts) | Creates/restores the testnet wallet, checks balances, and manages the RLUSD trustline |
+| [src/lib/xrplSettlement.ts](src/lib/xrplSettlement.ts) | Sends a demo XRPL testnet settlement payment for hybrid routes |
+| [src/lib/simulatedRLusdWallet.ts](src/lib/simulatedRLusdWallet.ts) | SecureStore-backed simulated RLUSD reserve used by routing and treasury logic |
+
+## 4. Supabase Tables and Active Read/Write Status
+
+| Table | Active read | Active write | In repo schema? | Notes |
+|---|---:|---:|---:|---|
+| `profiles` | Not directly read in app code | Yes, from [AuthContext](src/state/AuthContext.tsx) | RLS only | Upserted after session changes; schema is expected externally |
+| `transfers` | Yes, by [transferService](src/services/transferService.ts), [recipientService](src/services/recipientService.ts), and telemetry intelligence | Yes, by [transferService](src/services/transferService.ts) | RLS only | Main transfer history and persistence table |
+| `recipients` | Yes, by [recipientService](src/services/recipientService.ts) and the send screen | Yes, by [recipientService](src/services/recipientService.ts) | RLS only | Saved recipients and favourites |
+| `audit_logs` | No current app-side reader | Yes, by [auditLog](src/services/auditLog.ts) | RLS only | High-level login/signup/logout and recipient audit stream |
+| `transaction_audit_logs` | Yes, by [OperationalTimelineCard](src/components/audit/OperationalTimelineCard.tsx) and telemetry intelligence | Yes, by [transactionAuditService](src/services/transactionAuditService.ts) | Yes | Transfer-scoped lifecycle ledger |
+| `route_operational_events` | Yes, by [operations](app/operations.tsx) | Yes, by [routeOperationalEventService](src/services/routeOperationalEventService.ts) | Yes | Route degradation and failover event ledger |
+| `treasury_liquidity_snapshots` | Yes, by [operations](app/operations.tsx) | Yes, by [treasuryIntelligenceService](src/services/treasuryIntelligenceService.ts) | Yes | Treasury snapshot ledger for route evaluation time |
+| `execution_sessions` | Yes, by execution persistence/realtime/recovery services and operations | Yes, by [executionPersistenceService](src/services/execution/executionPersistenceService.ts) | Not in repo SQL | Primary execution state ledger assumed to exist in Supabase |
+| `payment_methods` | No, not yet queried by the app | No, not yet written by the app | Yes | Schema exists, but UI still uses mock payment data |
+| `orchestration_decisions` | No | No | Yes | Schema exists but no current app writer/reader |
+| `transactions` | No | No | RLS only | Future compatibility table in `rls-security-foundation.sql` |
+| `xrpl_identities` | No | No | RLS only | Future compatibility table in `rls-security-foundation.sql` |
+
+The important distinction is that the app already depends on several tables that are protected by the RLS foundation file but not defined locally in `supabase/`. Those are assumed to exist in the connected Supabase project.
+
+## 5. Data Flows Between Screens, Services, and Tables
+
+1. Authentication starts in [app/auth.tsx](app/auth.tsx), which calls [AuthContext](src/state/AuthContext.tsx). That context signs users into Supabase, upserts `profiles`, and logs auth events through [auditLog](src/services/auditLog.ts).
+2. Once authenticated, [AuthGate](src/components/auth/AuthGate.tsx) unlocks the main app shell. [WalletContext](src/state/WalletContext.tsx) loads the testnet wallet, XRP balance, RLUSD balance, and simulated RLUSD reserve.
+3. Transfer creation starts in [app/send.tsx](app/send.tsx). It captures sender amount and recipient details, reads saved recipients through [recipientService](src/services/recipientService.ts), writes audit events, and seeds the active transfer in [TransferContext](src/state/TransferContext.tsx).
+4. Route generation happens in [app/routes.tsx](app/routes.tsx). It calls [settlementOrchestrator](src/lib/settlementOrchestrator.ts), which combines [aiRouteIntelligence](src/lib/aiRouteIntelligence.ts), [treasuryIntelligence](src/lib/treasuryIntelligence.ts), and provider templates to rank routes. The screen then writes route treasury snapshots and operational events to Supabase, and stores the generated routes back into transfer state.
+5. Funding selection in [app/funding.tsx](app/funding.tsx) binds the chosen payment method into the transfer state. The current payment sources come from [PaymentMethodsContext](src/state/PaymentMethodsContext.tsx), which is still mock-backed rather than database-backed.
+6. Execution starts in [app/track.tsx](app/track.tsx). It hydrates any existing `execution_sessions` snapshot, subscribes to realtime updates, runs [executionEngine](src/services/execution/executionEngine.ts), debits simulated GBP, optionally performs XRPL testnet settlement, and writes execution snapshots back to Supabase.
+7. Completion writes the final transfer to `transfers`, saves the recipient to `recipients`, and resolves pending lifecycle audit events in `transaction_audit_logs`.
+8. Observability flows into [app/operations.tsx](app/operations.tsx), which reads `treasury_liquidity_snapshots`, `route_operational_events`, and `execution_sessions` to build an operations dashboard.
+9. The home dashboard in [app/index.tsx](app/index.tsx) reads the FX feed and corridor health, and the AI card reads `transfers`, `execution_sessions`, and `transaction_audit_logs` to produce executive-level intelligence.
 
-## Screens
+## 6. Intelligence Services Currently Connected
 
-### app/_layout.tsx
+- [src/services/intelligence/telemetryIntelligenceService.ts](src/services/intelligence/telemetryIntelligenceService.ts) is connected to [AICorridorIntelligenceCard](src/components/intelligence/AICorridorIntelligenceCard.tsx).
+- [src/services/intelligence/executiveInsightService.ts](src/services/intelligence/executiveInsightService.ts) is also connected to [AICorridorIntelligenceCard](src/components/intelligence/AICorridorIntelligenceCard.tsx).
+- [src/services/intelligence/providerExecutionIntelligence.ts](src/services/intelligence/providerExecutionIntelligence.ts) is connected to [app/operations.tsx](app/operations.tsx).
+- [src/lib/aiRouteIntelligence.ts](src/lib/aiRouteIntelligence.ts) is connected through [settlementOrchestrator](src/lib/settlementOrchestrator.ts) and therefore drives ranked route scoring.
+- [src/lib/treasuryIntelligence.ts](src/lib/treasuryIntelligence.ts) is connected through [settlementOrchestrator](src/lib/settlementOrchestrator.ts) and [treasuryIntelligenceService](src/services/treasuryIntelligenceService.ts).
+- [src/lib/routeOperationalState.ts](src/lib/routeOperationalState.ts) is connected to [routeOperationalEventService](src/services/routeOperationalEventService.ts) and the route-selection screen.
 
-The root composition layer. It installs the provider stack in this order:
+## 7. Intelligence Services Implemented but Not Connected
 
-- AuthProvider
-- DeviceUnlockProvider
-- WalletProvider
-- PaymentMethodsProvider
-- TransferProvider
-- AuthGate
-- Expo Router Stack
+- [src/lib/routingEngine.ts](src/lib/routingEngine.ts) looks like an older generic scorer and is not imported by the current route flow.
+- [src/lib/providerIntegrationFramework.ts](src/lib/providerIntegrationFramework.ts) defines a richer provider adapter model, but the live route flow does not use it directly.
+- [src/lib/xrplExplorer.ts](src/lib/xrplExplorer.ts) exists in the repo but is not wired into any current screen or service.
+- [app/quote.tsx](app/quote.tsx) is a separate route estimator that is not exposed in the menu path and appears to be a legacy or alternate screen.
+- [src/services/intelligence/telemetryIntelligenceService.ts](src/services/intelligence/telemetryIntelligenceService.ts) is connected, but it still depends on sample data quality that is limited by the current small telemetry history.
 
-This is the true application shell and determines which global state is available to every screen.
+## 8. Treasury Architecture
 
-### app/index.tsx
+The treasury path is split between pure calculation and persistence:
 
-The home dashboard. It:
+- [src/lib/treasuryIntelligence.ts](src/lib/treasuryIntelligence.ts) is the pure treasury engine. It scores corridor liquidity, partner capacity, rail capacity, pressure, and a treasury recommendation.
+- [src/lib/settlementOrchestrator.ts](src/lib/settlementOrchestrator.ts) invokes that engine for each route template and merges the treasury penalty into the final route score.
+- [src/services/treasuryIntelligenceService.ts](src/services/treasuryIntelligenceService.ts) persists the treasury signal into `treasury_liquidity_snapshots` for auditability.
+- [app/routes.tsx](app/routes.tsx) triggers that write for every generated route, so each quote evaluation leaves a snapshot trail.
+- [app/operations.tsx](app/operations.tsx) reads the snapshots back and summarizes treasury pressure, corridor health, and rail capacity.
 
-- Loads live FX rates from the provider chain.
-- Builds corridor health from the FX feed.
-- Shows corridor intelligence cards and summary metrics.
-- Renders recent transaction history.
-- Surfaces the AI corridor intelligence card.
-- Links into Send, Routes, Operations, and Account.
+The treasury model is simulation-first but already structured as if it were a live liquidity control plane. The simulated RLUSD reserve in [WalletContext](src/state/WalletContext.tsx) is part of the decision input for hybrid routes.
 
-This is the top-level operational overview for the system.
+## 9. Execution Engine Architecture
 
-### app/auth.tsx
+The execution engine is centered in [src/services/execution/executionEngine.ts](src/services/execution/executionEngine.ts) and behaves like a resumable state machine.
 
-Secure sign-in and sign-up screen. It:
+- It defines explicit states for reconnecting, verifying status, reconciling provider state, authorising the route, settling the bridge, executing payout, verifying payout, failover evaluation, completion, and failure.
+- It persists snapshots through [executionPersistenceService](src/services/execution/executionPersistenceService.ts), which upserts the full execution record into `execution_sessions`.
+- It emits realtime updates through [executionRealtimeService](src/services/execution/executionRealtimeService.ts), which the track screen subscribes to.
+- It supports recovery through [executionRecoveryService](src/services/execution/executionRecoveryService.ts), which loads in-flight sessions back from `execution_sessions`.
+- It writes detailed lifecycle audit events to `transaction_audit_logs` through [transactionAuditService](src/services/transactionAuditService.ts).
+- It can run an XRPL bridge settlement through [src/lib/xrplSettlement.ts](src/lib/xrplSettlement.ts) for hybrid routes, then verifies the resulting proof and refreshes wallet balances.
+- It sends payout instructions through [src/services/payout/payoutAdapter.ts](src/services/payout/payoutAdapter.ts), which currently routes to the mock provider by default and upgrades to Nium sandbox only when credentials are present.
 
-- Supports email/password sign-in and sign-up through Supabase Auth.
-- Requires device unlock for sign-in and demo access.
-- Supports demo access using EXPO_PUBLIC_DEMO_EMAIL and EXPO_PUBLIC_DEMO_PASSWORD.
-- Sends newly created users to /check-email.
+The track screen is therefore not just a progress view. It is the UI for a persisted, resumable execution workflow with audit logging, realtime updates, and a failover-aware backend.
 
-### app/check-email.tsx
+## 10. Route Intelligence Architecture
 
-Post-sign-up confirmation screen. It explains that a confirmation email was sent and routes back to login.
+The route stack is built in layers:
 
-### app/account-created.tsx
+- [src/lib/settlementOrchestrator.ts](src/lib/settlementOrchestrator.ts) constructs five route templates and enriches them with FX rates, liquidity status, treasury penalties, AI scoring, provider metadata, and settlement stages.
+- [src/lib/aiRouteIntelligence.ts](src/lib/aiRouteIntelligence.ts) contributes route score, predicted failure risk, AI confidence, partner health, and recommendation text.
+- [src/lib/treasuryIntelligence.ts](src/lib/treasuryIntelligence.ts) contributes treasury score, pressure, corridor insight, and liquidity recommendation.
+- [src/lib/routeOperationalState.ts](src/lib/routeOperationalState.ts) turns route metadata into a simulated operational event that can indicate watch, degraded, or failover conditions.
+- [app/routes.tsx](app/routes.tsx) persists the generated treasury and operational data and stores the selected route back in transfer state.
+- [src/services/routeOperationalEventService.ts](src/services/routeOperationalEventService.ts) and [src/services/treasuryIntelligenceService.ts](src/services/treasuryIntelligenceService.ts) make the route decisions auditable in Supabase.
 
-Post-confirmation landing screen. It tells the user the account was verified and returns them to /auth.
+There is also an older route estimator in [app/quote.tsx](app/quote.tsx), but the current route-selection flow is the richer one in `/routes`.
 
-### app/account.tsx
+## 11. OTA Deployment Configuration
 
-Account, security, and profile screen. It:
+OTA and release configuration is Expo/EAS based:
 
-- Displays the active Supabase session.
-- Shows demo access state, account readiness, and verification posture.
-- Surfaces security, compliance, payment-method, and limit status.
-- Exposes sign-out.
+- [app.json](app.json) enables `expo-updates`, sets `runtimeVersion` to `1.0.0`, and points updates at the EAS project URL `https://u.expo.dev/35f8cdd6-557f-493d-b065-52d6121f62d3`.
+- [app.json](app.json) uses `checkAutomatically: ON_LOAD` and `fallbackToCacheTimeout: 0`, which means updates are checked on app load and the cached bundle is not preferred over a fresh update.
+- [eas.json](eas.json) defines `development`, `preview`, and `production` build profiles with Expo channels `development`, `preview`, and `production`.
+- [eas.json](eas.json) uses internal distribution for development and preview, and auto-incremented production builds.
+- [app.json](app.json) enables `newArchEnabled`, `typedRoutes`, `reactCompiler`, and the `expo-secure-store` plugin, which matters for wallet and auth persistence.
 
-### app/send.tsx
+This is a standard EAS Update deployment setup rather than a custom OTA system.
 
-Transfer initiation screen. It:
+## 12. Known Technical Debt
 
-- Captures amount, recipient identity, country, payout method, and provider.
-- Loads saved recipients and allows reuse/favoriting.
-- Validates the transfer inputs.
-- Creates the transfer in TransferContext.
-- Moves the user to route scoring.
+- [src/state/PaymentMethodsContext.tsx](src/state/PaymentMethodsContext.tsx) is still mock-backed even though a `payment_methods` table and schema exist.
+- [app/payment-methods.tsx](app/payment-methods.tsx) simulates card and open-banking setup instead of writing live provider data.
+- [src/lib/routingEngine.ts](src/lib/routingEngine.ts) and [src/lib/providerIntegrationFramework.ts](src/lib/providerIntegrationFramework.ts) overlap conceptually with the newer settlement orchestrator and appear to be unused.
+- [app/quote.tsx](app/quote.tsx) is a second route quote surface that is not integrated into the main navigation path.
+- [src/services/auditLog.ts](src/services/auditLog.ts) writes to `audit_logs`, but there is no app-side reader for that table yet.
+- [supabase/orchestration-decisions.sql](supabase/orchestration-decisions.sql) defines a useful audit table, but no code currently writes or reads it.
+- [src/services/execution/executionPersistenceService.ts](src/services/execution/executionPersistenceService.ts) assumes `execution_sessions` exists in Supabase, but there is no local migration file for it in this repo.
+- [src/lib/xrplSettlement.ts](src/lib/xrplSettlement.ts) and [src/lib/xrplWallet.ts](src/lib/xrplWallet.ts) are live XRPL integrations, but the app still defaults to simulation-first behavior with fallback behavior around credentials and balances.
+- Route scoring still uses hardcoded corridor and provider heuristics for the current target markets rather than external live provider feeds.
+- The telemetry intelligence card depends on the available persisted sample size, which is still small and can produce limited insight quality.
 
-This is the recipient and transfer construction screen.
+## 13. Current Development Roadmap
 
-### app/routes.tsx
+There is no dedicated roadmap document in the repo, so this section is inferred from the codebase state and the outstanding integration gaps.
 
-Primary route-selection screen. It:
+1. Wire [src/state/PaymentMethodsContext.tsx](src/state/PaymentMethodsContext.tsx) to the live `payment_methods` table and remove the mock-only funding source model.
+2. Add or confirm a migration for `execution_sessions`, then tighten the execution persistence and recovery contract around that schema.
+3. Decide whether [src/lib/routingEngine.ts](src/lib/routingEngine.ts) and [src/lib/providerIntegrationFramework.ts](src/lib/providerIntegrationFramework.ts) should be consolidated into the current route stack or retired.
+4. Promote [supabase/orchestration-decisions.sql](supabase/orchestration-decisions.sql) into the live decision trail so each route selection is auditable beyond treasury and operational snapshots.
+5. Replace default mock payout handling with live sandbox providers where credentials exist, starting with the Nium path already scaffolded in [src/services/payout/providers/niumSandboxProvider.ts](src/services/payout/providers/niumSandboxProvider.ts).
+6. Expand the route intelligence data sources beyond heuristics so corridor scoring is driven more by external signals and less by fixed fixtures.
+7. Either integrate [app/quote.tsx](app/quote.tsx) into the main navigation model or remove it once the richer `/routes` flow is fully authoritative.
 
-- Builds ranked route quotes with settlementOrchestrator.
-- Writes treasury snapshots and route operational events to Supabase.
-- Persists the available routes into TransferContext.
-- Lets the user choose the best route and continue to funding.
+## 14. Short Summary
 
-This is the main route intelligence and orchestration decision screen.
+The repository currently behaves like a simulation-first payment orchestration platform with production-shaped abstractions. The main live path is:
 
-### app/quote.tsx
+Auth and unlock -> transfer creation -> route scoring and treasury snapshotting -> funding authorisation -> execution state machine -> realtime audit and operations telemetry.
 
-A simpler standalone route estimator. It calculates a small set of quote options from corridors and can forward the user to /send.
-
-It looks like an earlier or alternate quoting screen compared with the richer /routes flow.
-
-### app/funding.tsx
-
-Funding-authorisation screen. It:
-
-- Lets the user choose a saved bank or card method.
-- Sets the funding method and funding status on the transfer.
-- Simulates authorisation before moving to tracking.
-
-### app/track.tsx
-
-Live execution and settlement tracking screen. It:
-
-- Hydrates a persisted execution snapshot if one exists.
-- Subscribes to realtime execution updates from Supabase.
-- Starts the transfer execution engine.
-- Debits the simulated GBP balance.
-- Shows execution steps, payout status, XRPL proof, failover state, and completion status.
-
-This is the state machine visualisation and terminal execution view.
-
-### app/operations.tsx
-
-Operations command centre. It:
-
-- Loads treasury snapshots, route operational events, and recoverable execution sessions.
-- Subscribes to realtime execution session updates.
-- Builds provider execution metrics.
-- Summarises treasury pressure, failover activity, and active executions.
-
-This is the observability and resilience dashboard.
-
-### app/payment-methods.tsx
-
-Payment method management screen. It:
-
-- Shows mock saved cards and open-banking connections.
-- Lets the user select a primary funding method.
-- Exposes simulated add-card and connect-bank flows.
-
-### app/xrpl-test.tsx
-
-Small XRPL connectivity check screen. It gets or creates the testnet wallet and displays the address/status.
-
-## Context Providers
-
-### AuthContext
-
-File: src/state/AuthContext.tsx
-
-Responsibilities:
-
-- Owns Supabase auth session state.
-- Loads the current session and listens for auth state changes.
-- Upserts the user profile row into profiles.
-- Provides signIn, signUp, signOut, enableDemoAccess, and disableDemoAccess.
-
-Key exported API:
-
-- AuthProvider
-- useAuth
-
-Important behavior:
-
-- In development reloads, it forces a clean login by signing out.
-- Demo access is treated as a special session mode.
-
-### DeviceUnlockContext
-
-File: src/state/DeviceUnlockContext.tsx
-
-Responsibilities:
-
-- Detects biometric availability.
-- Locks/unlocks the app locally.
-- Uses Expo Local Authentication when hardware and enrollment exist.
-
-Key exported API:
-
-- DeviceUnlockProvider
-- useDeviceUnlock
-
-### WalletContext
-
-File: src/state/WalletContext.tsx
-
-Responsibilities:
-
-- Tracks a simulated GBP balance.
-- Manages the XRPL wallet address and balances.
-- Ensures the RLUSD trustline exists.
-- Tracks the simulated RLUSD reserve separately.
-
-Key exported API:
-
-- WalletProvider
-- useWallet
-
-Important behavior:
-
-- Refreshes balances only when an authenticated Supabase session exists.
-- Uses SecureStore-backed XRPL wallet creation and restoration.
-
-### PaymentMethodsContext
-
-File: src/state/PaymentMethodsContext.tsx
-
-Responsibilities:
-
-- Loads static mock payment methods.
-- Tracks the primary funding method.
-- Exposes the resolved primary method and setter.
-
-Key exported API:
-
-- PaymentMethodsProvider
-- usePaymentMethods
-
-### TransferContext
-
-File: src/state/TransferContext.tsx
-
-Responsibilities:
-
-- Owns the active transfer draft.
-- Tracks completed transfers for history.
-- Hydrates completed transfers from Supabase.
-- Emits audit logs when the transfer lifecycle changes.
-- Persists completed transfers and derives saved recipients.
-
-Key exported API:
-
-- TransferProvider
-- useTransfer
-
-Transfer lifecycle methods:
-
-- createTransfer
-- setRecipient
-- setRoutes
-- selectRoute
-- setFundingMethod
-- setFundingStatus
-- startTransfer
-- completeTransfer
-- resetTransfer
-
-## Services and Exports
-
-### Audit logging
-
-File: src/services/auditLog.ts
-
-Exports:
-
-- AuditEventType
-- writeAuditLog
-
-Purpose:
-
-- Writes user-level audit entries to audit_logs.
-- Used for login, signup, logout, and recipient lifecycle events.
-
-### Transaction audit logging
-
-File: src/services/transactionAuditService.ts
-
-Exports:
-
-- TransactionAuditStatus
-- TransactionAuditEventType
-- resolvePendingAuditEvents
-- writeTransactionAuditLog
-- loadTransactionAuditLogs
-
-Purpose:
-
-- Maintains a step-by-step audit ledger for a specific transfer.
-- Resolves pending entries when downstream events complete or fail.
-
-### Transfer persistence
-
-File: src/services/transferService.ts
-
-Exports:
-
-- saveTransferProgress
-- saveCompletedTransfer
-- loadCompletedTransfers
-
-Purpose:
-
-- Persists the transfer draft and completed transfers to the transfers table.
-- Serialises the selected route into the row payload.
-
-### Recipient persistence
-
-File: src/services/recipientService.ts
-
-Exports:
-
-- saveRecipientFromTransfer
-- loadSavedRecipients
-- toggleRecipientFavorite
-
-Purpose:
-
-- Upserts recipients from completed transfers.
-- Falls back to completed transfers when the recipients table is empty.
-- Stores and toggles favourites.
-
-### Route operational events
-
-File: src/services/routeOperationalEventService.ts
-
-Exports:
-
-- RouteOperationalEventRow
-- writeRouteOperationalEvent
-- loadRecentRouteOperationalEvents
-
-Purpose:
-
-- Writes simulated route degradation and failover events.
-- Feeds the Operations Command Centre.
-
-### Treasury snapshots
-
-File: src/services/treasuryIntelligenceService.ts
-
-Exports:
-
-- TreasuryLiquiditySnapshotRow
-- writeTreasuryLiquiditySnapshot
-- loadTreasurySnapshots
-- loadRecentTreasurySnapshots
-
-Purpose:
-
-- Persists treasury decision snapshots for route evaluation.
-- Supports per-transfer and recent-history retrieval.
-
-### Execution engine
-
-File: src/services/execution/executionEngine.ts
-
-Exports:
-
-- ExecutionState
-- ExecutionStepStatus
-- ExecutionStep
-- ExecutionSnapshot
-- runTransferExecution
-
-Purpose:
-
-- The core transfer state machine.
-- Handles idempotency, recovery, route authorisation, XRPL bridge settlement, payout submission, payout verification, failover, and completion.
-
-### Execution persistence
-
-File: src/services/execution/executionPersistenceService.ts
-
-Exports:
-
-- PersistedExecutionSession
-- persistExecutionSnapshot
-- loadExecutionSession
-- loadRecoverableExecutionSessions
-
-Purpose:
-
-- Stores the latest execution snapshot in execution_sessions.
-- Retrieves a transfer-specific snapshot and the active recoverable sessions.
-
-### Execution realtime
-
-File: src/services/execution/executionRealtimeService.ts
-
-Exports:
-
-- subscribeToExecutionSession
-- subscribeToRecentExecutionSessions
-
-Purpose:
-
-- Subscribes to Supabase realtime changes on execution_sessions.
-- Drives the Track and Operations screens.
-
-### Execution recovery
-
-File: src/services/execution/executionRecoveryService.ts
-
-Exports:
-
-- RecoverableExecutionSession
-- loadRecoverableExecutionSessions
-- loadLatestExecutionSnapshot
-
-Purpose:
-
-- Recovery-oriented reads for unfinished execution sessions.
-- Used by the observability surfaces and recovery prelude.
-
-### Provider execution intelligence
-
-File: src/services/intelligence/providerExecutionIntelligence.ts
-
-Exports:
-
-- ProviderExecutionMetrics
-- buildProviderExecutionMetrics
-
-Purpose:
-
-- Derives health, success rate, latency, degradation risk, and failover risk from a route quote.
-
-### Telemetry intelligence
-
-File: src/services/intelligence/telemetryIntelligenceService.ts
-
-Exports:
-
-- TelemetryInsightSeverity
-- TelemetryInsight
-- TelemetryIntelligenceSummary
-- loadTelemetryIntelligence
-
-Purpose:
-
-- Aggregates transfer, execution, and audit history into a higher-level intelligence summary.
-- Produces insights for the future analytics layer.
-
-### Payout orchestration
-
-File: src/services/payout/payoutTypes.ts
-
-Exports:
-
-- PayoutProviderId
-- PayoutStatus
-- PayoutRail
-- CreatePayoutRequest
-- PayoutResult
-- PayoutProvider
-- PayoutPartnerProfile
-- PayoutPartnerSelection
-
-File: src/services/payout/payoutPartnerDirectory.ts
-
-Exports:
-
-- payoutPartnerDirectory
-
-File: src/services/payout/payoutRoutingEngine.ts
-
-Exports:
-
-- selectBestPayoutPartner
-
-File: src/services/payout/payoutAdapter.ts
-
-Exports:
-
-- createPayout
-- getPayoutStatus
-
-File: src/services/payout/mockPayoutProvider.ts
-
-Exports:
-
-- mockPayoutProvider
-
-File: src/services/payout/providers/niumSandboxProvider.ts
-
-Exports:
-
-- hasNiumSandboxCredentials
-- niumSandboxProvider
-
-Purpose:
-
-- Chooses a payout provider from a partner directory.
-- Executes via Nium sandbox when configured, otherwise falls back to the mock provider.
-
-## Library Modules
-
-### fxFeed.ts
-
-Exports:
-
-- FxProviderName
-- FxRate
-- fetchFxRate
-- fetchCorridorFxRates
-
-Purpose:
-
-- Chains through multiple live FX providers and falls back to mock rates.
-
-### corridorHealth.ts
-
-Exports:
-
-- VolatilityLevel
-- CorridorHealth
-- buildCorridorHealth
-
-Purpose:
-
-- Converts FX feed output into corridor-level health, volatility, route confidence, and status.
-
-### aiRouteIntelligence.ts
-
-Exports:
-
-- RouteOptimisationMode
-- ProviderIntelligenceProfile
-- CorridorHealthSignal
-- getProviderIntelligence
-- getCorridorHealth
-- calculateAiRouteScore
-
-Purpose:
-
-- Computes route scores from provider history, corridor health, and optimisation weights.
-
-### treasuryIntelligence.ts
-
-Exports:
-
-- LiquidityDepth
-- LiquidityPressure
-- TreasurySignalStatus
-- CorridorLiquiditySignal
-- PartnerLiquiditySignal
-- RailLiquiditySignal
-- TreasuryIntelligenceSignal
-- getTreasuryIntelligence
-
-Purpose:
-
-- Produces treasury-aware corridor, partner, and rail capacity signals.
-- Feeds route scoring and treasury snapshots.
-
-### settlementOrchestrator.ts
-
-Exports:
-
-- buildOrchestratedRouteQuotes
-
-Purpose:
-
-- Combines FX, treasury intelligence, AI scoring, and route templates into ranked RouteQuote objects.
-
-### routingEngine.ts
-
-Exports:
-
-- scoreRoutes
-- labelRoutes
-- getRankedRoutes
-
-Purpose:
-
-- Generic scoring helper for simpler route option models.
-
-### routeOperationalState.ts
-
-Exports:
-
-- OperationalEventSeverity
-- RouteOperationalEvent
-- buildRouteOperationalEvent
-
-Purpose:
-
-- Converts a route quote into a simulated operational event with severity and recommended action.
-
-### providerIntegrationFramework.ts
-
-Exports:
-
-- ProviderMode
-- ProviderCapability
-- ProviderHealthStatus
-- ProviderAdapter
-- ProviderQuoteRequest
-- ProviderExecutionProfile
-- DEFAULT_PROVIDER_MODE
-- getProviderAdapterForRoute
-- listProviderAdapters
-- buildProviderExecutionProfile
-- isProviderQuoteExpired
-
-Purpose:
-
-- Abstracts provider integration metadata and execution profiles for future live connectors.
-
-### id.ts
-
-Exports:
-
-- createTransferId
-
-Purpose:
-
-- Generates transfer identifiers.
-
-### simulatedRLusdWallet.ts
-
-Exports:
-
-- getSimulatedRlusdBalance
-- setSimulatedRlusdBalance
-- addSimulatedRlusd
-- debitSimulatedRlusd
-- resetSimulatedRlusdBalance
-
-Purpose:
-
-- Holds a simulated RLUSD reserve used by route and treasury logic.
-
-### xrplClient.ts
-
-Exports:
-
-- getXrplClient
-- resetXrplClient
-- disconnectXrpl
-
-Purpose:
-
-- Manages a reusable XRPL websocket client.
-
-### xrplWallet.ts
-
-Exports:
-
-- RLUSD_DISPLAY_CODE
-- RLUSD_CURRENCY_CODE
-- RLUSD_TESTNET_ISSUER
-- getOrCreateWallet
-- getXrplTestnetXrpBalance
-- getXrplTestnetRlusdBalance
-- ensureRlusdTrustline
-
-Purpose:
-
-- Creates or loads the testnet wallet and retrieves XRPL balances.
-
-### xrplSettlement.ts
-
-Exports:
-
-- XrplSettlementResult
-- executeXrplTestnetSettlement
-
-Purpose:
-
-- Executes a testnet payment between two wallets as the hybrid bridge proof.
-
-### xrplExplorer.ts
-
-Exports:
-
-- getXrplTestnetTransactionUrl
-- shortenTxHash
-
-Purpose:
-
-- Builds explorer links and display helpers for XRPL transaction hashes.
-
-## Database Tables and Relationships
-
-The code touches the following Supabase/Postgres tables.
-
-### profiles
-
-- Owned by the Supabase auth user id.
-- Upserted from AuthContext after sign-in/sign-up state changes.
-- RLS in supabase/rls-security-foundation.sql restricts access to auth.uid() = id.
-
-### transfers
-
-- Primary transfer history table.
-- Written by transferService.ts.
-- Stores sender values, recipient snapshot, selected route, status, and completion time.
-- Related to user_id and to the completed transfer history shown on the dashboard.
-
-### recipients
-
-- Saved recipient table.
-- Written by recipientService.ts when a transfer completes.
-- Read back for recipient reuse in the send flow.
-- RLS restricts rows to the owning authenticated user.
-
-### payment_methods
-
-- Saved funding methods table.
-- Defined in supabase/payment-methods.sql.
-- Contains one primary method per user via a filtered unique index.
-- Read by PaymentMethodsContext and the payment-methods screen.
-
-### audit_logs
-
-- User-level audit log table.
-- Written by writeAuditLog.
-- Used for auth events and recipient lifecycle events.
-
-### transaction_audit_logs
-
-- Transfer-specific audit ledger.
-- Written by writeTransactionAuditLog.
-- Read by the operational timeline component and the telemetry service.
-- Has a strict transaction_id + user_id scope and PENDING resolution flow.
-
-### route_operational_events
-
-- Simulated route degradation/failover event ledger.
-- Written from route selection to power the operations dashboard.
-- Unique on transaction_id, route_id, user_id, and event_type.
-
-### treasury_liquidity_snapshots
-
-- Treasury intelligence snapshot ledger.
-- Written during route evaluation.
-- Stores corridor, partner, rail, pressure, recommendation, and the raw snapshot payload.
-
-### execution_sessions
-
-- Persisted execution state machine snapshots.
-- Written by persistExecutionSnapshot.
-- Read by track/operations screens and realtime subscriptions.
-- Not defined in the supplied SQL files, but required by the execution stack.
-
-### orchestration_decisions
-
-- Architectural decision table for route/provider choice, safety scores, failover recommendations, and AI factors.
-- Present in supabase/orchestration-decisions.sql.
-- Not yet wired into the main app flow, but clearly intended for richer decision auditability.
-
-### xrpl_identities
-
-- Reserved in the RLS foundation for future XRPL identity records.
-- Not yet part of the visible app flow.
-
-### transactions
-
-- Kept in the RLS foundation for compatibility.
-- Not currently referenced by the app code.
-
-## Supabase Integrations
-
-The Supabase integration surface is concentrated in src/lib/supabase.ts and the service layer.
-
-### Auth
-
-- Supabase Auth stores the user session.
-- AuthContext reads the session, reacts to auth state changes, and upserts the profile row.
-- AuthGate uses the session and demo access state to gate protected routes.
-
-### Realtime
-
-- executionRealtimeService.ts subscribes to execution_sessions changes.
-- OperationalTimelineCard subscribes to transaction_audit_logs inserts.
-- The app uses realtime as a best-effort enhancement, with polling/reload-style fallbacks in several screens.
-
-### Storage and data access pattern
-
-- Most reads/writes are straight Supabase table calls from service modules.
-- Query scope is always user_id restricted after reading the authenticated user from Supabase Auth.
-- The app relies on client-side RLS enforcement, not server-side custom RPC.
-
-### Configuration
-
-- src/lib/supabase.ts requires EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY.
-- If the config is missing, the app falls back to a placeholder client and surfaces a config error.
-
-## Orchestration Flow
-
-The main transfer path is:
-
-1. Auth gate accepts a valid session or demo access.
-2. The home screen starts the transfer flow.
-3. send.tsx captures the recipient and transfer amount.
-4. routes.tsx builds orchestrated quotes from settlementOrchestrator.ts.
-5. The selected route is persisted to the transfer draft and treasury/operational events are written.
-6. funding.tsx selects a saved funding source and marks the transfer as authorised.
-7. track.tsx starts the execution engine.
-8. executionEngine.ts creates an execution lock, writes transaction audit events, and steps through:
-   - route authorisation
-   - optional XRPL bridge settlement
-   - payout submission
-   - payout verification
-   - failover, if needed
-9. Persisted execution snapshots are written to execution_sessions.
-10. On completion, the transfer is stored, the recipient is upserted, and completed history is refreshed.
-
-Key properties of the flow:
-
-- Idempotency is enforced in the execution engine.
-- Failover is built into the route lifecycle.
-- XRPL settlement is only used for HYBRID routes.
-- Payout providers are abstracted behind the payout adapter.
-
-## Treasury Intelligence Components
-
-The treasury layer exists in both the route scoring path and the observability path.
-
-### Core modules
-
-- treasuryIntelligence.ts computes the route-time treasury signal.
-- treasuryIntelligenceService.ts persists and loads snapshots.
-- treasury_liquidity_snapshots.sql defines the backing table.
-
-### What it models
-
-- Corridor liquidity depth and pressure.
-- Partner capacity and settlement status.
-- Rail capacity and bridge-asset pressure.
-- A combined treasury score, penalty, recommendation, and decision factors.
-
-### How it is used
-
-- settlementOrchestrator.ts injects treasury signal into RouteQuote objects.
-- routes.tsx persists the snapshot for each generated route.
-- operations.tsx summarises recent snapshots and operational pressure.
-
-## Provider Intelligence Components
-
-### Core modules
-
-- aiRouteIntelligence.ts supplies provider intelligence profiles and provider-health adjustments.
-- providerExecutionIntelligence.ts turns a RouteQuote into live execution metrics.
-- providerIntegrationFramework.ts provides the abstraction for future live adapters.
-- payoutPartnerDirectory.ts defines payout partners and their supported corridors.
-- payoutRoutingEngine.ts selects the best payout partner.
-
-### What it models
-
-- Historical success rate.
-- Average latency.
-- Failure risk.
-- Recent trend.
-- Provider health score and failover risk.
-
-### Where it appears
-
-- Routes screen route cards show provider health, confidence, predicted failure risk, and recommendation text.
-- Operations screen uses provider metrics for a high-level observability view.
-
-## Route Intelligence Components
-
-### Core modules
-
-- fxFeed.ts fetches live FX from a provider chain with fallback.
-- corridorHealth.ts transforms FX into corridor health scoring.
-- aiRouteIntelligence.ts calculates route score and corridor health signal.
-- settlementOrchestrator.ts synthesises the final ranked RouteQuote list.
-- routeOperationalState.ts creates simulated operational events for routes.
-
-### What a RouteQuote contains
-
-A route quote is not just price and ETA. It also carries:
-
-- AI confidence and recommendation.
-- Predicted failure risk.
-- Corridor health score and insight.
-- Provider history and trend.
-- Treasury score and pressure fields.
-- Bridge asset and liquidity coverage.
-- Orchestration safety status and failover metadata.
-
-### How route intelligence is consumed
-
-- index.tsx shows live corridor intelligence at the dashboard level.
-- send.tsx uses a simpler corridor preview before route selection.
-- routes.tsx is the authoritative selection surface for ranked orchestration.
-
-## External Integrations
-
-### Supabase
-
-- Auth, table persistence, and realtime.
-
-### XRPL
-
-- xrpl package for testnet client, wallet generation, trustline creation, and settlement.
-- Testnet explorer links are generated for transaction proof.
-
-### Expo / React Native ecosystem
-
-- Expo Router for file-based routing.
-- Expo Secure Store for wallet seeds.
-- Expo Local Authentication for biometrics.
-- AsyncStorage for Supabase auth session persistence.
-- react-native-get-random-values for crypto-safe randomness.
-
-### FX providers
-
-- Frankfurter
-- ExchangeRate API
-- Currency API CDN
-- FloatRates
-- Open Exchange Rates
-- Fixer
-- CurrencyLayer
-
-### Payout providers
-
-- Nium sandbox when credentials are present.
-- Mock payout sandbox as the default fallback.
-- Directory entries also model Thunes, NextPay, and Tranglo sandbox endpoints for future use.
-
-### Simulated rails
-
-- Mock payment methods for card and open banking.
-- Simulated RLUSD wallet balance.
-- Simulated fiat payout provider fallback.
-
-## Current Architecture
-
-The architecture is a client-first orchestration prototype rather than a server-driven payment backend.
-
-### Structure
-
-- Expo Router app shell on top.
-- Cross-cutting state in React context providers.
-- Pure domain logic in src/lib.
-- Supabase service adapters in src/services.
-- UI cards that render derived state rather than owning business logic.
-
-### Strengths
-
-- Clear separation between orchestration logic and screens.
-- Most critical state transitions are persisted.
-- Realtime and recovery support are already part of the model.
-- The route quote is rich enough to carry audit, treasury, and execution metadata end to end.
-
-### Constraints
-
-- Many integrations are simulated or mock-backed.
-- The app still depends heavily on client-side orchestration.
-- Some tables are expected by code but not yet shipped in SQL.
-- The architecture assumes authenticated user scope for almost every persisted read/write.
-
-## Current Roadmap
-
-This is inferred from code comments, simulated flows, and placeholder screens rather than a formal product backlog.
-
-### Near-term
-
-- Wire real card tokenisation and open-banking setup instead of simulated payment method flows.
-- Connect a real KYC/AML provider and make the account screen reflect real verification state.
-- Add stronger 2FA and trusted-device management.
-- Promote the Nium sandbox from credential-ready stub to a full live connector.
-- Expand execution recovery/resume behaviour with more deterministic checkpointing.
-
-### Mid-term
-
-- Wire orchestration_decisions into the main route-selection flow for richer decision auditability.
-- Expand the telemetry model into a real analytics/forecasting view.
-- Add more live provider adapters and richer partner directory data.
-- Replace or supplement mock payout/provider paths with live integrations.
-
-### Longer-term
-
-- Move from simulated settlement to real settlement orchestration where supported.
-- Add compliance, risk, and observability surfaces that reflect production operations.
-- Use the persisted telemetry to drive adaptive scoring and corridor-specific automation.
-
-## Notable Implementation Notes
-
-- quote.tsx is a lighter legacy-style estimator, while routes.tsx is the main orchestrated route-selection experience.
-- payment-methods.tsx and the payment method context are mock-backed today, but the architecture is ready for real provider onboarding.
-- execution_sessions, orchestration_decisions, and some other tables are part of the intended data model even where the SQL migration is not present in the checked-in files.
-- Several cards and screens show intentionally simulated values; that is part of the prototype design, not a bug.
+The strongest active systems are the route orchestrator, treasury snapshotting, transaction audit trail, execution persistence/realtime stack, and the telemetry-backed home dashboard. The biggest gaps are live payment-method persistence, the unused legacy routing modules, and the still-mock-heavy funding and payout surfaces.

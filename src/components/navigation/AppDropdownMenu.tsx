@@ -9,17 +9,48 @@ import { UserAccountBadge } from "../auth/UserAccountBadge";
 import { AppText } from "../ui/AppText";
 
 const MENU_ITEMS = [
-  { label: "Home", description: "Dashboard and corridor intelligence", route: "/", match: "/" },
-  { label: "Send Money", description: "Create a new transfer", route: "/send", match: "/send" },
-  { label: "Route Intelligence", description: "Compare ranked payment routes", route: "/routes", match: "/routes" },
+  {
+    label: "Home",
+    description: "Dashboard and corridor intelligence",
+    route: "/",
+    match: "/",
+  },
+  {
+    label: "Send Money",
+    description: "Create a new transfer",
+    route: "/send",
+    match: "/send",
+  },
+  {
+    label: "Route Intelligence",
+    description: "Compare ranked payment routes",
+    route: "/routes",
+    match: "/routes",
+  },
   {
     label: "Operations Command Centre",
     description: "Treasury telemetry and orchestration intelligence",
     route: "/operations",
     match: "/operations",
   },
-  { label: "Track Transfer", description: "Execution status and settlement proof", route: "/track", match: "/track" },
-  { label: "Account & Profile", description: "Identity, security and limits", route: "/account", match: "/account" },
+  {
+    label: "Live Intelligence Feeds",
+    description: "Live FX, treasury and market intelligence feeds",
+    route: "/live-intelligence-feeds",
+    match: "/live-intelligence-feeds",
+  },
+  {
+    label: "Track Transfer",
+    description: "Execution status and settlement proof",
+    route: "/track",
+    match: "/track",
+  },
+  {
+    label: "Account & Profile",
+    description: "Identity, security and limits",
+    route: "/account",
+    match: "/account",
+  },
 ] as const;
 
 export function AppDropdownMenu() {
@@ -29,10 +60,10 @@ export function AppDropdownMenu() {
   const { lockApp } = useDeviceUnlock();
   const [isOpen, setIsOpen] = useState(false);
 
-  const handleNavigate = (route: string) => {
-    setIsOpen(false);
-    router.push(route);
-  };
+  const handleNavigate = (route: any) => {
+  setIsOpen(false);
+  router.push(route);
+};
 
   const handleSignOut = () => {
     Alert.alert("Sign out", "Do you want to end this NexusPay session?", [
@@ -117,7 +148,9 @@ export function AppDropdownMenu() {
         >
           {MENU_ITEMS.map((item) => {
             const isActive =
-              item.match === "/" ? pathname === "/" : pathname.startsWith(item.match);
+              item.match === "/"
+                ? pathname === "/"
+                : pathname.startsWith(item.match);
 
             return (
               <Pressable
@@ -135,7 +168,9 @@ export function AppDropdownMenu() {
                 <AppText
                   variant="body"
                   style={{
-                    color: isActive ? colors.gold : colors.textDarkPrimary,
+                    color: isActive
+                      ? colors.gold
+                      : colors.textDarkPrimary,
                     fontWeight: "900",
                   }}
                 >
@@ -145,7 +180,9 @@ export function AppDropdownMenu() {
                 <AppText
                   variant="caption"
                   style={{
-                    color: isActive ? "#BFEAF1" : colors.textDarkSecondary,
+                    color: isActive
+                      ? "#BFEAF1"
+                      : colors.textDarkSecondary,
                   }}
                 >
                   {item.description}
@@ -167,11 +204,18 @@ export function AppDropdownMenu() {
           >
             <AppText
               variant="body"
-              style={{ color: "#BE123C", fontWeight: "900" }}
+              style={{
+                color: "#BE123C",
+                fontWeight: "900",
+              }}
             >
               Sign out
             </AppText>
-            <AppText variant="caption" style={{ color: "#9F1239" }}>
+
+            <AppText
+              variant="caption"
+              style={{ color: "#9F1239" }}
+            >
               End this NexusPay session
             </AppText>
           </Pressable>
