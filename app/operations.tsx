@@ -1,53 +1,77 @@
+import { Feather } from "@expo/vector-icons";
 import { useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { RefreshControl, ScrollView, View } from "react-native";
+import {
+  ActivityIndicator,
+  FlatList,
+  Modal,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
 
 import { NexusAIToggleCard } from "../src/components/intelligence/NexusAIToggleCard";
 import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
 import { Screen } from "../src/components/ui/Screen";
 import { useNexusAIScreenSetting } from "../src/hooks/useNexusAISettings";
+import { getLiveIntelligenceFeeds } from "../src/services/liveIntelligenceFeedService";
 import {
-    loadRecoverableExecutionSessions,
-    PersistedExecutionSession,
-} from "../src/services/execution/executionPersistenceService";
-import { subscribeToRecentExecutionSessions } from "../src/services/execution/executionRealtimeService";
-import { buildProviderExecutionMetrics } from "../src/services/intelligence/providerExecutionIntelligence";
+  generateIntelligenceReport,
+  IntelligenceReportResult,
+} from "../src/services/nexusAIService";
 import {
-    loadRecentRouteOperationalEvents,
-    RouteOperationalEventRow,
+  loadRecentRouteOperationalEvents,
+  RouteOperationalEventRow,
 } from "../src/services/routeOperationalEventService";
 import {
-    loadRecentTreasurySnapshots,
-    TreasuryLiquiditySnapshotRow,
+  loadRecentTreasurySnapshots,
+  TreasuryLiquiditySnapshotRow,
 } from "../src/services/treasuryIntelligenceService";
+import { loadCompletedTransfers } from "../src/services/transferService";
+import {
+  loadRecoverableExecutionSessions,
+  PersistedExecutionSession,
+} from "../src/services/execution/executionPersistenceService";
+import { subscribeToRecentExecutionSessions } from "../src/services/execution/executionRealtimeService";
 import { colors } from "../src/theme";
+import { Transfer } from "../src/types/transfer";
 
 type OperationalPressure = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+type AlertFilter = "ALL" | "CRITICAL" | "WARNING" | "INFO";
 
-function MiniMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <View
-      style={{
-        flex: 1,
-        padding: 11,
-        borderRadius: 16,
-        backgroundColor: "#F8FAFC",
-        borderWidth: 1,
-        borderColor: "#E2E8F0",
-        gap: 4,
-      }}
-    >
-      <AppText variant="caption" color={colors.textDarkMuted}>
-        {label}
-      </AppText>
+type CorridorHealthRow = {
+  corridor: string;
+  score: number;
+  trend: number;
+  capacity: number;
+  status: "HEALTHY" | "DEGRADED" | "AT_RISK";
+  pressure: OperationalPressure;
+};
 
-      <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
-        {value}
-      </AppText>
-    </View>
-  );
-}
+type KPIItem = {
+  key: string;
+  label: string;
+  value: string;
+  delta: string;
+  trend: "up" | "down" | "flat";
+  tint: string;
+  icon: keyof typeof Feather.glyphMap;
+};
+
+type ActiveTransferRow = {
+  id: string;
+  corridor: string;
+  amount: number;
+  currency: string;
+  status: string;
+  progress: number;
+  settlementEstimate: string;
+  routeId: string;
+  updatedAt: string;
+};
 
 function getPressureWeight(pressure: string) {
   if (pressure === "CRITICAL") return 4;
@@ -63,338 +87,330 @@ function getPressureFromWeight(weight: number): OperationalPressure {
   return "LOW";
 }
 
-function getOverallOperationalPressure(
-  item: TreasuryLiquiditySnapshotRow
-): OperationalPressure {
+function getOverallOperationalPressure(item: TreasuryLiquiditySnapshotRow): OperationalPressure {
   const componentPressure = Math.max(
     getPressureWeight(item.corridor_pressure),
     getPressureWeight(item.partner_pressure),
     getPressureWeight(item.rail_pressure)
   );
 
-  const scorePressure =
-    item.treasury_score < 55
-      ? 4
-      : item.treasury_score < 70
-      ? 3
-      : item.treasury_score < 82
-      ? 2
-      : 1;
-
+  const scorePressure = item.treasury_score < 55 ? 4 : item.treasury_score < 70 ? 3 : item.treasury_score < 82 ? 2 : 1;
   return getPressureFromWeight(Math.max(componentPressure, scorePressure));
 }
 
-function getSeverityColor(severity: RouteOperationalEventRow["severity"]) {
-  if (severity === "INFO") return "#16A34A";
-  if (severity === "WATCH") return "#0EA5E9";
-  if (severity === "DEGRADED") return "#F59E0B";
+function formatDateTime(input?: string) {
+  if (!input) return "--";
+  return new Date(input).toLocaleString([], {
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatRelativeTime(input?: string) {
+  if (!input) return "just now";
+  const deltaMs = Date.now() - new Date(input).getTime();
+  const minutes = Math.max(1, Math.floor(deltaMs / 60000));
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
+function trendFromDelta(delta: number): "up" | "down" | "flat" {
+  if (delta > 0) return "up";
+  if (delta < 0) return "down";
+  return "flat";
+}
+
+function formatDelta(delta: number, suffix = "") {
+  const rounded = Math.abs(delta) < 10 ? delta.toFixed(1) : Math.round(delta).toString();
+  return `${delta >= 0 ? "+" : ""}${rounded}${suffix}`;
+}
+
+function mapEventToAlertFilter(event: RouteOperationalEventRow): AlertFilter {
+  if (event.severity === "FAILOVER" || event.severity === "DEGRADED") return "CRITICAL";
+  if (event.severity === "WATCH") return "WARNING";
+  return "INFO";
+}
+
+function getAlertColor(level: AlertFilter) {
+  if (level === "CRITICAL") return "#DC2626";
+  if (level === "WARNING") return "#D97706";
+  return "#2563EB";
+}
+
+function getStatusColor(status: CorridorHealthRow["status"]) {
+  if (status === "HEALTHY") return "#16A34A";
+  if (status === "DEGRADED") return "#D97706";
   return "#DC2626";
 }
 
-function executionStateColor(state: string) {
-  if (state === "COMPLETED") return "#16A34A";
-  if (state === "FAILED") return "#DC2626";
-  return colors.gold;
+function toTransferMap(transfers: Transfer[]) {
+  const map = new Map<string, Transfer>();
+  transfers.forEach((item) => map.set(item.id, item));
+  return map;
 }
 
-function formatDate(date: string) {
-  return new Date(date).toLocaleString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    day: "2-digit",
-    month: "short",
+function buildCorridorRows(snapshots: TreasuryLiquiditySnapshotRow[]): CorridorHealthRow[] {
+  const grouped = new Map<string, TreasuryLiquiditySnapshotRow[]>();
+
+  snapshots.forEach((item) => {
+    const next = grouped.get(item.corridor) ?? [];
+    next.push(item);
+    grouped.set(item.corridor, next);
   });
+
+  return Array.from(grouped.entries())
+    .map(([corridor, rows]) => {
+      const sorted = [...rows].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      const latest = sorted[0];
+      const previous = sorted[1] ?? sorted[0];
+      const trend = latest.treasury_score - previous.treasury_score;
+      const capacity = Math.round(
+        (latest.corridor_capacity_score + latest.partner_capacity_score + latest.rail_capacity_score) /
+          3
+      );
+      const pressure = getOverallOperationalPressure(latest);
+      const status: CorridorHealthRow["status"] =
+        latest.treasury_score >= 82 && pressure !== "CRITICAL"
+          ? "HEALTHY"
+          : latest.treasury_score >= 65
+            ? "DEGRADED"
+            : "AT_RISK";
+
+      return {
+        corridor,
+        score: latest.treasury_score,
+        trend,
+        capacity,
+        status,
+        pressure,
+      };
+    })
+    .sort((a, b) => b.score - a.score);
+}
+
+function buildActiveTransfers(
+  sessions: PersistedExecutionSession[],
+  transfers: Transfer[]
+): ActiveTransferRow[] {
+  const transferMap = toTransferMap(transfers);
+
+  return sessions
+    .filter((item) => item.state !== "COMPLETED" && item.state !== "FAILED")
+    .map((session) => {
+      const transfer = transferMap.get(session.transfer_id);
+      const route = session.snapshot?.activeRoute ?? transfer?.selectedRoute;
+
+      return {
+        id: session.transfer_id,
+        corridor: route?.treasuryCorridor ?? "Unknown corridor",
+        amount: transfer?.senderAmount ?? route?.sendAmount ?? 0,
+        currency: transfer?.senderCurrency ?? "GBP",
+        status: session.state,
+        progress: Math.max(0, Math.min(100, session.progress_percent ?? 0)),
+        settlementEstimate: route?.estimatedTime ?? "Pending",
+        routeId: route?.id ?? "--",
+        updatedAt: session.updated_at ?? session.created_at ?? new Date().toISOString(),
+      };
+    })
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+}
+
+function buildKpis(params: {
+  transfers: Transfer[];
+  sessions: PersistedExecutionSession[];
+  snapshots: TreasuryLiquiditySnapshotRow[];
+  events: RouteOperationalEventRow[];
+}): KPIItem[] {
+  const now = Date.now();
+  const day = 24 * 60 * 60 * 1000;
+  const currentStart = now - day;
+  const previousStart = now - day * 2;
+
+  const transfersCurrent = params.transfers.filter((item) => item.createdAt >= currentStart);
+  const transfersPrevious = params.transfers.filter(
+    (item) => item.createdAt >= previousStart && item.createdAt < currentStart
+  );
+
+  const terminalCurrent = params.sessions.filter(
+    (item) =>
+      (item.state === "COMPLETED" || item.state === "FAILED") &&
+      new Date(item.updated_at ?? 0).getTime() >= currentStart
+  );
+  const terminalPrevious = params.sessions.filter(
+    (item) =>
+      (item.state === "COMPLETED" || item.state === "FAILED") &&
+      new Date(item.updated_at ?? 0).getTime() >= previousStart &&
+      new Date(item.updated_at ?? 0).getTime() < currentStart
+  );
+
+  const successCurrent = terminalCurrent.length
+    ? (terminalCurrent.filter((item) => item.state === "COMPLETED").length / terminalCurrent.length) * 100
+    : 0;
+  const successPrevious = terminalPrevious.length
+    ? (terminalPrevious.filter((item) => item.state === "COMPLETED").length / terminalPrevious.length) * 100
+    : 0;
+
+  const completedCurrent = terminalCurrent.filter((item) => item.state === "COMPLETED");
+  const completedPrevious = terminalPrevious.filter((item) => item.state === "COMPLETED");
+
+  const settleSeconds = (items: PersistedExecutionSession[]) => {
+    if (!items.length) return 0;
+    const avgMs =
+      items.reduce((sum, item) => {
+        const created = new Date(item.created_at ?? item.updated_at ?? 0).getTime();
+        const updated = new Date(item.updated_at ?? item.created_at ?? 0).getTime();
+        return sum + Math.max(0, updated - created);
+      }, 0) / items.length;
+    return Math.round(avgMs / 1000);
+  };
+
+  const settlementCurrent = settleSeconds(completedCurrent);
+  const settlementPrevious = settleSeconds(completedPrevious);
+
+  const latestSnapshots = [...params.snapshots]
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, 10);
+
+  const avgCapacity = latestSnapshots.length
+    ? latestSnapshots.reduce(
+        (sum, item) =>
+          sum +
+          (item.corridor_capacity_score + item.partner_capacity_score + item.rail_capacity_score) / 3,
+        0
+      ) / latestSnapshots.length
+    : 0;
+
+  const previousCapacity = latestSnapshots.length > 4
+    ? latestSnapshots.slice(4).reduce(
+        (sum, item) =>
+          sum +
+          (item.corridor_capacity_score + item.partner_capacity_score + item.rail_capacity_score) / 3,
+        0
+      ) / latestSnapshots.slice(4).length
+    : avgCapacity;
+
+  const activeAlerts = params.events.filter((item) => item.status !== "RESOLVED");
+  const highestSeverity = activeAlerts.reduce((max, item) => {
+    const level = mapEventToAlertFilter(item);
+    const weight = level === "CRITICAL" ? 3 : level === "WARNING" ? 2 : 1;
+    const maxWeight = max === "CRITICAL" ? 3 : max === "WARNING" ? 2 : 1;
+    return weight > maxWeight ? level : max;
+  }, "INFO" as AlertFilter);
+
+  const transferDelta = transfersCurrent.length - transfersPrevious.length;
+  const successDelta = successCurrent - successPrevious;
+  const settlementDelta = settlementPrevious - settlementCurrent;
+  const capacityDelta = avgCapacity - previousCapacity;
+
+  return [
+    {
+      key: "transfers",
+      label: "Transfers (24h)",
+      value: transfersCurrent.length.toLocaleString(),
+      delta: `${formatDelta(transferDelta)} vs prev`,
+      trend: trendFromDelta(transferDelta),
+      tint: "#F59E0B",
+      icon: "repeat",
+    },
+    {
+      key: "success",
+      label: "Success Rate",
+      value: `${successCurrent.toFixed(2)}%`,
+      delta: `${formatDelta(successDelta, "%")}`,
+      trend: trendFromDelta(successDelta),
+      tint: "#16A34A",
+      icon: "trending-up",
+    },
+    {
+      key: "settlement",
+      label: "Avg Settlement",
+      value: settlementCurrent > 0 ? `${settlementCurrent}s` : "--",
+      delta: `${formatDelta(settlementDelta, "s")}`,
+      trend: trendFromDelta(settlementDelta),
+      tint: "#2563EB",
+      icon: "clock",
+    },
+    {
+      key: "treasury",
+      label: "Treasury Capacity",
+      value: `${Math.round(avgCapacity)}%`,
+      delta: `${formatDelta(capacityDelta, "%")}`,
+      trend: trendFromDelta(capacityDelta),
+      tint: "#7C3AED",
+      icon: "database",
+    },
+    {
+      key: "alerts",
+      label: "Active Alerts",
+      value: String(activeAlerts.length),
+      delta: `Highest: ${highestSeverity}`,
+      trend: highestSeverity === "CRITICAL" ? "down" : highestSeverity === "WARNING" ? "flat" : "up",
+      tint: highestSeverity === "CRITICAL" ? "#DC2626" : highestSeverity === "WARNING" ? "#D97706" : "#2563EB",
+      icon: "alert-triangle",
+    },
+  ];
 }
 
 function upsertSession(
   sessions: PersistedExecutionSession[],
   incoming: PersistedExecutionSession
 ) {
-  const filtered = sessions.filter((item) => item.id !== incoming.id);
-  return [incoming, ...filtered]
-    .sort((a, b) =>
-      new Date(b.updated_at ?? 0).getTime() - new Date(a.updated_at ?? 0).getTime()
+  const next = sessions.filter((item) => item.id !== incoming.id);
+  return [incoming, ...next]
+    .sort(
+      (a, b) =>
+        new Date(b.updated_at ?? b.created_at ?? 0).getTime() -
+        new Date(a.updated_at ?? a.created_at ?? 0).getTime()
     )
-    .slice(0, 12);
+    .slice(0, 30);
 }
 
-function SnapshotCard({ item }: { item: TreasuryLiquiditySnapshotRow }) {
-  const overallPressure = getOverallOperationalPressure(item);
+function KpiCard({ item }: { item: KPIItem }) {
+  const trendColor = item.trend === "up" ? "#16A34A" : item.trend === "down" ? "#DC2626" : "#2563EB";
 
   return (
-    <View
-      style={{
-        padding: 16,
-        borderRadius: 22,
-        backgroundColor: "#FFFFFF",
-        borderWidth: 1,
-        borderColor: "#E2E8F0",
-        gap: 12,
-      }}
-    >
-      <View style={{ gap: 4 }}>
-        <AppText variant="caption" color={colors.textDarkMuted}>
-          Treasury orchestration snapshot
-        </AppText>
-
-        <AppText variant="subheading" color={colors.textDarkPrimary}>
-          {item.corridor}
-        </AppText>
-
-        <AppText variant="caption" color={colors.textDarkSecondary}>
-          {item.provider} • {item.rail}
-        </AppText>
-      </View>
-
-      <View
-        style={{
-          padding: 14,
-          borderRadius: 18,
-          backgroundColor: "#0B3F4A",
-          gap: 8,
-        }}
-      >
-        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          <View>
-            <AppText variant="caption" color="#BFEAF1">
-              Treasury score
-            </AppText>
-
-            <AppText variant="title" color={colors.gold}>
-              {item.treasury_score}/100
-            </AppText>
-          </View>
-
-          <View style={{ alignItems: "flex-end" }}>
-            <AppText variant="caption" color="#BFEAF1">
-              Overall pressure
-            </AppText>
-
-            <AppText variant="title" color="#FFFFFF">
-              {overallPressure}
-            </AppText>
-          </View>
+    <View style={styles.kpiCard}>
+      <View style={styles.kpiHeader}>
+        <View style={[styles.kpiIconBubble, { backgroundColor: `${item.tint}1A` }]}>
+          <Feather name={item.icon} size={18} color={item.tint} />
         </View>
-      </View>
-
-      <View style={{ flexDirection: "row", gap: 8 }}>
-        <MiniMetric label="Corridor" value={`${item.corridor_capacity_score}/100`} />
-        <MiniMetric label="Partner" value={`${item.partner_capacity_score}/100`} />
-        <MiniMetric label="Rail" value={`${item.rail_capacity_score}/100`} />
-      </View>
-
-      <View style={{ flexDirection: "row", gap: 8 }}>
-        <MiniMetric label="Corr. pressure" value={item.corridor_pressure} />
-        <MiniMetric label="Partner press." value={item.partner_pressure} />
-        <MiniMetric label="Rail pressure" value={item.rail_pressure} />
-      </View>
-
-      <View
-        style={{
-          padding: 12,
-          borderRadius: 18,
-          backgroundColor: "#F8FAFC",
-          borderWidth: 1,
-          borderColor: "#E2E8F0",
-          gap: 6,
-        }}
-      >
-        <AppText variant="caption" color={colors.textDarkMuted}>
-          Treasury recommendation
-        </AppText>
-
-        <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
-          {item.liquidity_recommendation}
+        <AppText variant="caption" color={colors.textDarkMuted} style={styles.kpiLabel}>
+          {item.label}
         </AppText>
       </View>
 
-      <AppText variant="caption" color={colors.textDarkMuted}>
-        Snapshot recorded {formatDate(item.created_at)}
-      </AppText>
-    </View>
-  );
-}
-
-function OperationalEventCard({ item }: { item: RouteOperationalEventRow }) {
-  const severityColor = getSeverityColor(item.severity);
-
-  return (
-    <View
-      style={{
-        padding: 16,
-        borderRadius: 22,
-        backgroundColor: "#FFFFFF",
-        borderWidth: 1,
-        borderColor: "#E2E8F0",
-        gap: 12,
-      }}
-    >
-      <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
-        <View style={{ flex: 1, gap: 4 }}>
-          <AppText variant="caption" color={colors.textDarkMuted}>
-            Orchestration event
-          </AppText>
-
-          <AppText variant="subheading" color={colors.textDarkPrimary}>
-            {item.event_type.replace(/_/g, " ")}
-          </AppText>
-
-          <AppText variant="caption" color={colors.textDarkSecondary}>
-            {item.provider} • {item.rail} • {item.corridor ?? "Corridor pending"}
-          </AppText>
-        </View>
-
-        <View
-          style={{
-            alignSelf: "flex-start",
-            paddingHorizontal: 12,
-            paddingVertical: 6,
-            borderRadius: 999,
-            backgroundColor: severityColor,
-          }}
-        >
-          <AppText variant="caption" style={{ color: "#FFFFFF", fontWeight: "900" }}>
-            {item.severity}
-          </AppText>
-        </View>
-      </View>
-
-      <View
-        style={{
-          padding: 14,
-          borderRadius: 18,
-          backgroundColor: "#0B3F4A",
-          gap: 8,
-        }}
-      >
-        <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
-          <View style={{ flex: 1 }}>
-            <AppText variant="caption" color="#BFEAF1">
-              Degradation score
-            </AppText>
-
-            <AppText variant="title" color={colors.gold}>
-              {item.degradation_score}/100
-            </AppText>
-          </View>
-
-          <View style={{ flex: 1, alignItems: "flex-end" }}>
-            <AppText variant="caption" color="#BFEAF1">
-              Failover
-            </AppText>
-
-            <AppText variant="title" color="#FFFFFF">
-              {item.failover_recommended ? "YES" : "NO"}
-            </AppText>
-          </View>
-        </View>
-      </View>
-
-      <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
-        {item.message}
+      <AppText variant="heading" color={colors.textDarkPrimary} style={styles.kpiValue}>
+        {item.value}
       </AppText>
 
-      <View
-        style={{
-          padding: 12,
-          borderRadius: 18,
-          backgroundColor: "#F8FAFC",
-          borderWidth: 1,
-          borderColor: "#E2E8F0",
-          gap: 6,
-        }}
-      >
-        <AppText variant="caption" color={colors.textDarkMuted}>
-          Recommended orchestration action
-        </AppText>
-
-        <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
-          {item.preferred_action.replace(/_/g, " ")}
-        </AppText>
-
-        <AppText variant="caption" color={colors.textDarkSecondary}>
-          {item.recommendation}
-        </AppText>
-      </View>
-
-      <AppText variant="caption" color={colors.textDarkMuted}>
-        Event recorded {formatDate(item.created_at)}
-      </AppText>
-    </View>
-  );
-}
-
-function ExecutionSessionCard({ item }: { item: PersistedExecutionSession }) {
-  const color = executionStateColor(item.state);
-  const progress = Math.max(0, Math.min(100, item.progress_percent ?? 0));
-
-  return (
-    <View
-      style={{
-        padding: 16,
-        borderRadius: 22,
-        backgroundColor: "#FFFFFF",
-        borderWidth: 1,
-        borderColor: "#E2E8F0",
-        gap: 12,
-      }}
-    >
-      <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
-        <View style={{ flex: 1, gap: 4 }}>
-          <AppText variant="caption" color={colors.textDarkMuted}>
-            Live execution session
-          </AppText>
-
-          <AppText variant="subheading" color={colors.textDarkPrimary}>
-            {item.active_provider ?? "Execution engine"}
-          </AppText>
-
-          <AppText variant="caption" color={colors.textDarkSecondary}>
-            {item.human_status ?? "Runtime state captured"}
-          </AppText>
-        </View>
-
-        <View
-          style={{
-            alignSelf: "flex-start",
-            paddingHorizontal: 12,
-            paddingVertical: 6,
-            borderRadius: 999,
-            backgroundColor: `${color}22`,
-          }}
-        >
-          <AppText variant="caption" style={{ color, fontWeight: "900" }}>
-            {item.state}
-          </AppText>
-        </View>
-      </View>
-
-      <View
-        style={{
-          height: 8,
-          borderRadius: 999,
-          overflow: "hidden",
-          backgroundColor: "rgba(15,23,42,0.08)",
-        }}
-      >
-        <View
-          style={{
-            width: `${progress}%`,
-            height: "100%",
-            backgroundColor: colors.gold,
-          }}
+      <View style={styles.kpiDeltaRow}>
+        <Feather
+          name={item.trend === "up" ? "arrow-up-right" : item.trend === "down" ? "arrow-down-right" : "minus"}
+          size={14}
+          color={trendColor}
         />
+        <AppText variant="caption" style={{ color: trendColor, fontWeight: "800" }}>
+          {item.delta}
+        </AppText>
       </View>
+    </View>
+  );
+}
 
-      <View style={{ flexDirection: "row", gap: 8 }}>
-        <MiniMetric label="Progress" value={`${progress}%`} />
-        <MiniMetric label="XRPL" value={item.xrpl_status ?? "N/A"} />
-        <MiniMetric label="Payout" value={item.payout_status ?? "N/A"} />
-      </View>
-
+function MetricPill({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.metricPill}>
       <AppText variant="caption" color={colors.textDarkMuted}>
-        Updated {item.updated_at ? formatDate(item.updated_at) : "just now"}
+        {label}
+      </AppText>
+      <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
+        {value}
       </AppText>
     </View>
   );
@@ -403,99 +419,48 @@ function ExecutionSessionCard({ item }: { item: PersistedExecutionSession }) {
 export default function OperationsScreen() {
   const [snapshots, setSnapshots] = useState<TreasuryLiquiditySnapshotRow[]>([]);
   const [events, setEvents] = useState<RouteOperationalEventRow[]>([]);
+  const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [executionSessions, setExecutionSessions] = useState<PersistedExecutionSession[]>([]);
+  const [feedsRefreshedAt, setFeedsRefreshedAt] = useState<string | null>(null);
+  const [marketOpenCount, setMarketOpenCount] = useState(0);
+  const [fxFeedCount, setFxFeedCount] = useState(0);
   const [realtimeStatus, setRealtimeStatus] = useState("Connecting");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<string>(new Date().toISOString());
+  const [filterVisible, setFilterVisible] = useState(false);
+  const [severityFilter, setSeverityFilter] = useState<AlertFilter>("ALL");
+  const [corridorFilter, setCorridorFilter] = useState("ALL");
+  const [missionSummary, setMissionSummary] = useState<IntelligenceReportResult | null>(null);
+  const [missionSummaryLoading, setMissionSummaryLoading] = useState(false);
+  const [missionSummaryStatus, setMissionSummaryStatus] = useState("Waiting for telemetry");
+
   const {
+    settings,
     loading: nexusAILoading,
     enabled: operationsAIEnabled,
     disabled: operationsAIDisabled,
     toggle: toggleOperationsAI,
   } = useNexusAIScreenSetting("corridor_enabled");
 
-  useEffect(() => {
-    let mounted = true;
-
-    async function hydrateRecoverableExecutions() {
-      const recovered = await loadRecoverableExecutionSessions();
-      if (mounted) {
-        setExecutionSessions(recovered);
-      }
-    }
-
-    hydrateRecoverableExecutions();
-
-    const unsubscribe = subscribeToRecentExecutionSessions({
-      onSession: (session) => {
-        setRealtimeStatus("Live");
-        setExecutionSessions((current) => upsertSession(current, session));
-      },
-      onError: () => setRealtimeStatus("Manual refresh fallback"),
-    });
-
-    return () => {
-      mounted = false;
-      unsubscribe();
-    };
-  }, []);
-
-  const providerMetrics = useMemo(() => {
-    return executionSessions
-      .filter((session) => Boolean(session.snapshot?.activeRoute))
-      .slice(0, 4)
-      .map((session) => buildProviderExecutionMetrics(session.snapshot.activeRoute));
-  }, [executionSessions]);
-
-  const summary = useMemo(() => {
-    if (snapshots.length === 0) {
-      return {
-        averageTreasuryScore: 0,
-        highestPressure: "LOW" as OperationalPressure,
-        activeCorridors: 0,
-        failoverEvents: events.filter((item) => item.failover_recommended).length,
-        activeExecutions: executionSessions.filter(
-          (item) => item.state !== "COMPLETED" && item.state !== "FAILED"
-        ).length,
-      };
-    }
-
-    const averageTreasuryScore = Math.round(
-      snapshots.reduce((sum, item) => sum + item.treasury_score, 0) /
-        snapshots.length
-    );
-
-    const activeCorridors = new Set(snapshots.map((item) => item.corridor)).size;
-
-    const highestPressureWeight = Math.max(
-      ...snapshots.map((item) => getPressureWeight(getOverallOperationalPressure(item)))
-    );
-
-    return {
-      averageTreasuryScore,
-      highestPressure: getPressureFromWeight(highestPressureWeight),
-      activeCorridors,
-      failoverEvents: events.filter((item) => item.failover_recommended).length,
-      activeExecutions: executionSessions.filter(
-        (item) => item.state !== "COMPLETED" && item.state !== "FAILED"
-      ).length,
-    };
-  }, [events, executionSessions, snapshots]);
-
   const loadTelemetry = useCallback(async () => {
     try {
-      const [snapshotData, eventData, executionData] = await Promise.all([
-        loadRecentTreasurySnapshots(20),
-        loadRecentRouteOperationalEvents(20),
+      const [snapshotData, eventData, executionData, transferData, feedData] = await Promise.all([
+        loadRecentTreasurySnapshots(60),
+        loadRecentRouteOperationalEvents(60),
         loadRecoverableExecutionSessions(),
+        loadCompletedTransfers(),
+        getLiveIntelligenceFeeds(),
       ]);
 
       setSnapshots(snapshotData);
       setEvents(eventData);
-      setExecutionSessions((current) => {
-        const merged = executionData.reduce(upsertSession, current);
-        return merged;
-      });
+      setTransfers(transferData);
+      setExecutionSessions((current) => executionData.reduce(upsertSession, current));
+      setFeedsRefreshedAt(feedData.refreshedAt);
+      setMarketOpenCount(feedData.marketHours.filter((item) => item.status === "OPEN").length);
+      setFxFeedCount(feedData.fx.length);
+      setLastUpdatedAt(new Date().toISOString());
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -504,252 +469,1083 @@ export default function OperationsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadTelemetry();
+      void loadTelemetry();
     }, [loadTelemetry])
   );
 
+  useEffect(() => {
+    const unsubscribe = subscribeToRecentExecutionSessions({
+      onSession: (session) => {
+        setRealtimeStatus("Live");
+        setExecutionSessions((current) => upsertSession(current, session));
+      },
+      onError: () => setRealtimeStatus("Polling"),
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  const corridorRows = useMemo(() => buildCorridorRows(snapshots), [snapshots]);
+
+  const filteredEvents = useMemo(() => {
+    return events.filter((item) => {
+      const severityMatch =
+        severityFilter === "ALL" ? true : mapEventToAlertFilter(item) === severityFilter;
+      const corridorMatch =
+        corridorFilter === "ALL" ? true : (item.corridor ?? "Unknown corridor") === corridorFilter;
+      return severityMatch && corridorMatch;
+    });
+  }, [corridorFilter, events, severityFilter]);
+
+  const activeTransfers = useMemo(
+    () => buildActiveTransfers(executionSessions, transfers),
+    [executionSessions, transfers]
+  );
+
+  const filteredCorridors = useMemo(() => {
+    if (corridorFilter === "ALL") return corridorRows;
+    return corridorRows.filter((item) => item.corridor === corridorFilter);
+  }, [corridorFilter, corridorRows]);
+
+  const kpis = useMemo(
+    () =>
+      buildKpis({
+        transfers,
+        sessions: executionSessions,
+        snapshots,
+        events,
+      }),
+    [events, executionSessions, snapshots, transfers]
+  );
+
+  const treasurySummary = useMemo(() => {
+    if (snapshots.length === 0) {
+      return {
+        utilization: 0,
+        availableCapacity: 0,
+        forecast: "No treasury telemetry yet",
+        pressure: "LOW" as OperationalPressure,
+      };
+    }
+
+    const latest = snapshots[0];
+    const utilization = 100 - Math.round(
+      (latest.corridor_capacity_score + latest.partner_capacity_score + latest.rail_capacity_score) / 3
+    );
+    const availableCapacity = Math.max(0, 100 - utilization);
+    const pressure = getOverallOperationalPressure(latest);
+
+    const forecast =
+      pressure === "CRITICAL"
+        ? "Capacity risk elevated across one or more rails"
+        : pressure === "HIGH"
+          ? "Watch liquidity buffers for near-term settlement windows"
+          : "Liquidity coverage supports current transfer load";
+
+    return {
+      utilization,
+      availableCapacity,
+      forecast,
+      pressure,
+    };
+  }, [snapshots]);
+
+  const walletDistribution = useMemo(() => {
+    const grouped = new Map<string, number>();
+
+    transfers.forEach((item) => {
+      const next = grouped.get(item.senderCurrency) ?? 0;
+      grouped.set(item.senderCurrency, next + item.senderAmount);
+    });
+
+    const total = Array.from(grouped.values()).reduce((sum, value) => sum + value, 0);
+
+    return Array.from(grouped.entries())
+      .map(([currency, amount]) => ({
+        currency,
+        amount,
+        percentage: total > 0 ? Math.round((amount / total) * 1000) / 10 : 0,
+      }))
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 5);
+  }, [transfers]);
+
+  const corridorOptions = useMemo(() => {
+    const set = new Set<string>();
+    corridorRows.forEach((item) => set.add(item.corridor));
+    events.forEach((item) => set.add(item.corridor ?? "Unknown corridor"));
+    return ["ALL", ...Array.from(set).sort((a, b) => a.localeCompare(b))];
+  }, [corridorRows, events]);
+
+  const activeAlerts = useMemo(() => filteredEvents.slice(0, 8), [filteredEvents]);
+
+  const serviceHealth = useMemo(() => {
+    const criticalAlerts = events.filter((item) => mapEventToAlertFilter(item) === "CRITICAL").length;
+    const warningAlerts = events.filter((item) => mapEventToAlertFilter(item) === "WARNING").length;
+
+    const routingStatus = criticalAlerts > 1 ? "OFFLINE" : warningAlerts > 0 ? "DEGRADED" : "HEALTHY";
+    const treasuryStatus =
+      treasurySummary.pressure === "CRITICAL"
+        ? "OFFLINE"
+        : treasurySummary.pressure === "HIGH"
+          ? "DEGRADED"
+          : "HEALTHY";
+    const fxStatus = fxFeedCount > 0 ? "HEALTHY" : "OFFLINE";
+    const marketStatus = marketOpenCount > 0 ? "HEALTHY" : "DEGRADED";
+    const aiStatus = operationsAIEnabled
+      ? missionSummary
+        ? "HEALTHY"
+        : missionSummaryLoading
+          ? "DEGRADED"
+          : "OFFLINE"
+      : "DEGRADED";
+    const executionStatus = realtimeStatus === "Live" ? "HEALTHY" : "DEGRADED";
+
+    return [
+      { label: "Orchestration Engine", status: executionStatus },
+      { label: "Routing Engine", status: routingStatus },
+      { label: "Treasury Service", status: treasuryStatus },
+      { label: "FX Feed Service", status: fxStatus },
+      { label: "Market Feed Service", status: marketStatus },
+      { label: "Nexus AI Service", status: aiStatus },
+      { label: "Notification Service", status: criticalAlerts > 2 ? "DEGRADED" : "HEALTHY" },
+    ] as const;
+  }, [events, fxFeedCount, marketOpenCount, missionSummary, missionSummaryLoading, operationsAIEnabled, realtimeStatus, treasurySummary.pressure]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function generateMissionSummary() {
+      if (!operationsAIEnabled) {
+        setMissionSummary(null);
+        setMissionSummaryStatus("Nexus AI disabled for this screen");
+        return;
+      }
+
+      const topCorridor = corridorRows[0]?.corridor ?? "Unknown";
+      const criticalCount = events.filter((item) => mapEventToAlertFilter(item) === "CRITICAL").length;
+
+      setMissionSummaryLoading(true);
+      setMissionSummaryStatus("Generating live mission interpretation");
+
+      const result = await generateIntelligenceReport(
+        {
+          reportType: "corridor_analysis",
+          focus: "Operations command centre mission health",
+          telemetry: {
+            live: realtimeStatus,
+            transfers24h: kpis.find((item) => item.key === "transfers")?.value ?? "0",
+            successRate: kpis.find((item) => item.key === "success")?.value ?? "0%",
+            activeExecutions: activeTransfers.length,
+            activeAlerts: activeAlerts.length,
+            criticalAlerts: criticalCount,
+            topCorridor,
+            treasuryPressure: treasurySummary.pressure,
+            treasuryUtilization: treasurySummary.utilization,
+            marketOpenCount,
+            fxFeedsLive: fxFeedCount,
+          },
+        },
+        settings?.sensitivity ?? "balanced",
+        {
+          timeoutMs: 7000,
+          maxRetries: 1,
+        }
+      );
+
+      if (!active) return;
+
+      if (result.ok) {
+        setMissionSummary(result.data);
+        setMissionSummaryStatus("Live Nexus AI interpretation");
+      } else {
+        setMissionSummary(null);
+        setMissionSummaryStatus("Nexus AI mission summary currently unavailable");
+      }
+
+      setMissionSummaryLoading(false);
+    }
+
+    void generateMissionSummary();
+
+    return () => {
+      active = false;
+    };
+  }, [
+    activeAlerts.length,
+    activeTransfers.length,
+    corridorRows,
+    events,
+    fxFeedCount,
+    kpis,
+    marketOpenCount,
+    operationsAIEnabled,
+    realtimeStatus,
+    settings?.sensitivity,
+    treasurySummary.pressure,
+    treasurySummary.utilization,
+  ]);
+
   return (
     <Screen>
+      <View style={styles.screenBackground} />
+
       <ScrollView
+        contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
+            tintColor="#FFFFFF"
             refreshing={refreshing}
             onRefresh={() => {
               setRefreshing(true);
-              loadTelemetry();
+              void loadTelemetry();
             }}
           />
         }
       >
-        <View style={{ gap: 18, paddingBottom: 40 }}>
-          <View style={{ gap: 6 }}>
-            <AppText variant="caption" color={colors.gold}>
-              NexusPay operations command centre
-            </AppText>
+        <View style={styles.headerBlock}>
+          <AppText variant="title" color={colors.textPrimary}>
+            Operations Command Centre
+          </AppText>
+          <AppText variant="body" color={colors.textSecondary}>
+            Real-time platform operations overview
+          </AppText>
 
-            <AppText variant="title" color={colors.textPrimary}>
-              Operations Intelligence
-            </AppText>
-
-            <AppText variant="body" color={colors.textSecondary}>
-              Live execution telemetry, treasury intelligence and adaptive provider observability.
-            </AppText>
-          </View>
-
-          <NexusAIToggleCard
-            title="Nexus AI"
-            description="Controls corridor intelligence, operational summaries and provider insight visibility on this screen."
-            enabled={operationsAIEnabled}
-            disabled={operationsAIDisabled}
-            loading={nexusAILoading}
-            onToggle={toggleOperationsAI}
-          />
-
-          {!operationsAIEnabled ? (
-            <AppCard>
-              <AppText variant="subheading" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
-                Nexus AI disabled for this screen
-              </AppText>
-
-              <AppText variant="caption" color={colors.textDarkSecondary} style={{ marginTop: 6 }}>
-                Treasury and execution telemetry remain available, but provider intelligence is hidden until corridor intelligence is re-enabled.
-              </AppText>
-            </AppCard>
-          ) : null}
-
-          <View
-            style={{
-              padding: 18,
-              borderRadius: 26,
-              backgroundColor: "#0B3F4A",
-              gap: 14,
-            }}
-          >
-            <View style={{ gap: 4 }}>
-              <AppText variant="caption" color="#BFEAF1">
-                Orchestration health
-              </AppText>
-
-              <AppText variant="title" color="#FFFFFF">
-                Active response telemetry
+          <View style={styles.headerRow}>
+            <View style={styles.liveBadge}>
+              <View style={[styles.liveDot, { backgroundColor: realtimeStatus === "Live" ? "#10B981" : "#D97706" }]} />
+              <AppText variant="caption" style={styles.liveBadgeText}>
+                {realtimeStatus}
               </AppText>
             </View>
 
-            <View style={{ flexDirection: "row", gap: 8 }}>
-              <MiniMetric label="Treasury" value={`${summary.averageTreasuryScore}/100`} />
-              <MiniMetric label="Pressure" value={summary.highestPressure} />
-              <MiniMetric label="Active exec." value={String(summary.activeExecutions)} />
+            <View style={styles.headerActions}>
+              <Pressable style={styles.actionButton} onPress={() => setFilterVisible(true)}>
+                <Feather name="filter" size={15} color="#DDEAF4" />
+                <AppText variant="caption" color="#DDEAF4" style={{ fontWeight: "800" }}>
+                  Filter
+                </AppText>
+              </Pressable>
+
+              <Pressable
+                style={styles.actionButton}
+                onPress={() => {
+                  setRefreshing(true);
+                  void loadTelemetry();
+                }}
+              >
+                <Feather name="refresh-cw" size={15} color="#DDEAF4" />
+                <AppText variant="caption" color="#DDEAF4" style={{ fontWeight: "800" }}>
+                  Refresh
+                </AppText>
+              </Pressable>
             </View>
           </View>
 
-          <AppCard>
-            <View style={{ gap: 12 }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
-                <View style={{ flex: 1, gap: 4 }}>
-                  <AppText variant="subheading" color={colors.textDarkPrimary}>
-                    Realtime Execution Feed
-                  </AppText>
-
-                  <AppText variant="caption" color={colors.textDarkMuted}>
-                    Live execution_sessions stream from Supabase Realtime.
-                  </AppText>
-                </View>
-
-                <View
-                  style={{
-                    alignSelf: "flex-start",
-                    paddingHorizontal: 10,
-                    paddingVertical: 5,
-                    borderRadius: 999,
-                    backgroundColor: realtimeStatus === "Live" ? "#DCFCE7" : colors.goldSoft,
-                  }}
-                >
-                  <AppText
-                    variant="caption"
-                    style={{
-                      color: realtimeStatus === "Live" ? "#166534" : "#8A6218",
-                      fontWeight: "900",
-                    }}
-                  >
-                    {realtimeStatus}
-                  </AppText>
-                </View>
-              </View>
-
-              {executionSessions.length === 0 ? (
-                <AppText variant="body" color={colors.textDarkSecondary}>
-                  Waiting for execution activity. Start a transfer to see live orchestration sessions here.
-                </AppText>
-              ) : (
-                <View style={{ gap: 12 }}>
-                  {executionSessions.map((item) => (
-                    <ExecutionSessionCard key={item.id} item={item} />
-                  ))}
-                </View>
-              )}
-            </View>
-          </AppCard>
-
-          {operationsAIEnabled ? (
-            <AppCard>
-              <View style={{ gap: 12 }}>
-                <View style={{ gap: 4 }}>
-                  <AppText variant="subheading" color={colors.textDarkPrimary}>
-                    Provider Execution Intelligence
-                  </AppText>
-
-                  <AppText variant="caption" color={colors.textDarkMuted}>
-                    Adaptive provider reliability, latency and failover-risk scoring from live route execution.
-                  </AppText>
-                </View>
-
-                {providerMetrics.length === 0 ? (
-                  <AppText variant="body" color={colors.textDarkSecondary}>
-                    Provider intelligence will populate once execution snapshots contain active route telemetry.
-                  </AppText>
-                ) : (
-                  <View style={{ gap: 12 }}>
-                    {providerMetrics.map((metric) => (
-                      <View
-                        key={metric.provider}
-                        style={{
-                          padding: 16,
-                          borderRadius: 22,
-                          backgroundColor: "#FFFFFF",
-                          borderWidth: 1,
-                          borderColor: "#E2E8F0",
-                          gap: 12,
-                        }}
-                      >
-                        <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
-                          <View style={{ flex: 1 }}>
-                            <AppText variant="subheading" color={colors.textDarkPrimary}>
-                              {metric.provider}
-                            </AppText>
-                            <AppText variant="caption" color={colors.textDarkSecondary}>
-                              {metric.recommendation}
-                            </AppText>
-                          </View>
-                          <AppText variant="caption" style={{ color: colors.gold, fontWeight: "900" }}>
-                            Health {metric.healthScore}/100
-                          </AppText>
-                        </View>
-
-                        <View style={{ flexDirection: "row", gap: 8 }}>
-                          <MiniMetric label="Success" value={`${metric.successRate}%`} />
-                          <MiniMetric label="Latency" value={`${metric.averageLatencyMinutes}m`} />
-                          <MiniMetric label="Failover" value={`${metric.failoverRisk}%`} />
-                        </View>
-                      </View>
-                    ))}
-                  </View>
-                )}
-              </View>
-            </AppCard>
-          ) : null}
-
-          <AppCard>
-            <View style={{ gap: 12 }}>
-              <View style={{ gap: 4 }}>
-                <AppText variant="subheading" color={colors.textDarkPrimary}>
-                  Orchestration Event Stream
-                </AppText>
-
-                <AppText variant="caption" color={colors.textDarkMuted}>
-                  Route degradation, treasury watch and failover recommendations generated by the orchestration engine.
-                </AppText>
-              </View>
-
-              {loading ? (
-                <AppText variant="body" color={colors.textDarkSecondary}>
-                  Loading operational events...
-                </AppText>
-              ) : events.length === 0 ? (
-                <AppText variant="body" color={colors.textDarkSecondary}>
-                  No route operational events yet. Generate route intelligence first.
-                </AppText>
-              ) : (
-                <View style={{ gap: 12 }}>
-                  {events.map((item) => (
-                    <OperationalEventCard key={item.id} item={item} />
-                  ))}
-                </View>
-              )}
-            </View>
-          </AppCard>
-
-          <AppCard>
-            <View style={{ gap: 12 }}>
-              <View style={{ gap: 4 }}>
-                <AppText variant="subheading" color={colors.textDarkPrimary}>
-                  Treasury Snapshot History
-                </AppText>
-
-                <AppText variant="caption" color={colors.textDarkMuted}>
-                  Liquidity, pressure and route-capacity observations captured during route evaluation.
-                </AppText>
-              </View>
-
-              {loading ? (
-                <AppText variant="body" color={colors.textDarkSecondary}>
-                  Loading treasury orchestration telemetry...
-                </AppText>
-              ) : snapshots.length === 0 ? (
-                <AppText variant="body" color={colors.textDarkSecondary}>
-                  No treasury intelligence snapshots yet. Generate route intelligence first.
-                </AppText>
-              ) : (
-                <View style={{ gap: 12 }}>
-                  {snapshots.map((item) => (
-                    <SnapshotCard key={item.id} item={item} />
-                  ))}
-                </View>
-              )}
-            </View>
-          </AppCard>
+          <AppText variant="caption" color={colors.textMuted}>
+            Last sync: {formatDateTime(lastUpdatedAt)}{feedsRefreshedAt ? ` • Feeds ${formatDateTime(feedsRefreshedAt)}` : ""}
+          </AppText>
         </View>
+
+        <NexusAIToggleCard
+          title="Nexus AI"
+          description="Controls mission interpretation and operational intelligence on this screen."
+          enabled={operationsAIEnabled}
+          disabled={operationsAIDisabled}
+          loading={nexusAILoading}
+          onToggle={toggleOperationsAI}
+        />
+
+        <FlatList
+          data={kpis}
+          horizontal
+          keyExtractor={(item) => item.key}
+          showsHorizontalScrollIndicator={false}
+          style={styles.kpiList}
+          contentContainerStyle={{ gap: 10, paddingRight: 8 }}
+          renderItem={({ item }) => <KpiCard item={item} />}
+        />
+
+        <AppCard>
+          <View style={styles.cardHeaderRow}>
+            <View>
+              <AppText variant="subheading" color={colors.textDarkPrimary} style={styles.cardTitle}>
+                Corridor Health
+              </AppText>
+              <AppText variant="caption" color={colors.textDarkMuted}>
+                Live corridor intelligence from treasury and route telemetry
+              </AppText>
+            </View>
+          </View>
+
+          {loading ? (
+            <ActivityIndicator color="#0B3F4A" style={styles.loaderSpacing} />
+          ) : filteredCorridors.length === 0 ? (
+            <AppText variant="body" color={colors.textDarkSecondary}>
+              No corridor intelligence available for the selected filters.
+            </AppText>
+          ) : (
+            <View style={styles.stackList}>
+              {filteredCorridors.slice(0, 8).map((item) => {
+                const statusColor = getStatusColor(item.status);
+                const trendColor = item.trend >= 0 ? "#16A34A" : "#DC2626";
+
+                return (
+                  <View key={item.corridor} style={styles.rowCard}>
+                    <View style={styles.rowCardTop}>
+                      <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
+                        {item.corridor}
+                      </AppText>
+                      <View style={[styles.tagPill, { backgroundColor: `${statusColor}1A` }]}>
+                        <AppText variant="caption" style={{ color: statusColor, fontWeight: "900" }}>
+                          {item.status}
+                        </AppText>
+                      </View>
+                    </View>
+
+                    <View style={styles.metricsGrid}>
+                      <MetricPill label="Health score" value={`${item.score.toFixed(1)}`} />
+                      <MetricPill label="Capacity" value={`${item.capacity}%`} />
+                      <MetricPill label="Pressure" value={item.pressure} />
+                    </View>
+
+                    <View style={styles.progressTrack}>
+                      <View style={[styles.progressFill, { width: `${Math.max(6, Math.min(100, item.score))}%`, backgroundColor: statusColor }]} />
+                    </View>
+
+                    <View style={styles.deltaRow}>
+                      <Feather
+                        name={item.trend >= 0 ? "trending-up" : "trending-down"}
+                        size={14}
+                        color={trendColor}
+                      />
+                      <AppText variant="caption" style={{ color: trendColor, fontWeight: "800" }}>
+                        {formatDelta(item.trend)} vs previous snapshot
+                      </AppText>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+        </AppCard>
+
+        <AppCard>
+          <View style={styles.cardHeaderRow}>
+            <View>
+              <AppText variant="subheading" color={colors.textDarkPrimary} style={styles.cardTitle}>
+                Active Alerts
+              </AppText>
+              <AppText variant="caption" color={colors.textDarkMuted}>
+                Critical, warning and informational events from the operational stream
+              </AppText>
+            </View>
+          </View>
+
+          {loading ? (
+            <ActivityIndicator color="#0B3F4A" style={styles.loaderSpacing} />
+          ) : activeAlerts.length === 0 ? (
+            <AppText variant="body" color={colors.textDarkSecondary}>
+              No active alerts for the current filter set.
+            </AppText>
+          ) : (
+            <FlatList
+              data={activeAlerts}
+              keyExtractor={(item) => item.id}
+              scrollEnabled={false}
+              ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+              renderItem={({ item }) => {
+                const level = mapEventToAlertFilter(item);
+                const alertColor = getAlertColor(level);
+                return (
+                  <View style={styles.alertRow}>
+                    <View style={[styles.alertIcon, { backgroundColor: `${alertColor}1A` }]}>
+                      <Feather name="alert-triangle" size={16} color={alertColor} />
+                    </View>
+
+                    <View style={{ flex: 1, gap: 3 }}>
+                      <View style={styles.alertTop}>
+                        <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900", flex: 1 }}>
+                          {item.event_type.replace(/_/g, " ")}
+                        </AppText>
+                        <AppText variant="caption" style={{ color: alertColor, fontWeight: "900" }}>
+                          {level}
+                        </AppText>
+                      </View>
+
+                      <AppText variant="caption" color={colors.textDarkSecondary}>
+                        {item.provider} • {item.rail} • {item.corridor ?? "Unknown corridor"}
+                      </AppText>
+
+                      <AppText variant="caption" color={colors.textDarkSecondary}>
+                        {item.message}
+                      </AppText>
+
+                      <AppText variant="caption" color={colors.textDarkMuted}>
+                        {formatRelativeTime(item.created_at)} • {formatDateTime(item.created_at)}
+                      </AppText>
+                    </View>
+                  </View>
+                );
+              }}
+            />
+          )}
+        </AppCard>
+
+        <AppCard>
+          <View style={styles.cardHeaderRow}>
+            <View>
+              <AppText variant="subheading" color={colors.textDarkPrimary} style={styles.cardTitle}>
+                Treasury and Liquidity
+              </AppText>
+              <AppText variant="caption" color={colors.textDarkMuted}>
+                Utilisation, available liquidity, currency distribution and capacity forecast
+              </AppText>
+            </View>
+          </View>
+
+          <View style={styles.metricsGrid}>
+            <MetricPill label="Utilisation" value={`${treasurySummary.utilization}%`} />
+            <MetricPill label="Available" value={`${treasurySummary.availableCapacity}%`} />
+            <MetricPill label="FX feeds live" value={`${fxFeedCount}`} />
+          </View>
+
+          <View style={styles.progressTrackLarge}>
+            <View
+              style={{
+                width: `${Math.max(4, Math.min(100, treasurySummary.utilization))}%`,
+                height: "100%",
+                backgroundColor:
+                  treasurySummary.pressure === "CRITICAL"
+                    ? "#DC2626"
+                    : treasurySummary.pressure === "HIGH"
+                      ? "#D97706"
+                      : "#16A34A",
+                borderRadius: 999,
+              }}
+            />
+          </View>
+
+          <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "700" }}>
+            {treasurySummary.forecast}
+          </AppText>
+
+          {walletDistribution.length > 0 ? (
+            <View style={styles.stackList}>
+              {walletDistribution.map((item) => (
+                <View key={item.currency} style={styles.currencyRow}>
+                  <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "800" }}>
+                    {item.currency}
+                  </AppText>
+                  <AppText variant="caption" color={colors.textDarkSecondary}>
+                    {item.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })} ({item.percentage.toFixed(1)}%)
+                  </AppText>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <AppText variant="caption" color={colors.textDarkSecondary}>
+              Wallet distribution will populate from live transfer history.
+            </AppText>
+          )}
+        </AppCard>
+
+        <AppCard>
+          <View style={styles.cardHeaderRow}>
+            <View>
+              <AppText variant="subheading" color={colors.textDarkPrimary} style={styles.cardTitle}>
+                Live Transfers
+              </AppText>
+              <AppText variant="caption" color={colors.textDarkMuted}>
+                Active transfers from transaction history and execution state services
+              </AppText>
+            </View>
+          </View>
+
+          {activeTransfers.length === 0 ? (
+            <AppText variant="body" color={colors.textDarkSecondary}>
+              No active transfers in-flight right now.
+            </AppText>
+          ) : (
+            <FlatList
+              data={activeTransfers.slice(0, 12)}
+              keyExtractor={(item) => item.id}
+              scrollEnabled={false}
+              ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+              renderItem={({ item }) => (
+                <View style={styles.transferRow}>
+                  <View style={{ flex: 1, gap: 3 }}>
+                    <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
+                      {item.corridor}
+                    </AppText>
+                    <AppText variant="caption" color={colors.textDarkSecondary}>
+                      {item.currency} {item.amount.toLocaleString()} • Route {item.routeId}
+                    </AppText>
+                    <AppText variant="caption" color={colors.textDarkSecondary}>
+                      Settlement {item.settlementEstimate} • {formatRelativeTime(item.updatedAt)}
+                    </AppText>
+                  </View>
+
+                  <View style={{ minWidth: 92, alignItems: "flex-end", gap: 6 }}>
+                    <View style={[styles.tagPill, { backgroundColor: "#EFF6FF" }]}>
+                      <AppText variant="caption" style={{ color: "#1D4ED8", fontWeight: "900" }}>
+                        {item.status}
+                      </AppText>
+                    </View>
+                    <AppText variant="caption" color={colors.textDarkMuted}>
+                      {item.progress}%
+                    </AppText>
+                  </View>
+                </View>
+              )}
+            />
+          )}
+        </AppCard>
+
+        <AppCard>
+          <View style={styles.cardHeaderRow}>
+            <View>
+              <AppText variant="subheading" color={colors.textDarkPrimary} style={styles.cardTitle}>
+                Global Flow Map
+              </AppText>
+              <AppText variant="caption" color={colors.textDarkMuted}>
+                Active route volume and utilization across live corridors
+              </AppText>
+            </View>
+          </View>
+
+          {corridorRows.length === 0 ? (
+            <AppText variant="body" color={colors.textDarkSecondary}>
+              Flow map will appear once corridor telemetry is available.
+            </AppText>
+          ) : (
+            <View style={styles.stackList}>
+              {corridorRows.slice(0, 6).map((item, index) => {
+                const transferVolume = activeTransfers.filter((transfer) => transfer.corridor === item.corridor).length;
+                return (
+                  <View key={item.corridor} style={styles.mapRow}>
+                    <View style={[styles.mapNode, { backgroundColor: ["#F59E0B", "#7C3AED", "#2563EB", "#10B981"][index % 4] }]} />
+
+                    <View style={{ flex: 1, gap: 4 }}>
+                      <View style={styles.rowCardTop}>
+                        <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "800" }}>
+                          {item.corridor}
+                        </AppText>
+                        <AppText variant="caption" color={colors.textDarkMuted}>
+                          Volume {transferVolume}
+                        </AppText>
+                      </View>
+
+                      <View style={styles.progressTrack}>
+                        <View style={[styles.progressFill, { width: `${Math.max(6, Math.min(100, item.capacity))}%` }]} />
+                      </View>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+        </AppCard>
+
+        <AppCard>
+          <View style={styles.cardHeaderRow}>
+            <View>
+              <AppText variant="subheading" color={colors.textDarkPrimary} style={styles.cardTitle}>
+                Operational Health
+              </AppText>
+              <AppText variant="caption" color={colors.textDarkMuted}>
+                Real-time service telemetry and platform subsystem status
+              </AppText>
+            </View>
+          </View>
+
+          <View style={styles.stackList}>
+            {serviceHealth.map((item) => {
+              const color = item.status === "HEALTHY" ? "#16A34A" : item.status === "DEGRADED" ? "#D97706" : "#DC2626";
+              return (
+                <View key={item.label} style={styles.healthRow}>
+                  <View style={styles.healthLabelRow}>
+                    <View style={[styles.healthDot, { backgroundColor: color }]} />
+                    <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "700" }}>
+                      {item.label}
+                    </AppText>
+                  </View>
+
+                  <AppText variant="caption" style={{ color, fontWeight: "900" }}>
+                    {item.status}
+                  </AppText>
+                </View>
+              );
+            })}
+          </View>
+        </AppCard>
+
+        <AppCard style={styles.missionCard}>
+          <View style={styles.cardHeaderRow}>
+            <View style={styles.missionIconBubble}>
+              <Feather name="cpu" size={18} color="#7C3AED" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <AppText variant="subheading" color={colors.textDarkPrimary} style={styles.cardTitle}>
+                Nexus AI Mission Summary
+              </AppText>
+              <AppText variant="caption" color={colors.textDarkMuted}>
+                Mission Control interpretation based on live operational telemetry
+              </AppText>
+            </View>
+          </View>
+
+          {missionSummaryLoading ? (
+            <View style={styles.aiLoadingRow}>
+              <ActivityIndicator color="#7C3AED" />
+              <AppText variant="body" color={colors.textDarkSecondary}>
+                Generating live mission interpretation...
+              </AppText>
+            </View>
+          ) : missionSummary ? (
+            <View style={styles.stackList}>
+              <AppText variant="body" color={colors.textDarkPrimary} style={{ lineHeight: 22, fontWeight: "700" }}>
+                {missionSummary.executiveSummary}
+              </AppText>
+              {missionSummary.keyFindings.slice(0, 3).map((line, index) => (
+                <View key={`finding-${index}`} style={styles.aiBulletRow}>
+                  <View style={styles.aiBullet} />
+                  <AppText variant="caption" color={colors.textDarkSecondary} style={{ flex: 1 }}>
+                    {line}
+                  </AppText>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <AppText variant="body" color={colors.textDarkSecondary}>
+              {missionSummaryStatus}
+            </AppText>
+          )}
+        </AppCard>
       </ScrollView>
+
+      <Modal visible={filterVisible} transparent animationType="fade" onRequestClose={() => setFilterVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <AppText variant="subheading" color={colors.textDarkPrimary} style={styles.cardTitle}>
+                Operations Filters
+              </AppText>
+              <Pressable onPress={() => setFilterVisible(false)}>
+                <Feather name="x" size={20} color={colors.textDarkPrimary} />
+              </Pressable>
+            </View>
+
+            <View style={{ gap: 10 }}>
+              <AppText variant="caption" color={colors.textDarkMuted}>
+                Alert severity
+              </AppText>
+              <View style={styles.filterRowWrap}>
+                {(["ALL", "CRITICAL", "WARNING", "INFO"] as AlertFilter[]).map((level) => (
+                  <Pressable
+                    key={level}
+                    onPress={() => setSeverityFilter(level)}
+                    style={[
+                      styles.filterChip,
+                      severityFilter === level && styles.filterChipSelected,
+                    ]}
+                  >
+                    <AppText
+                      variant="caption"
+                      style={{
+                        color: severityFilter === level ? "#0B3F4A" : colors.textDarkSecondary,
+                        fontWeight: "800",
+                      }}
+                    >
+                      {level}
+                    </AppText>
+                  </Pressable>
+                ))}
+              </View>
+
+              <AppText variant="caption" color={colors.textDarkMuted}>
+                Corridor
+              </AppText>
+              <View style={styles.filterRowWrap}>
+                {corridorOptions.map((value) => (
+                  <Pressable
+                    key={value}
+                    onPress={() => setCorridorFilter(value)}
+                    style={[
+                      styles.filterChip,
+                      corridorFilter === value && styles.filterChipSelected,
+                    ]}
+                  >
+                    <AppText
+                      variant="caption"
+                      style={{
+                        color: corridorFilter === value ? "#0B3F4A" : colors.textDarkSecondary,
+                        fontWeight: "800",
+                      }}
+                    >
+                      {value}
+                    </AppText>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.modalFooter}>
+              <Pressable
+                style={styles.modalGhostButton}
+                onPress={() => {
+                  setSeverityFilter("ALL");
+                  setCorridorFilter("ALL");
+                }}
+              >
+                <AppText variant="caption" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
+                  Reset
+                </AppText>
+              </Pressable>
+
+              <Pressable style={styles.modalPrimaryButton} onPress={() => setFilterVisible(false)}>
+                <AppText variant="caption" color="#FFFFFF" style={{ fontWeight: "900" }}>
+                  Apply
+                </AppText>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  screenBackground: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.background,
+  },
+  content: {
+    gap: 14,
+    paddingTop: 10,
+    paddingBottom: 42,
+  },
+  headerBlock: {
+    gap: 6,
+  },
+  headerRow: {
+    marginTop: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  liveBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(11,63,74,0.55)",
+    borderWidth: 1,
+    borderColor: "rgba(191,234,241,0.35)",
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  liveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  liveBadgeText: {
+    color: "#DDEAF4",
+    fontWeight: "900",
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  actionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(159,191,216,0.35)",
+    backgroundColor: "rgba(12,35,56,0.48)",
+  },
+  kpiList: {
+    marginTop: 2,
+  },
+  kpiCard: {
+    width: 168,
+    borderRadius: 20,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    padding: 14,
+    gap: 10,
+    shadowColor: "#020713",
+    shadowOpacity: 0.14,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
+  },
+  kpiHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  kpiIconBubble: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  kpiLabel: {
+    flex: 1,
+    fontWeight: "700",
+  },
+  kpiValue: {
+    fontWeight: "900",
+  },
+  kpiDeltaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  cardHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 12,
+  },
+  cardTitle: {
+    fontWeight: "900",
+  },
+  loaderSpacing: {
+    marginVertical: 6,
+  },
+  stackList: {
+    gap: 10,
+  },
+  rowCard: {
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 14,
+    padding: 12,
+    gap: 10,
+    backgroundColor: "#FAFCFF",
+  },
+  rowCardTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  tagPill: {
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  metricsGrid: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  metricPill: {
+    flex: 1,
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    backgroundColor: "#FFFFFF",
+    gap: 4,
+  },
+  progressTrack: {
+    height: 8,
+    borderRadius: 999,
+    overflow: "hidden",
+    backgroundColor: "#E2E8F0",
+  },
+  progressFill: {
+    height: "100%",
+    borderRadius: 999,
+    backgroundColor: "#16A34A",
+  },
+  deltaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  alertRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    backgroundColor: "#FAFCFF",
+  },
+  alertIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 1,
+  },
+  alertTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  progressTrackLarge: {
+    marginVertical: 10,
+    height: 11,
+    borderRadius: 999,
+    overflow: "hidden",
+    backgroundColor: "#E2E8F0",
+  },
+  currencyRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 12,
+    paddingHorizontal: 11,
+    paddingVertical: 10,
+    backgroundColor: "#FFFFFF",
+  },
+  transferRow: {
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 14,
+    padding: 12,
+    backgroundColor: "#FAFCFF",
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+  },
+  mapRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 12,
+    padding: 10,
+    backgroundColor: "#FFFFFF",
+  },
+  mapNode: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  healthRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E2E8F0",
+  },
+  healthLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  healthDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+  },
+  missionCard: {
+    borderColor: "#EADDFD",
+    backgroundColor: "#FEFBFF",
+  },
+  missionIconBubble: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F3E8FF",
+  },
+  aiLoadingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 4,
+  },
+  aiBulletRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+  },
+  aiBullet: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: "#7C3AED",
+    marginTop: 6,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(3,9,18,0.64)",
+    justifyContent: "center",
+    padding: 20,
+  },
+  modalCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    padding: 16,
+    gap: 14,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  filterRowWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  filterChip: {
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#D1DCE8",
+    backgroundColor: "#F8FAFC",
+  },
+  filterChipSelected: {
+    borderColor: "#67C7D4",
+    backgroundColor: "#E7FAFD",
+  },
+  modalFooter: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 10,
+    marginTop: 4,
+  },
+  modalGhostButton: {
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  modalPrimaryButton: {
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: "#0B3F4A",
+  },
+});
