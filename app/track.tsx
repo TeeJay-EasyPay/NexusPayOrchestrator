@@ -276,7 +276,7 @@ export default function TrackScreen() {
 
           <NexusAIToggleCard
             title="Nexus AI"
-            description="Controls tracking intelligence, execution context and screen-level AI assistance on this screen."
+            description="Controls AI transfer monitoring, status analysis and operational insights on this screen."
             enabled={trackingAIEnabled}
             disabled={trackingAIDisabled}
             loading={nexusAILoading}
@@ -331,7 +331,7 @@ export default function TrackScreen() {
 
           <NexusAIToggleCard
             title="Nexus AI"
-            description="Controls tracking intelligence, execution context and screen-level AI assistance on this screen."
+            description="Controls AI transfer monitoring, status analysis and operational insights on this screen."
             enabled={trackingAIEnabled}
             disabled={trackingAIDisabled}
             loading={nexusAILoading}
