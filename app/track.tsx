@@ -16,6 +16,10 @@ import {
 } from "../src/services/execution/executionEngine";
 import { loadExecutionSession } from "../src/services/execution/executionPersistenceService";
 import { subscribeToExecutionSession } from "../src/services/execution/executionRealtimeService";
+import {
+  analyseTransfer,
+  TransferAnalysisResult,
+} from "../src/services/nexusAIService";
 import { PayoutStatus } from "../src/services/payout/payoutTypes";
 import { useTransfer } from "../src/state/TransferContext";
 import { useWallet } from "../src/state/WalletContext";
@@ -164,12 +168,15 @@ export default function TrackScreen() {
     loading: nexusAILoading,
     enabled: trackingAIEnabled,
     disabled: trackingAIDisabled,
+    settings,
     toggle: toggleTrackingAI,
   } = useNexusAIScreenSetting("tracking_enabled");
 
   const [executionSnapshot, setExecutionSnapshot] = useState<ExecutionSnapshot | null>(null);
   const [completedAt, setCompletedAt] = useState<string | null>(null);
   const [realtimeStatus, setRealtimeStatus] = useState("Connecting");
+  const [transferAnalysis, setTransferAnalysis] =
+    useState<TransferAnalysisResult | null>(null);
 
   const hasStartedRef = useRef(false);
   const hasDebitedWalletRef = useRef(false);
@@ -261,6 +268,65 @@ export default function TrackScreen() {
   completeTransfer,
 ]);
 
+  useEffect(() => {
+    let active = true;
+
+    if (!trackingAIEnabled || !transfer?.id) {
+      setTransferAnalysis(null);
+      return () => {
+        active = false;
+      };
+    }
+
+    const milestones = (executionSnapshot?.steps ?? []).map((step) => ({
+      title: step.title,
+      status: step.status,
+    }));
+
+    const operationalEvents = metadataLines(executionSnapshot?.telemetry ?? {}).map((line) => {
+      const separator = line.indexOf(":");
+      const label = separator > 0 ? line.slice(0, separator).trim() : "telemetry";
+      const value = separator > 0 ? line.slice(separator + 1).trim() : line;
+      return { label, value };
+    });
+
+    void analyseTransfer(
+      {
+        transferId: transfer.id,
+        transferState: executionSnapshot?.state ?? transfer.status,
+        progressPercent: executionSnapshot?.progressPercent ?? 0,
+        settlementCommentary:
+          executionSnapshot?.humanStatus ?? "Preparing execution engine...",
+        milestones,
+        operationalEvents,
+      },
+      settings?.sensitivity ?? "balanced",
+      {
+        timeoutMs: 6500,
+        maxRetries: 1,
+        _transfer: transfer,
+        _executionSnapshot: executionSnapshot ?? undefined,
+      }
+    ).then((result) => {
+      if (!active) return;
+      setTransferAnalysis(result.data);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [
+    trackingAIEnabled,
+    transfer?.id,
+    transfer?.status,
+    executionSnapshot?.state,
+    executionSnapshot?.progressPercent,
+    executionSnapshot?.humanStatus,
+    executionSnapshot?.steps,
+    executionSnapshot?.telemetry,
+    settings?.sensitivity,
+  ]);
+
   if (!transfer || !selectedRoute) {
     return (
       <Screen>
@@ -347,6 +413,30 @@ export default function TrackScreen() {
               <AppText variant="caption" color={colors.textDarkSecondary} style={{ marginTop: 6 }}>
                 Execution still runs normally, but AI-assisted tracking context is hidden until tracking intelligence is enabled.
               </AppText>
+            </AppCard>
+          ) : null}
+
+          {trackingAIEnabled ? (
+            <AppCard>
+              <View style={{ gap: 8 }}>
+                <AppText variant="subheading" color={colors.textDarkPrimary}>
+                  {transferAnalysis?.title ?? "Transfer intelligence"}
+                </AppText>
+
+                <AppText variant="body" color={colors.textDarkSecondary}>
+                  {transferAnalysis?.progressAnalysis ?? "Analysing transfer progress and execution telemetry..."}
+                </AppText>
+
+                <AppText variant="caption" color={colors.textDarkSecondary}>
+                  {transferAnalysis?.settlementCommentary ?? humanStatus}
+                </AppText>
+
+                {(transferAnalysis?.milestoneAnalysis ?? []).slice(0, 2).map((line, index) => (
+                  <AppText key={`track-ai-line-${index}`} variant="caption" color={colors.textDarkMuted}>
+                    • {line}
+                  </AppText>
+                ))}
+              </View>
             </AppCard>
           ) : null}
 

@@ -13,6 +13,10 @@ import {
 } from "../src/lib/routeOperationalState";
 import { buildOrchestratedRouteQuotes } from "../src/lib/settlementOrchestrator";
 import {
+  explainRoute,
+  RouteExplanationResult,
+} from "../src/services/nexusAIService";
+import {
     writeRouteOperationalEvent,
 } from "../src/services/routeOperationalEventService";
 import { writeTreasuryLiquiditySnapshot } from "../src/services/treasuryIntelligenceService";
@@ -125,6 +129,7 @@ function RouteOptionCard({
   isSelected,
   onPress,
   showIntelligence,
+  routeExplanation,
 }: {
   route: RouteQuote;
   index: number;
@@ -132,6 +137,7 @@ function RouteOptionCard({
   isSelected: boolean;
   onPress: () => void;
   showIntelligence: boolean;
+  routeExplanation?: RouteExplanationResult;
 }) {
   const isRecommended = index === 0;
   const borderColor = isSelected ? colors.gold : isRecommended ? "#BFE7D0" : "#E2E8F0";
@@ -228,12 +234,18 @@ function RouteOptionCard({
                 </AppText>
 
                 <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
-                  {route.aiRecommendation}
+                  {routeExplanation?.title ?? route.aiRecommendation}
                 </AppText>
 
-                <AppText variant="caption" color={colors.textDarkSecondary}>
-                  {route.corridorInsight}
-                </AppText>
+                {(routeExplanation?.bullets ?? [route.corridorInsight]).filter(Boolean).map((line, lineIndex) => (
+                  <AppText
+                    key={`${route.id}-explain-${lineIndex}`}
+                    variant="caption"
+                    color={colors.textDarkSecondary}
+                  >
+                    {line}
+                  </AppText>
+                ))}
 
                 <View style={{ flexDirection: "row", gap: 8 }}>
                   <MiniStat
@@ -348,10 +360,14 @@ export default function RoutesScreen() {
     loading: nexusAILoading,
     enabled: routeAIEnabled,
     disabled: routeAIDisabled,
+    settings,
     toggle: toggleRouteAI,
   } = useNexusAIScreenSetting("route_enabled");
 
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
+  const [routeExplanations, setRouteExplanations] = useState<
+    Record<string, RouteExplanationResult>
+  >({});
 
   const generatedRoutes = useMemo(() => {
     if (!transfer?.senderAmount || !transfer?.recipient?.currency) {
@@ -405,6 +421,53 @@ export default function RoutesScreen() {
 
   const activeRoutes =
     transfer?.routes && transfer.routes.length > 0 ? transfer.routes : generatedRoutes;
+
+  useEffect(() => {
+    let active = true;
+
+    if (!routeAIEnabled || activeRoutes.length === 0) {
+      setRouteExplanations({});
+      return () => {
+        active = false;
+      };
+    }
+
+    async function hydrateRouteExplanations() {
+      const nextEntries = await Promise.all(
+        activeRoutes.map(async (route) => {
+          const corridor = route.treasuryCorridor ?? `${transfer?.senderCurrency ?? "GBP"} → ${transfer?.recipient.currency ?? "PHP"}`;
+
+          const result = await explainRoute(
+            {
+              corridor,
+              routeScore: route.score,
+              liquidityScore: route.liquidityScore ?? 0,
+              treasuryScore: route.treasuryScore ?? 0,
+              settlementEstimate: route.estimatedTime,
+            },
+            settings?.sensitivity ?? "balanced",
+            {
+              timeoutMs: 6000,
+              maxRetries: 1,
+              _routeQuote: route,
+            }
+          );
+
+          return [route.id, result.data] as const;
+        })
+      );
+
+      if (!active) return;
+
+      setRouteExplanations(Object.fromEntries(nextEntries));
+    }
+
+    void hydrateRouteExplanations();
+
+    return () => {
+      active = false;
+    };
+  }, [activeRoutes, routeAIEnabled, settings?.sensitivity, transfer?.recipient.currency, transfer?.senderCurrency]);
 
   const selectedRoute = activeRoutes.find((route) => route.id === selectedRouteId);
 
@@ -503,6 +566,7 @@ export default function RoutesScreen() {
                 recipientCurrency={recipient.currency}
                 isSelected={selectedRouteId === route.id}
                 showIntelligence={routeAIEnabled}
+                routeExplanation={routeExplanations[route.id]}
                 onPress={() => handleSelectRoute(route)}
               />
             ))}

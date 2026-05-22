@@ -19,6 +19,10 @@ import { useNexusAIScreenSetting } from "../src/hooks/useNexusAISettings";
 import { buildCorridorHealth, CorridorHealth } from "../src/lib/corridorHealth";
 import { fetchCorridorFxRates, fetchFxRate, FxRate } from "../src/lib/fxFeed";
 import { supabase } from "../src/lib/supabase";
+import {
+  DashboardSummaryResult,
+  generateDashboardSummary,
+} from "../src/services/nexusAIService";
 import { usePaymentMethods } from "../src/state/PaymentMethodsContext";
 import { useTransfer } from "../src/state/TransferContext";
 import { colors, spacing } from "../src/theme";
@@ -286,6 +290,9 @@ export default function HomeScreen() {
   const [lastRefresh, setLastRefresh] = useState("");
   const [corridorHealth, setCorridorHealth] = useState<CorridorHealth[]>([]);
   const [fxSnapshots, setFxSnapshots] = useState<FxSnapshot[]>([]);
+  const [dashboardSummary, setDashboardSummary] =
+    useState<DashboardSummaryResult | null>(null);
+  const [dashboardAILoading, setDashboardAILoading] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -392,6 +399,71 @@ export default function HomeScreen() {
         : null
     );
   }, [corridorHealth, fxSnapshots]);
+
+  useEffect(() => {
+    let active = true;
+
+    if (!homeAIEnabled) {
+      setDashboardSummary(null);
+      setDashboardAILoading(false);
+      return () => {
+        active = false;
+      };
+    }
+
+    const coverage =
+      corridorHealth.length === 0
+        ? "--"
+        : `${corridorHealth.filter((item) => item.status !== "Restricted").length}/${corridorHealth.length}`;
+
+    const strongestCorridor = recommendedCorridors[0]?.corridor ?? "GBP → PHP";
+    const treasuryStatus = loading
+      ? "Syncing"
+      : corridorHealth.length > 0
+      ? "Healthy"
+      : "Watch";
+
+    const networkHealth =
+      corridorHealth.length > 0 && corridorHealth.every((item) => item.status !== "Restricted")
+        ? "Healthy"
+        : "Watch";
+
+    void generateDashboardSummary(
+      {
+        telemetry: {
+          treasuryStatus,
+          liquidityStatus: coverage === "--" ? "Unknown" : "Strong",
+          corridorHealth: `${strongestCorridor} strongest`,
+          networkHealth,
+          fxStatus: fxSnapshots.length > 0 ? "Live" : "Fallback",
+          marketStatus: "Operational",
+          activeTransferCount: activeTransfer ? 1 : 0,
+          corridorCoverage: coverage,
+        },
+      },
+      settings?.sensitivity ?? "balanced",
+      {
+        timeoutMs: 7000,
+        maxRetries: 1,
+        onLoadingChange: setDashboardAILoading,
+      }
+    ).then((result) => {
+      if (!active) return;
+      setDashboardSummary(result.data);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [
+    homeAIEnabled,
+    settings?.sensitivity,
+    activeTransfer,
+    corridorHealth,
+    fxSnapshots,
+    loading,
+    recommendedCorridors,
+  ]);
 
   function handleResend(transferItem: (typeof recentTransactions)[number]) {
     const recipient = transferItem.recipient;
@@ -534,20 +606,18 @@ export default function HomeScreen() {
                 >
                   <View style={{ flex: 1, gap: 6 }}>
                     <AppText variant="subheading" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
-                      Nexus AI Summary
+                      {dashboardSummary?.title ?? "Nexus AI Summary"}
                     </AppText>
 
-                    <AppText variant="body" color={colors.textDarkSecondary}>
-                      Recommended corridor: {recommendedCorridors[0]?.corridor ?? "GBP → PHP"}.
-                    </AppText>
-
-                    <AppText variant="body" color={colors.textDarkSecondary}>
-                      Settlement forecast: {recommendedCorridors[0]?.settlement ?? "< 3 minutes"} with {recommendedCorridors[0]?.liquidity ?? "healthy"} liquidity.
-                    </AppText>
-
-                    <AppText variant="body" color={colors.textDarkSecondary}>
-                      Operational status: {activeTransfer ? "1 active transfer in-flight" : "No active transfer incidents"}.
-                    </AppText>
+                    {(dashboardSummary?.executiveSummary ?? [
+                      `Recommended corridor: ${recommendedCorridors[0]?.corridor ?? "GBP → PHP"}.`,
+                      `Settlement forecast: ${recommendedCorridors[0]?.settlement ?? "< 3 minutes"} with ${recommendedCorridors[0]?.liquidity ?? "healthy"} liquidity.`,
+                      `Operational status: ${activeTransfer ? "1 active transfer in-flight" : "No active transfer incidents"}.`,
+                    ]).map((line, index) => (
+                      <AppText key={`summary-${index}`} variant="body" color={colors.textDarkSecondary}>
+                        {line}
+                      </AppText>
+                    ))}
 
                     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 2 }}>
                       <StatusBadge label={`Sensitivity: ${settings?.sensitivity ?? "balanced"}`} />
@@ -590,7 +660,7 @@ export default function HomeScreen() {
                   }}
                 >
                   <AppText variant="caption" color={colors.textDarkMuted}>
-                    Generated by Nexus AI
+                    {dashboardAILoading ? "Generating Nexus AI summary..." : "Generated by Nexus AI"}
                   </AppText>
 
                   <AppText variant="caption" color={colors.textDarkMuted}>
