@@ -1,4 +1,4 @@
-import { Pressable, useWindowDimensions, View } from "react-native";
+import { Switch, useWindowDimensions, View } from "react-native";
 
 import { colors } from "../../theme";
 import { AppCard } from "../ui/AppCard";
@@ -25,33 +25,12 @@ export function NexusAIToggleCard({
   const compactLayout = width < 430;
   const toggleDisabled = disabled || loading;
 
-  const statusLabel = loading ? "LOADING" : enabled ? "ON" : "OFF";
+  const statusLabel = enabled ? "Enabled" : "Disabled";
   const statusText = disabled
     ? "AI disabled globally"
     : enabled
       ? "Nexus AI active for this screen"
       : "Nexus AI disabled for this screen";
-
-  const statusPillStyle = disabled
-    ? {
-        backgroundColor: "#E2E8F0",
-        borderColor: "#CBD5E1",
-      }
-    : enabled
-      ? {
-          backgroundColor: colors.goldSoft,
-          borderColor: "#F1D99B",
-        }
-      : {
-          backgroundColor: "#F8FAFC",
-          borderColor: "#E2E8F0",
-        };
-
-  const statusTextStyle = disabled
-    ? { color: colors.textDarkSecondary }
-    : enabled
-      ? { color: colors.gold }
-      : { color: colors.textDarkSecondary };
 
   return (
     <AppCard
@@ -66,7 +45,7 @@ export function NexusAIToggleCard({
       <View
         style={{
           flexDirection: compactLayout ? "column" : "row",
-          alignItems: compactLayout ? "stretch" : "center",
+          alignItems: "center",
           justifyContent: "space-between",
           gap: 12,
         }}
@@ -85,36 +64,42 @@ export function NexusAIToggleCard({
           </AppText>
         </View>
 
-        <View style={{ alignItems: compactLayout ? "flex-start" : "flex-end", gap: 8 }}>
-          <Pressable
-            accessibilityRole="switch"
-            accessibilityState={{ checked: enabled, disabled: toggleDisabled }}
-            onPress={() => {
+        <View style={{ alignItems: compactLayout ? "flex-start" : "center", gap: 8 }}>
+          <Switch
+            value={enabled}
+            onValueChange={(nextValue) => {
               if (toggleDisabled) return;
-              onToggle(!enabled);
+              onToggle(nextValue);
             }}
-            style={({ pressed }) => [
-              {
-                minWidth: 78,
-                paddingVertical: 10,
-                paddingHorizontal: 16,
-                borderRadius: 999,
-                borderWidth: 1,
-                alignItems: "center",
-                justifyContent: "center",
-                opacity: toggleDisabled ? 0.82 : 1,
-                transform: [{ scale: pressed && !toggleDisabled ? 0.98 : 1 }],
-              },
-              statusPillStyle,
-            ]}
+            disabled={toggleDisabled}
+            trackColor={{ false: "#CBD5E1", true: "#0E8A92" }}
+            thumbColor={enabled ? "#FFFFFF" : "#F8FAFC"}
+          />
+
+          <View
+            style={{
+              minWidth: 78,
+              paddingHorizontal: 12,
+              paddingVertical: 4,
+              borderRadius: 999,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: enabled ? "#DCFCE7" : "#E2E8F0",
+            }}
           >
-            <AppText variant="caption" style={{ ...statusTextStyle, fontWeight: "900" }}>
+            <AppText
+              variant="caption"
+              style={{
+                color: enabled ? "#15803D" : "#64748B",
+                fontWeight: "900",
+              }}
+            >
               {statusLabel}
             </AppText>
-          </Pressable>
+          </View>
 
           {disabled ? (
-            <AppText variant="caption" color={colors.textDarkMuted} style={{ textAlign: compactLayout ? "left" : "right" }}>
+            <AppText variant="caption" color={colors.textDarkMuted} style={{ textAlign: compactLayout ? "left" : "center" }}>
               AI disabled globally
             </AppText>
           ) : null}
