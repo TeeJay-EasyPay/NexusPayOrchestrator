@@ -45,17 +45,28 @@ export function NexusAIToggleCard({
           gap: 12,
         }}
       >
-        <View style={{ flex: 1, gap: 4, minWidth: 0 }}>
+        <View style={{ flex: 1, gap: 4, minWidth: 0, paddingRight: compactLayout ? 0 : 6 }}>
           <AppText variant="subheading" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
             {title}
           </AppText>
 
-          <AppText variant="caption" color={colors.textDarkSecondary}>
+          <AppText
+            variant="caption"
+            color={colors.textDarkSecondary}
+            style={{ lineHeight: 18, flexShrink: 1 }}
+          >
             {description}
           </AppText>
         </View>
 
-        <View style={{ alignItems: compactLayout ? "flex-start" : "center", gap: 8 }}>
+        <View
+          style={{
+            alignItems: compactLayout ? "flex-start" : "flex-end",
+            justifyContent: "center",
+            gap: 8,
+            minWidth: compactLayout ? 0 : 92,
+          }}
+        >
           <Switch
             value={enabled}
             onValueChange={(nextValue) => {
@@ -90,7 +101,7 @@ export function NexusAIToggleCard({
           </View>
 
           {disabled ? (
-            <AppText variant="caption" color={colors.textDarkMuted} style={{ textAlign: compactLayout ? "left" : "center" }}>
+            <AppText variant="caption" color={colors.textDarkMuted} style={{ textAlign: compactLayout ? "left" : "right" }}>
               AI disabled globally
             </AppText>
           ) : null}

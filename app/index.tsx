@@ -4,6 +4,7 @@ import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
+  FlatList,
     Pressable,
     ScrollView,
     useWindowDimensions,
@@ -18,20 +19,15 @@ import { useNexusAIScreenSetting } from "../src/hooks/useNexusAISettings";
 import { buildCorridorHealth, CorridorHealth } from "../src/lib/corridorHealth";
 import { fetchCorridorFxRates, fetchFxRate, FxRate } from "../src/lib/fxFeed";
 import { supabase } from "../src/lib/supabase";
+import { usePaymentMethods } from "../src/state/PaymentMethodsContext";
 import { useTransfer } from "../src/state/TransferContext";
-import { useWallet } from "../src/state/WalletContext";
 import { colors, spacing } from "../src/theme";
+import { Transfer } from "../src/types/transfer";
 
 const FX_BASELINES: Record<string, number> = {
   PHP: 72.93,
   MYR: 5.71,
   USD: 1.35,
-};
-
-const CITY_BY_COUNTRY: Record<string, string> = {
-  Philippines: "Manila",
-  Malaysia: "Kuala Lumpur",
-  "United Arab Emirates": "Dubai",
 };
 
 type FxSnapshot = {
@@ -49,13 +45,6 @@ type RecommendedCorridor = {
   settlement: string;
   badge: string;
 };
-
-function formatMoney(value: number) {
-  return value.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -109,6 +98,30 @@ function getProgressPercent(status?: string) {
   if (status === "COMPLETED") return 100;
 
   return 14;
+}
+
+function recipientDisplayName(transferItem: Transfer) {
+  if (transferItem.recipient.name?.trim()) {
+    return transferItem.recipient.name;
+  }
+
+  const fullName = [
+    transferItem.recipient.firstName,
+    transferItem.recipient.surname,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+
+  return fullName || "Recipient";
+}
+
+function recipientPayoutLabel(transferItem: Transfer) {
+  if (transferItem.recipient.payoutMethod === "BANK") {
+    return transferItem.recipient.bankName || "Bank account";
+  }
+
+  return transferItem.recipient.mobileWalletProvider || "Mobile wallet";
 }
 
 function toFxSnapshot(rate: FxRate): FxSnapshot {
@@ -255,9 +268,10 @@ export default function HomeScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const wideLayout = width >= 760;
+  const compactSummaryLayout = width < 560;
 
-  const { gbpBalance } = useWallet();
   const { transfer, completedTransfers } = useTransfer();
+  const { paymentMethods } = usePaymentMethods();
 
   const {
     loading: nexusAILoading,
@@ -343,9 +357,17 @@ export default function HomeScreen() {
   const activeProgress = getProgressPercent(activeTransfer?.status);
 
   const recentTransactions = useMemo(
-    () => completedTransfers.slice(0, 3),
+    () => completedTransfers.slice(0, 15),
     [completedTransfers]
   );
+
+  const connectedSourceCount = paymentMethods.length;
+  const connectedCardsCount = paymentMethods.filter((method) => method.type === "CARD").length;
+  const connectedBankCount = paymentMethods.filter((method) => method.type === "OPEN_BANKING").length;
+  const connectedAndReadyCount = paymentMethods.filter(
+    (method) => method.status === "ACTIVE" || method.status === "CONNECTED"
+  ).length;
+  const fundingReady = connectedAndReadyCount > 0;
 
   const latestReference = useMemo(
     () => transferReference((recentTransactions[0] ?? activeTransfer)?.id),
@@ -401,7 +423,7 @@ export default function HomeScreen() {
   return (
     <Screen>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={{ gap: spacing.md, paddingBottom: 40 }}>
+        <View style={{ gap: spacing.md, paddingTop: 10, paddingBottom: 40 }}>
           <NexusAIToggleCard
             title="Nexus AI"
             description="Controls home dashboard intelligence, operational summaries and route guidance on this screen."
@@ -419,18 +441,73 @@ export default function HomeScreen() {
                 </AppText>
 
                 <AppText variant="caption" color={colors.textDarkSecondary}>
-                  Available Balance
-                </AppText>
-
-                <AppText variant="title" color="#062A37" style={{ fontSize: 54, fontWeight: "900" }}>
-                  £{formatMoney(gbpBalance)}
+                  Funding Readiness Summary
                 </AppText>
               </View>
 
+              <View style={{ flexDirection: compactSummaryLayout ? "column" : "row", gap: 8 }}>
+                <View
+                  style={{
+                    flex: 1,
+                    minWidth: compactSummaryLayout ? 0 : 110,
+                    padding: 12,
+                    borderRadius: 14,
+                    borderWidth: 1,
+                    borderColor: "#E2E8F0",
+                    backgroundColor: "#F8FAFC",
+                  }}
+                >
+                  <AppText variant="caption" color={colors.textDarkMuted}>Connected Sources</AppText>
+                  <AppText variant="subheading" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
+                    {connectedSourceCount}
+                  </AppText>
+                </View>
+
+                <View
+                  style={{
+                    flex: 1,
+                    minWidth: compactSummaryLayout ? 0 : 110,
+                    padding: 12,
+                    borderRadius: 14,
+                    borderWidth: 1,
+                    borderColor: "#E2E8F0",
+                    backgroundColor: "#F8FAFC",
+                  }}
+                >
+                  <AppText variant="caption" color={colors.textDarkMuted}>Bank Accounts</AppText>
+                  <AppText variant="subheading" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
+                    {connectedBankCount}
+                  </AppText>
+                </View>
+
+                <View
+                  style={{
+                    flex: 1,
+                    minWidth: compactSummaryLayout ? 0 : 110,
+                    padding: 12,
+                    borderRadius: 14,
+                    borderWidth: 1,
+                    borderColor: "#E2E8F0",
+                    backgroundColor: "#F8FAFC",
+                  }}
+                >
+                  <AppText variant="caption" color={colors.textDarkMuted}>Connected Cards</AppText>
+                  <AppText variant="subheading" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
+                    {connectedCardsCount}
+                  </AppText>
+                </View>
+              </View>
+
+              <AppText variant="caption" color={colors.textDarkSecondary}>
+                {fundingReady
+                  ? "Funding sources are ready for transfer orchestration."
+                  : "Connect a bank account or card to begin sending money."}
+              </AppText>
+
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                 <BalanceAction icon="arrow-up-right" label="Send Money" onPress={() => router.push("/send")} />
-                <BalanceAction icon="plus" label="Add Funds" onPress={() => router.push("/funding")} />
-                <BalanceAction icon="clock" label="Transaction History" onPress={() => router.push("/account")} />
+                <BalanceAction icon="link" label="Funding Sources" onPress={() => router.push("/payment-methods")} />
+                <BalanceAction icon="clock" label="Transfer History" onPress={() => router.push("/account")} />
               </View>
             </View>
           </AppCard>
@@ -461,16 +538,26 @@ export default function HomeScreen() {
                     </AppText>
 
                     <AppText variant="body" color={colors.textDarkSecondary}>
-                      {recommendedCorridors[0]?.corridor ?? "GBP → PHP"} remains the strongest consumer corridor today.
+                      Recommended corridor: {recommendedCorridors[0]?.corridor ?? "GBP → PHP"}.
                     </AppText>
 
                     <AppText variant="body" color={colors.textDarkSecondary}>
-                      Settlement conditions are stable across major routes and treasury pressure remains controlled.
+                      Settlement forecast: {recommendedCorridors[0]?.settlement ?? "< 3 minutes"} with {recommendedCorridors[0]?.liquidity ?? "healthy"} liquidity.
                     </AppText>
 
                     <AppText variant="body" color={colors.textDarkSecondary}>
-                      Current sensitivity profile: {settings?.sensitivity ?? "balanced"}.
+                      Operational status: {activeTransfer ? "1 active transfer in-flight" : "No active transfer incidents"}.
                     </AppText>
+
+                    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 2 }}>
+                      <StatusBadge label={`Sensitivity: ${settings?.sensitivity ?? "balanced"}`} />
+                      <StatusBadge
+                        label={`Treasury Capacity: ${loading ? "Syncing" : corridorHealth.length > 0 ? "Healthy" : "Watch"}`}
+                      />
+                      <StatusBadge
+                        label={`Liquidity Coverage: ${corridorHealth.length === 0 ? "--" : `${corridorHealth.filter((item) => item.status !== "Restricted").length}/${corridorHealth.length}`}`}
+                      />
+                    </View>
                   </View>
 
                   <View
@@ -735,46 +822,63 @@ export default function HomeScreen() {
                   No completed transfers yet.
                 </AppText>
               ) : (
-                recentTransactions.map((item) => (
-                  <View
-                    key={item.id}
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: 10,
-                      paddingBottom: 10,
-                      borderBottomWidth: 1,
-                      borderBottomColor: "#E2E8F0",
-                    }}
-                  >
-                    <View style={{ flex: 1, gap: 2 }}>
-                      <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "800" }}>
-                        {item.senderCurrency} → {item.recipient.currency}  £{item.senderAmount.toFixed(2)}
-                      </AppText>
+                <View style={{ height: 342 }}>
+                  <FlatList
+                    data={recentTransactions}
+                    keyExtractor={(item) => item.id}
+                    nestedScrollEnabled
+                    showsVerticalScrollIndicator
+                    contentContainerStyle={{ gap: 10, paddingRight: 4 }}
+                    renderItem={({ item }) => (
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "flex-start",
+                          justifyContent: "space-between",
+                          gap: 10,
+                          paddingBottom: 10,
+                          borderBottomWidth: 1,
+                          borderBottomColor: "#E2E8F0",
+                        }}
+                      >
+                        <View style={{ flex: 1, gap: 3 }}>
+                          <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
+                            {recipientDisplayName(item)}
+                          </AppText>
 
-                      <AppText variant="caption" color={colors.textDarkSecondary}>
-                        {CITY_BY_COUNTRY[item.recipient.country] ?? item.recipient.country} • {formatTimeAgo(item.createdAt)}
-                      </AppText>
-                    </View>
+                          <AppText variant="caption" color={colors.textDarkSecondary}>
+                            {recipientPayoutLabel(item)} • {item.recipient.country}
+                          </AppText>
 
-                    <Pressable
-                      onPress={() => handleResend(item)}
-                      style={{
-                        paddingHorizontal: 12,
-                        paddingVertical: 7,
-                        borderRadius: 999,
-                        borderWidth: 1,
-                        borderColor: "#D4DEE8",
-                        backgroundColor: "#F8FAFC",
-                      }}
-                    >
-                      <AppText variant="caption" color="#0B3F4A" style={{ fontWeight: "900" }}>
-                        Resend
-                      </AppText>
-                    </Pressable>
-                  </View>
-                ))
+                          <AppText variant="caption" color={colors.textDarkSecondary}>
+                            Corridor: {item.senderCurrency} → {item.recipient.currency} • £{item.senderAmount.toFixed(2)}
+                          </AppText>
+
+                          <AppText variant="caption" color={colors.textDarkMuted}>
+                            Completed {formatTimeAgo(item.createdAt)}
+                          </AppText>
+                        </View>
+
+                        <Pressable
+                          onPress={() => handleResend(item)}
+                          style={{
+                            marginTop: 2,
+                            paddingHorizontal: 12,
+                            paddingVertical: 7,
+                            borderRadius: 999,
+                            borderWidth: 1,
+                            borderColor: "#D4DEE8",
+                            backgroundColor: "#F8FAFC",
+                          }}
+                        >
+                          <AppText variant="caption" color="#0B3F4A" style={{ fontWeight: "900" }}>
+                            Resend
+                          </AppText>
+                        </Pressable>
+                      </View>
+                    )}
+                  />
+                </View>
               )}
             </View>
           </AppCard>
@@ -810,12 +914,6 @@ export default function HomeScreen() {
               <Pressable onPress={copyReference}>
                 <AppText variant="caption" color={colors.gold} style={{ fontWeight: "900" }}>
                   Copy Reference
-                </AppText>
-              </Pressable>
-
-              <Pressable onPress={() => router.push("/track")}>
-                <AppText variant="caption" color={colors.gold} style={{ fontWeight: "900" }}>
-                  Track
                 </AppText>
               </Pressable>
             </View>

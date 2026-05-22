@@ -27,9 +27,16 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const lastRedirectRef = useRef<string | null>(null);
   const unlockPromptInFlightRef = useRef(false);
+  const lastProtectedRouteRef = useRef<string>("/");
 
   const isPublicRoute = PUBLIC_ROUTES.has(pathname);
   const hasAccess = Boolean(session) || demoAccessEnabled;
+
+  useEffect(() => {
+    if (!isPublicRoute) {
+      lastProtectedRouteRef.current = pathname;
+    }
+  }, [isPublicRoute, pathname]);
 
   useEffect(() => {
     if (loading) return;
@@ -37,7 +44,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     const target = !hasAccess && !isPublicRoute
       ? "/auth"
       : hasAccess && isPublicRoute && !locked
-        ? "/"
+        ? lastProtectedRouteRef.current || "/"
         : null;
 
     if (!target || pathname === target || lastRedirectRef.current === target) {
@@ -45,12 +52,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     }
 
     lastRedirectRef.current = target;
-
-    const timeout = setTimeout(() => {
-      router.replace(target);
-    }, 0);
-
-    return () => clearTimeout(timeout);
+    router.replace(target);
   }, [hasAccess, isPublicRoute, loading, locked, pathname, router]);
 
   useEffect(() => {
