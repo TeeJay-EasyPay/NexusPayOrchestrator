@@ -2,15 +2,17 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import { ScrollView, View } from "react-native";
 import AICorridorIntelligenceCard from "../src/components/intelligence/AICorridorIntelligenceCard";
+import { NexusAIToggleCard } from "../src/components/intelligence/NexusAIToggleCard";
 
 import { RecentTransactionHistoryCard } from "../src/components/transactions/RecentTransactionHistoryCard";
 import { AppButton } from "../src/components/ui/AppButton";
 import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
 import { Screen } from "../src/components/ui/Screen";
+import { useNexusAIScreenSetting } from "../src/hooks/useNexusAISettings";
 import {
-  buildCorridorHealth,
-  CorridorHealth,
+    buildCorridorHealth,
+    CorridorHealth,
 } from "../src/lib/corridorHealth";
 import { fetchCorridorFxRates, FxRate } from "../src/lib/fxFeed";
 import { colors, spacing } from "../src/theme";
@@ -194,6 +196,12 @@ function CorridorCard({
 
 export default function HomeScreen() {
   const router = useRouter();
+  const {
+    loading: nexusAILoading,
+    enabled: homeAIEnabled,
+    disabled: homeAIDisabled,
+    toggle: toggleHomeAI,
+  } = useNexusAIScreenSetting("home_enabled");
 
   const [fxRates, setFxRates] = useState<FxRate[]>([]);
   const [corridorHealth, setCorridorHealth] = useState<CorridorHealth[]>([]);
@@ -272,6 +280,15 @@ export default function HomeScreen() {
             </AppText>
           </View>
 
+          <NexusAIToggleCard
+            title="Nexus AI"
+            description="Controls home dashboard intelligence, corridor summaries and executive telemetry on this screen."
+            enabled={homeAIEnabled}
+            disabled={homeAIDisabled}
+            loading={nexusAILoading}
+            onToggle={toggleHomeAI}
+          />
+
           <View
             style={{
               padding: 18,
@@ -334,9 +351,23 @@ export default function HomeScreen() {
               </View>
             </View>
 
-            <AICorridorIntelligenceCard />
+            <View style={{ gap: 12 }}>
+              {homeAIEnabled ? (
+                <AICorridorIntelligenceCard />
+              ) : (
+                <AppCard>
+                  <AppText variant="subheading" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
+                    Nexus AI disabled for this screen
+                  </AppText>
 
-            <AppButton title="Start Transfer" onPress={() => router.push("/send")} />
+                  <AppText variant="caption" color={colors.textDarkSecondary} style={{ marginTop: 6 }}>
+                    Enable home intelligence from the Nexus AI screen to restore corridor insights and executive summaries here.
+                  </AppText>
+                </AppCard>
+              )}
+
+              <AppButton title="Start Transfer" onPress={() => router.push("/send")} />
+            </View>
           </View>
 
           <AppCard>

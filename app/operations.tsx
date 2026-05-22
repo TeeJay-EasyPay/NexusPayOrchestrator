@@ -2,22 +2,24 @@ import { useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { RefreshControl, ScrollView, View } from "react-native";
 
+import { NexusAIToggleCard } from "../src/components/intelligence/NexusAIToggleCard";
 import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
 import { Screen } from "../src/components/ui/Screen";
+import { useNexusAIScreenSetting } from "../src/hooks/useNexusAISettings";
 import {
-  PersistedExecutionSession,
-  loadRecoverableExecutionSessions,
+    loadRecoverableExecutionSessions,
+    PersistedExecutionSession,
 } from "../src/services/execution/executionPersistenceService";
 import { subscribeToRecentExecutionSessions } from "../src/services/execution/executionRealtimeService";
 import { buildProviderExecutionMetrics } from "../src/services/intelligence/providerExecutionIntelligence";
 import {
-  loadRecentRouteOperationalEvents,
-  RouteOperationalEventRow,
+    loadRecentRouteOperationalEvents,
+    RouteOperationalEventRow,
 } from "../src/services/routeOperationalEventService";
 import {
-  loadRecentTreasurySnapshots,
-  TreasuryLiquiditySnapshotRow,
+    loadRecentTreasurySnapshots,
+    TreasuryLiquiditySnapshotRow,
 } from "../src/services/treasuryIntelligenceService";
 import { colors } from "../src/theme";
 
@@ -405,6 +407,12 @@ export default function OperationsScreen() {
   const [realtimeStatus, setRealtimeStatus] = useState("Connecting");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const {
+    loading: nexusAILoading,
+    enabled: operationsAIEnabled,
+    disabled: operationsAIDisabled,
+    toggle: toggleOperationsAI,
+  } = useNexusAIScreenSetting("corridor_enabled");
 
   useEffect(() => {
     let mounted = true;
@@ -529,6 +537,27 @@ export default function OperationsScreen() {
             </AppText>
           </View>
 
+          <NexusAIToggleCard
+            title="Nexus AI"
+            description="Controls corridor intelligence, operational summaries and provider insight visibility on this screen."
+            enabled={operationsAIEnabled}
+            disabled={operationsAIDisabled}
+            loading={nexusAILoading}
+            onToggle={toggleOperationsAI}
+          />
+
+          {!operationsAIEnabled ? (
+            <AppCard>
+              <AppText variant="subheading" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
+                Nexus AI disabled for this screen
+              </AppText>
+
+              <AppText variant="caption" color={colors.textDarkSecondary} style={{ marginTop: 6 }}>
+                Treasury and execution telemetry remain available, but provider intelligence is hidden until corridor intelligence is re-enabled.
+              </AppText>
+            </AppCard>
+          ) : null}
+
           <View
             style={{
               padding: 18,
@@ -602,61 +631,63 @@ export default function OperationsScreen() {
             </View>
           </AppCard>
 
-          <AppCard>
-            <View style={{ gap: 12 }}>
-              <View style={{ gap: 4 }}>
-                <AppText variant="subheading" color={colors.textDarkPrimary}>
-                  Provider Execution Intelligence
-                </AppText>
+          {operationsAIEnabled ? (
+            <AppCard>
+              <View style={{ gap: 12 }}>
+                <View style={{ gap: 4 }}>
+                  <AppText variant="subheading" color={colors.textDarkPrimary}>
+                    Provider Execution Intelligence
+                  </AppText>
 
-                <AppText variant="caption" color={colors.textDarkMuted}>
-                  Adaptive provider reliability, latency and failover-risk scoring from live route execution.
-                </AppText>
-              </View>
+                  <AppText variant="caption" color={colors.textDarkMuted}>
+                    Adaptive provider reliability, latency and failover-risk scoring from live route execution.
+                  </AppText>
+                </View>
 
-              {providerMetrics.length === 0 ? (
-                <AppText variant="body" color={colors.textDarkSecondary}>
-                  Provider intelligence will populate once execution snapshots contain active route telemetry.
-                </AppText>
-              ) : (
-                <View style={{ gap: 12 }}>
-                  {providerMetrics.map((metric) => (
-                    <View
-                      key={metric.provider}
-                      style={{
-                        padding: 16,
-                        borderRadius: 22,
-                        backgroundColor: "#FFFFFF",
-                        borderWidth: 1,
-                        borderColor: "#E2E8F0",
-                        gap: 12,
-                      }}
-                    >
-                      <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
-                        <View style={{ flex: 1 }}>
-                          <AppText variant="subheading" color={colors.textDarkPrimary}>
-                            {metric.provider}
-                          </AppText>
-                          <AppText variant="caption" color={colors.textDarkSecondary}>
-                            {metric.recommendation}
+                {providerMetrics.length === 0 ? (
+                  <AppText variant="body" color={colors.textDarkSecondary}>
+                    Provider intelligence will populate once execution snapshots contain active route telemetry.
+                  </AppText>
+                ) : (
+                  <View style={{ gap: 12 }}>
+                    {providerMetrics.map((metric) => (
+                      <View
+                        key={metric.provider}
+                        style={{
+                          padding: 16,
+                          borderRadius: 22,
+                          backgroundColor: "#FFFFFF",
+                          borderWidth: 1,
+                          borderColor: "#E2E8F0",
+                          gap: 12,
+                        }}
+                      >
+                        <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
+                          <View style={{ flex: 1 }}>
+                            <AppText variant="subheading" color={colors.textDarkPrimary}>
+                              {metric.provider}
+                            </AppText>
+                            <AppText variant="caption" color={colors.textDarkSecondary}>
+                              {metric.recommendation}
+                            </AppText>
+                          </View>
+                          <AppText variant="caption" style={{ color: colors.gold, fontWeight: "900" }}>
+                            Health {metric.healthScore}/100
                           </AppText>
                         </View>
-                        <AppText variant="caption" style={{ color: colors.gold, fontWeight: "900" }}>
-                          Health {metric.healthScore}/100
-                        </AppText>
-                      </View>
 
-                      <View style={{ flexDirection: "row", gap: 8 }}>
-                        <MiniMetric label="Success" value={`${metric.successRate}%`} />
-                        <MiniMetric label="Latency" value={`${metric.averageLatencyMinutes}m`} />
-                        <MiniMetric label="Failover" value={`${metric.failoverRisk}%`} />
+                        <View style={{ flexDirection: "row", gap: 8 }}>
+                          <MiniMetric label="Success" value={`${metric.successRate}%`} />
+                          <MiniMetric label="Latency" value={`${metric.averageLatencyMinutes}m`} />
+                          <MiniMetric label="Failover" value={`${metric.failoverRisk}%`} />
+                        </View>
                       </View>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
-          </AppCard>
+                    ))}
+                  </View>
+                )}
+              </View>
+            </AppCard>
+          ) : null}
 
           <AppCard>
             <View style={{ gap: 12 }}>

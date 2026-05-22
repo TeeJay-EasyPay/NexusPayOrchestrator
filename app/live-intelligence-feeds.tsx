@@ -9,8 +9,10 @@ import {
   View,
 } from "react-native";
 
+import { NexusAIToggleCard } from "../src/components/intelligence/NexusAIToggleCard";
 import { AppDropdownMenu } from "../src/components/navigation/AppDropdownMenu";
 import { AppButton } from "../src/components/ui/AppButton";
+import { useNexusAIScreenSetting } from "../src/hooks/useNexusAISettings";
 import {
   getLiveIntelligenceFeeds,
   LiveIntelligenceFeeds,
@@ -21,6 +23,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function LiveIntelligenceFeedsScreen() {
   const router = useRouter();
+  const {
+    loading: nexusAILoading,
+    enabled: corridorAIEnabled,
+    disabled: corridorAIDisabled,
+    toggle: toggleCorridorAI,
+  } = useNexusAIScreenSetting("corridor_enabled");
 
   const [feeds, setFeeds] = useState<LiveIntelligenceFeeds | null>(null);
   const [loading, setLoading] = useState(true);
@@ -82,6 +90,15 @@ export default function LiveIntelligenceFeedsScreen() {
         </Text>
       </View>
 
+      <NexusAIToggleCard
+        title="Nexus AI"
+        description="Controls corridor liquidity intelligence and screen-level intelligence visibility on this feed."
+        enabled={corridorAIEnabled}
+        disabled={corridorAIDisabled}
+        loading={nexusAILoading}
+        onToggle={toggleCorridorAI}
+      />
+
       {/* MARKET INTELLIGENCE */}
 
       <View style={styles.card}>
@@ -118,48 +135,60 @@ export default function LiveIntelligenceFeedsScreen() {
 
       {/* Corridor Liquidity Intelligence */}
 
-<View style={styles.card}>
-  <Text style={styles.cardTitle}>
-    Corridor Liquidity Intelligence
-  </Text>
+      {corridorAIEnabled ? (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>
+            Corridor Liquidity Intelligence
+          </Text>
 
-  {feeds?.treasury.length ? (
-    feeds.treasury.map((item) => (
-      <View
-        key={`${item.corridor}-${item.asOf}`}
-        style={styles.treasuryCard}
-      >
-        <Text style={styles.corridorTitle}>
-          {item.corridor}
-        </Text>
+          {feeds?.treasury.length ? (
+            feeds.treasury.map((item) => (
+              <View
+                key={`${item.corridor}-${item.asOf}`}
+                style={styles.treasuryCard}
+              >
+                <Text style={styles.corridorTitle}>
+                  {item.corridor}
+                </Text>
 
-        <Text style={styles.metric}>
-          Liquidity Health: {item.liquidityHealth}
-        </Text>
+                <Text style={styles.metric}>
+                  Liquidity Health: {item.liquidityHealth}
+                </Text>
 
-        <Text style={styles.metric}>
-          Market Status: {item.marketStatus}
-        </Text>
+                <Text style={styles.metric}>
+                  Market Status: {item.marketStatus}
+                </Text>
 
-        <Text style={styles.metric}>
-          FX Stability: {item.fxStability}
-        </Text>
+                <Text style={styles.metric}>
+                  FX Stability: {item.fxStability}
+                </Text>
 
-        <Text style={styles.recommendation}>
-          Recommendation: {item.recommendation}
-        </Text>
+                <Text style={styles.recommendation}>
+                  Recommendation: {item.recommendation}
+                </Text>
 
-        <Text style={styles.insight}>
-          {item.insight}
-        </Text>
-      </View>
-    ))
-  ) : (
-    <Text style={styles.empty}>
-      No corridor liquidity intelligence available.
-    </Text>
-  )}
-</View>
+                <Text style={styles.insight}>
+                  {item.insight}
+                </Text>
+              </View>
+            ))
+          ) : (
+            <Text style={styles.empty}>
+              No corridor liquidity intelligence available.
+            </Text>
+          )}
+        </View>
+      ) : (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>
+            Nexus AI disabled for this screen
+          </Text>
+
+          <Text style={styles.empty}>
+            Corridor liquidity intelligence is hidden until corridor intelligence is enabled in Nexus AI.
+          </Text>
+        </View>
+      )}
 
       {/* MARKET HOURS */}
 

@@ -2,16 +2,18 @@ import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 
+import { NexusAIToggleCard } from "../src/components/intelligence/NexusAIToggleCard";
 import { AppButton } from "../src/components/ui/AppButton";
 import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
 import { Screen } from "../src/components/ui/Screen";
+import { useNexusAIScreenSetting } from "../src/hooks/useNexusAISettings";
 import {
-  buildRouteOperationalEvent,
+    buildRouteOperationalEvent,
 } from "../src/lib/routeOperationalState";
 import { buildOrchestratedRouteQuotes } from "../src/lib/settlementOrchestrator";
 import {
-  writeRouteOperationalEvent,
+    writeRouteOperationalEvent,
 } from "../src/services/routeOperationalEventService";
 import { writeTreasuryLiquiditySnapshot } from "../src/services/treasuryIntelligenceService";
 import { useTransfer } from "../src/state/TransferContext";
@@ -122,12 +124,14 @@ function RouteOptionCard({
   recipientCurrency,
   isSelected,
   onPress,
+  showIntelligence,
 }: {
   route: RouteQuote;
   index: number;
   recipientCurrency: Currency;
   isSelected: boolean;
   onPress: () => void;
+  showIntelligence: boolean;
 }) {
   const isRecommended = index === 0;
   const borderColor = isSelected ? colors.gold : isRecommended ? "#BFE7D0" : "#E2E8F0";
@@ -207,108 +211,130 @@ function RouteOptionCard({
             <MiniStat label="AI Confidence" value={`${route.aiConfidence ?? 0}/100`} />
           </View>
 
-          <View
-            style={{
-              padding: 14,
-              borderRadius: 18,
-              backgroundColor: "#F8FAFC",
-              borderWidth: 1,
-              borderColor: "#E2E8F0",
-              gap: 8,
-            }}
-          >
-            <AppText variant="caption" color={colors.textDarkMuted}>
-              AI route intelligence
-            </AppText>
+          {showIntelligence ? (
+            <>
+              <View
+                style={{
+                  padding: 14,
+                  borderRadius: 18,
+                  backgroundColor: "#F8FAFC",
+                  borderWidth: 1,
+                  borderColor: "#E2E8F0",
+                  gap: 8,
+                }}
+              >
+                <AppText variant="caption" color={colors.textDarkMuted}>
+                  AI route intelligence
+                </AppText>
 
-            <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
-              {route.aiRecommendation}
-            </AppText>
+                <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
+                  {route.aiRecommendation}
+                </AppText>
 
-            <AppText variant="caption" color={colors.textDarkSecondary}>
-              {route.corridorInsight}
-            </AppText>
+                <AppText variant="caption" color={colors.textDarkSecondary}>
+                  {route.corridorInsight}
+                </AppText>
 
-            <View style={{ flexDirection: "row", gap: 8 }}>
-              <MiniStat
-                label="Risk"
-                value={`${route.predictedFailureRisk?.toFixed(1) ?? "0.0"}%`}
-              />
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  <MiniStat
+                    label="Risk"
+                    value={`${route.predictedFailureRisk?.toFixed(1) ?? "0.0"}%`}
+                  />
 
-              <MiniStat
-                label="Corridor"
-                value={`${route.corridorHealthScore ?? 0}/100`}
-              />
+                  <MiniStat
+                    label="Corridor"
+                    value={`${route.corridorHealthScore ?? 0}/100`}
+                  />
 
-              <MiniStat
-                label="Trend"
-                value={route.providerRecentTrend ?? "STABLE"}
-              />
-            </View>
-          </View>
+                  <MiniStat
+                    label="Trend"
+                    value={route.providerRecentTrend ?? "STABLE"}
+                  />
+                </View>
+              </View>
 
-          <View
-            style={{
-              padding: 14,
-              borderRadius: 18,
-              backgroundColor: "#FFF8E1",
-              borderWidth: 1,
-              borderColor: "#F3D58A",
-              gap: 8,
-            }}
-          >
-            <AppText variant="caption" color="#8A6218">
-              Treasury liquidity intelligence
-            </AppText>
+              <View
+                style={{
+                  padding: 14,
+                  borderRadius: 18,
+                  backgroundColor: "#FFF8E1",
+                  borderWidth: 1,
+                  borderColor: "#F3D58A",
+                  gap: 8,
+                }}
+              >
+                <AppText variant="caption" color="#8A6218">
+                  Treasury liquidity intelligence
+                </AppText>
 
-            <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
-              {route.treasuryRecommendation ?? "Treasury intelligence pending"}
-            </AppText>
+                <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
+                  {route.treasuryRecommendation ?? "Treasury intelligence pending"}
+                </AppText>
 
-            <View style={{ flexDirection: "row", gap: 8 }}>
-              <MiniStat
-                label="Treasury"
-                value={`${route.treasuryScore ?? 0}/100`}
-              />
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  <MiniStat
+                    label="Treasury"
+                    value={`${route.treasuryScore ?? 0}/100`}
+                  />
 
-              <MiniStat
-                label="Pressure"
-                value={route.treasuryCorridorPressure ?? "LOW"}
-              />
+                  <MiniStat
+                    label="Pressure"
+                    value={route.treasuryCorridorPressure ?? "LOW"}
+                  />
 
-              <MiniStat
-                label="Rail cap."
-                value={`${route.treasuryRailCapacityScore ?? 0}/100`}
-              />
-            </View>
-          </View>
+                  <MiniStat
+                    label="Rail cap."
+                    value={`${route.treasuryRailCapacityScore ?? 0}/100`}
+                  />
+                </View>
+              </View>
 
-          {route.aiDecisionFactors && route.aiDecisionFactors.length > 0 ? (
-            <View
+              {route.aiDecisionFactors && route.aiDecisionFactors.length > 0 ? (
+                <View
+                  style={{
+                    padding: 13,
+                    borderRadius: 18,
+                    backgroundColor: isSelected ? "#FFFFFF" : "#F8FAFC",
+                    borderWidth: 1,
+                    borderColor: "#E2E8F0",
+                    gap: 6,
+                  }}
+                >
+                  <AppText variant="caption" color={colors.textDarkMuted}>
+                    AI decision factors
+                  </AppText>
+
+                  {route.aiDecisionFactors.map((factor, factorIndex) => (
+                    <AppText
+                      key={`${route.id}-${factorIndex}`}
+                      variant="caption"
+                      color={colors.textDarkSecondary}
+                    >
+                      • {factor}
+                    </AppText>
+                  ))}
+                </View>
+              ) : null}
+            </>
+          ) : (
+            <AppCard
               style={{
-                padding: 13,
-                borderRadius: 18,
-                backgroundColor: isSelected ? "#FFFFFF" : "#F8FAFC",
+                padding: 14,
                 borderWidth: 1,
                 borderColor: "#E2E8F0",
+                backgroundColor: "#F8FAFC",
                 gap: 6,
               }}
             >
               <AppText variant="caption" color={colors.textDarkMuted}>
-                AI decision factors
+                Nexus AI disabled for this screen
               </AppText>
 
-              {route.aiDecisionFactors.map((factor, factorIndex) => (
-                <AppText
-                  key={`${route.id}-${factorIndex}`}
-                  variant="caption"
-                  color={colors.textDarkSecondary}
-                >
-                  • {factor}
-                </AppText>
-              ))}
-            </View>
-          ) : null}
+              <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
+                Route suggestions remain available, but AI-driven explanations are hidden until Nexus AI is enabled for Route Intelligence.
+              </AppText>
+            </AppCard>
+          )}
         </View>
       </AppCard>
     </Pressable>
@@ -318,6 +344,12 @@ function RouteOptionCard({
 export default function RoutesScreen() {
   const { transfer, setRoutes, selectRoute } = useTransfer();
   const { simulatedRlusdBalance } = useWallet();
+  const {
+    loading: nexusAILoading,
+    enabled: routeAIEnabled,
+    disabled: routeAIDisabled,
+    toggle: toggleRouteAI,
+  } = useNexusAIScreenSetting("route_enabled");
 
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
 
@@ -432,6 +464,27 @@ export default function RoutesScreen() {
             </AppText>
           </View>
 
+          <NexusAIToggleCard
+            title="Nexus AI"
+            description="Controls route intelligence scoring, treasury reasoning and route explanations on this screen."
+            enabled={routeAIEnabled}
+            disabled={routeAIDisabled}
+            loading={nexusAILoading}
+            onToggle={toggleRouteAI}
+          />
+
+          {!routeAIEnabled ? (
+            <AppCard>
+              <AppText variant="subheading" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
+                Nexus AI disabled for this screen
+              </AppText>
+
+              <AppText variant="caption" color={colors.textDarkSecondary} style={{ marginTop: 6 }}>
+                Route selection still works, but the AI explanation panels are hidden until Route Intelligence is re-enabled.
+              </AppText>
+            </AppCard>
+          ) : null}
+
           <View style={{ gap: 12 }}>
             {activeRoutes.map((route, index) => (
               <RouteOptionCard
@@ -440,6 +493,7 @@ export default function RoutesScreen() {
                 index={index}
                 recipientCurrency={recipient.currency}
                 isSelected={selectedRouteId === route.id}
+                showIntelligence={routeAIEnabled}
                 onPress={() => handleSelectRoute(route)}
               />
             ))}

@@ -3,10 +3,12 @@ import { useEffect, useRef, useState } from "react";
 import { Linking, Pressable, ScrollView, View } from "react-native";
 
 import { OperationalTimelineCard } from "../src/components/audit/OperationalTimelineCard";
+import { NexusAIToggleCard } from "../src/components/intelligence/NexusAIToggleCard";
 import { AppButton } from "../src/components/ui/AppButton";
 import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
 import { Screen } from "../src/components/ui/Screen";
+import { useNexusAIScreenSetting } from "../src/hooks/useNexusAISettings";
 import {
   ExecutionSnapshot,
   ExecutionStep,
@@ -158,6 +160,12 @@ function DetailMetric({ label, value }: { label: string; value: string }) {
 export default function TrackScreen() {
   const { transfer, startTransfer, completeTransfer } = useTransfer();
   const { debitGbp, refreshXrpBalance } = useWallet();
+  const {
+    loading: nexusAILoading,
+    enabled: trackingAIEnabled,
+    disabled: trackingAIDisabled,
+    toggle: toggleTrackingAI,
+  } = useNexusAIScreenSetting("tracking_enabled");
 
   const [executionSnapshot, setExecutionSnapshot] = useState<ExecutionSnapshot | null>(null);
   const [completedAt, setCompletedAt] = useState<string | null>(null);
@@ -311,6 +319,27 @@ export default function TrackScreen() {
               NexusPay is coordinating settlement, bridge proof and payout delivery through the execution engine.
             </AppText>
           </View>
+
+          <NexusAIToggleCard
+            title="Nexus AI"
+            description="Controls tracking intelligence, execution context and screen-level AI assistance on this screen."
+            enabled={trackingAIEnabled}
+            disabled={trackingAIDisabled}
+            loading={nexusAILoading}
+            onToggle={toggleTrackingAI}
+          />
+
+          {!trackingAIEnabled ? (
+            <AppCard>
+              <AppText variant="subheading" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
+                Nexus AI disabled for this screen
+              </AppText>
+
+              <AppText variant="caption" color={colors.textDarkSecondary} style={{ marginTop: 6 }}>
+                Execution still runs normally, but AI-assisted tracking context is hidden until tracking intelligence is enabled.
+              </AppText>
+            </AppCard>
+          ) : null}
 
           <View
             style={{
