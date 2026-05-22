@@ -274,6 +274,15 @@ export default function TrackScreen() {
             </AppText>
           </View>
 
+          <NexusAIToggleCard
+            title="Nexus AI"
+            description="Controls tracking intelligence, execution context and screen-level AI assistance on this screen."
+            enabled={trackingAIEnabled}
+            disabled={trackingAIDisabled}
+            loading={nexusAILoading}
+            onToggle={toggleTrackingAI}
+          />
+
           <AppCard>
             <AppText variant="body" color={colors.textDarkSecondary}>
               Select a route first so NexusPay can begin tracking the transfer.

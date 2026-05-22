@@ -2,6 +2,7 @@ import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, TextInput, View } from "react-native";
 
+import { NexusAIToggleCard } from "../src/components/intelligence/NexusAIToggleCard";
 import { SavedRecipientsCard } from "../src/components/recipients/SavedRecipientsCard";
 import { AppButton } from "../src/components/ui/AppButton";
 import { AppCard } from "../src/components/ui/AppCard";
@@ -9,10 +10,11 @@ import { AppText } from "../src/components/ui/AppText";
 import { Screen } from "../src/components/ui/Screen";
 
 import { corridors } from "../src/data/corridors";
+import { useNexusAIScreenSetting } from "../src/hooks/useNexusAISettings";
 import { writeAuditLog } from "../src/services/auditLog";
 import {
-  loadSavedRecipients,
-  toggleRecipientFavorite,
+    loadSavedRecipients,
+    toggleRecipientFavorite,
 } from "../src/services/recipientService";
 import { useTransfer } from "../src/state/TransferContext";
 import { useWallet } from "../src/state/WalletContext";
@@ -317,6 +319,12 @@ export default function SendScreen() {
   const params = useLocalSearchParams();
   const { gbpBalance } = useWallet();
   const { createTransfer, setRecipient } = useTransfer();
+  const {
+    loading: nexusAILoading,
+    enabled: sendAIEnabled,
+    disabled: sendAIDisabled,
+    toggle: toggleSendAI,
+  } = useNexusAIScreenSetting("route_enabled");
 
   const [savedRecipients, setSavedRecipients] = useState<SavedRecipient[]>([]);
   const [selectedRecipientId, setSelectedRecipientId] = useState<string | null>(null);
@@ -588,6 +596,15 @@ export default function SendScreen() {
               Fast, secure and transparent transfers powered by route intelligence.
             </AppText>
           </View>
+
+          <NexusAIToggleCard
+            title="Nexus AI"
+            description="Controls route intelligence guidance and AI-assisted transfer setup on this screen."
+            enabled={sendAIEnabled}
+            disabled={sendAIDisabled}
+            loading={nexusAILoading}
+            onToggle={toggleSendAI}
+          />
 
           <AppCard>
             <View style={{ gap: 16 }}>

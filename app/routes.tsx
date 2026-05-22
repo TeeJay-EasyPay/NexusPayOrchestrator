@@ -432,6 +432,15 @@ export default function RoutesScreen() {
             </AppText>
           </View>
 
+          <NexusAIToggleCard
+            title="Nexus AI"
+            description="Controls route intelligence scoring, treasury reasoning and route explanations on this screen."
+            enabled={routeAIEnabled}
+            disabled={routeAIDisabled}
+            loading={nexusAILoading}
+            onToggle={toggleRouteAI}
+          />
+
           <AppCard>
             <AppText variant="body" color={colors.textDarkSecondary}>
               Start a transfer first so NexusPay can calculate live route options.

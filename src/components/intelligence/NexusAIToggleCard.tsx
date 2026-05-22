@@ -26,11 +26,6 @@ export function NexusAIToggleCard({
   const toggleDisabled = disabled || loading;
 
   const statusLabel = enabled ? "Enabled" : "Disabled";
-  const statusText = disabled
-    ? "AI disabled globally"
-    : enabled
-      ? "Nexus AI active for this screen"
-      : "Nexus AI disabled for this screen";
 
   return (
     <AppCard
@@ -45,7 +40,7 @@ export function NexusAIToggleCard({
       <View
         style={{
           flexDirection: compactLayout ? "column" : "row",
-          alignItems: "center",
+          alignItems: compactLayout ? "stretch" : "flex-start",
           justifyContent: "space-between",
           gap: 12,
         }}
@@ -57,10 +52,6 @@ export function NexusAIToggleCard({
 
           <AppText variant="caption" color={colors.textDarkSecondary}>
             {description}
-          </AppText>
-
-          <AppText variant="caption" color={disabled ? colors.textDarkMuted : colors.textDarkSecondary}>
-            {statusText}
           </AppText>
         </View>
 
