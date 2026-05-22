@@ -17,6 +17,11 @@ import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
 import { Screen } from "../src/components/ui/Screen";
 import { useNexusAIScreenSetting } from "../src/hooks/useNexusAISettings";
+import {
+  loadRecoverableExecutionSessions,
+  PersistedExecutionSession,
+} from "../src/services/execution/executionPersistenceService";
+import { subscribeToRecentExecutionSessions } from "../src/services/execution/executionRealtimeService";
 import { getLiveIntelligenceFeeds } from "../src/services/liveIntelligenceFeedService";
 import {
   generateIntelligenceReport,
@@ -26,16 +31,11 @@ import {
   loadRecentRouteOperationalEvents,
   RouteOperationalEventRow,
 } from "../src/services/routeOperationalEventService";
+import { loadCompletedTransfers } from "../src/services/transferService";
 import {
   loadRecentTreasurySnapshots,
   TreasuryLiquiditySnapshotRow,
 } from "../src/services/treasuryIntelligenceService";
-import { loadCompletedTransfers } from "../src/services/transferService";
-import {
-  loadRecoverableExecutionSessions,
-  PersistedExecutionSession,
-} from "../src/services/execution/executionPersistenceService";
-import { subscribeToRecentExecutionSessions } from "../src/services/execution/executionRealtimeService";
 import { colors } from "../src/theme";
 import { Transfer } from "../src/types/transfer";
 
