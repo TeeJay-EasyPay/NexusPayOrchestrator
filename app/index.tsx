@@ -4,7 +4,7 @@ import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  FlatList,
+    FlatList,
     Pressable,
     ScrollView,
     useWindowDimensions,
@@ -20,8 +20,8 @@ import { buildCorridorHealth, CorridorHealth } from "../src/lib/corridorHealth";
 import { fetchCorridorFxRates, fetchFxRate, FxRate } from "../src/lib/fxFeed";
 import { supabase } from "../src/lib/supabase";
 import {
-  DashboardSummaryResult,
-  generateDashboardSummary,
+    DashboardSummaryResult,
+    generateDashboardSummary,
 } from "../src/services/nexusAIService";
 import { usePaymentMethods } from "../src/state/PaymentMethodsContext";
 import { useTransfer } from "../src/state/TransferContext";

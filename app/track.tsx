@@ -10,15 +10,15 @@ import { AppText } from "../src/components/ui/AppText";
 import { Screen } from "../src/components/ui/Screen";
 import { useNexusAIScreenSetting } from "../src/hooks/useNexusAISettings";
 import {
-  ExecutionSnapshot,
-  ExecutionStep,
-  runTransferExecution,
+    ExecutionSnapshot,
+    ExecutionStep,
+    runTransferExecution,
 } from "../src/services/execution/executionEngine";
 import { loadExecutionSession } from "../src/services/execution/executionPersistenceService";
 import { subscribeToExecutionSession } from "../src/services/execution/executionRealtimeService";
 import {
-  analyseTransfer,
-  TransferAnalysisResult,
+    analyseTransfer,
+    TransferAnalysisResult,
 } from "../src/services/nexusAIService";
 import { PayoutStatus } from "../src/services/payout/payoutTypes";
 import { useTransfer } from "../src/state/TransferContext";

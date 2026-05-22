@@ -1,17 +1,17 @@
 import { supabase } from "../lib/supabase";
-import { NexusAISensitivity } from "./nexusAISettingsService";
+import type { RouteQuote, Transfer } from "../types/transfer";
+import type { ExecutionSnapshot } from "./execution/executionEngine";
 import {
-	buildDashboardExecutiveContext,
-	buildRouteIntelligenceContext,
-	buildTransferIntelligenceContext,
+    buildDashboardExecutiveContext,
+    buildRouteIntelligenceContext,
+    buildTransferIntelligenceContext,
 } from "./intelligence/contextBuilder";
 import type {
-	DashboardExecutiveContext,
-	RouteIntelligenceContext,
-	TransferIntelligenceContext,
+    DashboardExecutiveContext,
+    RouteIntelligenceContext,
+    TransferIntelligenceContext,
 } from "./intelligence/contextTypes";
-import type { Transfer, RouteQuote } from "../types/transfer";
-import type { ExecutionSnapshot } from "./execution/executionEngine";
+import { NexusAISensitivity } from "./nexusAISettingsService";
 
 type NexusAIScreenContext =
 	| "home"
@@ -698,21 +698,21 @@ export async function generateIntelligenceReport(
 }
 
 export type {
-	DashboardSummaryInput,
-	DashboardSummaryResult,
-	DashboardTelemetryPayload,
-	IntelligenceReportInput,
-	IntelligenceReportResult,
-	IntelligenceReportType,
-	NexusAIRequestOptions,
-	NexusAIResult,
-	NexusAIScreenContext,
-	RouteExplanationInput,
-	RouteExplanationResult,
-	TransferAnalysisInput,
-	TransferAnalysisResult,
-	TransferMilestone,
-	TransferOperationalEvent,
+    DashboardSummaryInput,
+    DashboardSummaryResult,
+    DashboardTelemetryPayload,
+    IntelligenceReportInput,
+    IntelligenceReportResult,
+    IntelligenceReportType,
+    NexusAIRequestOptions,
+    NexusAIResult,
+    NexusAIScreenContext,
+    RouteExplanationInput,
+    RouteExplanationResult,
+    TransferAnalysisInput,
+    TransferAnalysisResult,
+    TransferMilestone,
+    TransferOperationalEvent
 };
 
 /**
@@ -722,17 +722,17 @@ export type {
  * for more advanced integrations. Context building is optional and all existing
  * APIs remain unchanged.
  */
-export type {
-	DashboardExecutiveContext,
-	RouteIntelligenceContext,
-	TransferIntelligenceContext,
-};
+    export type {
+        DashboardExecutiveContext,
+        RouteIntelligenceContext,
+        TransferIntelligenceContext
+    };
 
-export {
-	buildDashboardExecutiveContext,
-	buildRouteIntelligenceContext,
-	buildTransferIntelligenceContext,
-};
+    export {
+        buildDashboardExecutiveContext,
+        buildRouteIntelligenceContext,
+        buildTransferIntelligenceContext
+    };
 
 /**
  * Optional enrichment helper exports for advanced callers.
@@ -740,4 +740,5 @@ export {
  * These helpers allow optional context enrichment of payloads for integrations
  * that want to leverage the structured context models.
  */
-export { enrichDashboardPayload, enrichRoutePayload, enrichTransferPayload };
+    export { enrichDashboardPayload, enrichRoutePayload, enrichTransferPayload };
+
