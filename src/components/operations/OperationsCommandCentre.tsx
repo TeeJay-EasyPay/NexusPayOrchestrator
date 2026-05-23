@@ -438,25 +438,8 @@ export function OperationsCommandCentre() {
         />
 
         <AppCard>
-          <View style={styles.cardHeaderRow}>
-            <View>
-              <AppText variant="subheading" color={colors.textDarkPrimary} style={styles.sectionTitle}>
-                Mission Control Status
-              </AppText>
-              <AppText variant="caption" color={colors.textDarkMuted}>
-                The operating picture at a glance
-              </AppText>
-            </View>
-          </View>
-
-          <AppText variant="body" color={colors.textDarkPrimary} style={styles.attentionSummary}>
-            {missionSummaryView.missionAlertMessage}
-          </AppText>
-
-          <View style={styles.statusGrid}>
-            {missionStatus.chips.map((chip) => (
-              <StatusChip key={chip.label} chip={chip} />
-            ))}
+          <View>
+            <Text>SECTION DISABLED FOR DIAGNOSIS - MISSION CONTROL STATUS</Text>
           </View>
         </AppCard>
 
