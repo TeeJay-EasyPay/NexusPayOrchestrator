@@ -299,6 +299,15 @@ export function OperationsCommandCentre() {
     });
 
   const missionAlertMessage = transferSuccessAnomaly ?? missionStatus.attentionSummary;
+  const missionExecutiveSummary =
+    typeof missionSummary?.executiveSummary === "string" && missionSummary.executiveSummary.trim().length > 0
+      ? missionSummary.executiveSummary
+      : "Live mission summary is temporarily unavailable.";
+  const missionKeyFindings = Array.isArray((missionSummary as { keyFindings?: unknown } | null)?.keyFindings)
+    ? ((missionSummary as { keyFindings: unknown[] }).keyFindings
+      .filter((line): line is string => typeof line === "string" && line.trim().length > 0)
+      .slice(0, 3))
+    : [];
 
   return (
     <Screen>
@@ -550,16 +559,20 @@ export function OperationsCommandCentre() {
           ) : missionSummary ? (
             <View style={styles.stack}>
               <AppText variant="body" color={colors.textDarkPrimary} style={{ lineHeight: 22, fontWeight: "700" }}>
-                {missionSummary.executiveSummary}
+                {missionExecutiveSummary}
               </AppText>
-              {missionSummary.keyFindings.slice(0, 3).map((line, index) => (
+              {missionKeyFindings.length > 0 ? missionKeyFindings.map((line, index) => (
                 <View key={`finding-${index}`} style={styles.aiBulletRow}>
                   <View style={styles.aiBullet} />
                   <AppText variant="caption" color={colors.textDarkSecondary} style={{ flex: 1 }}>
                     {line}
                   </AppText>
                 </View>
-              ))}
+              )) : (
+                <AppText variant="caption" color={colors.textDarkSecondary}>
+                  No key findings were returned for this mission snapshot.
+                </AppText>
+              )}
             </View>
           ) : (
             <AppText variant="body" color={colors.textDarkSecondary}>

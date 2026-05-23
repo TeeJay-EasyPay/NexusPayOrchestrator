@@ -21,7 +21,15 @@ import {
     TreasuryLiquiditySnapshotRow,
 } from "../services/treasuryIntelligenceService";
 import { Transfer } from "../types/transfer";
-import { buildOperationsInsights, OperationsAlertFilter, OperationsInsights } from "../utils/operationsCommandCentre";
+import {
+  buildActiveTransfers,
+  buildCorridorRows,
+  buildKpis,
+  buildOperationsInsights,
+  buildTreasurySummary,
+  OperationsAlertFilter,
+  OperationsInsights,
+} from "../utils/operationsCommandCentre";
 import { useNexusAIScreenSetting } from "./useNexusAISettings";
 
 export type OperationsCommandCentreState = OperationsInsights & {
@@ -103,9 +111,11 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
       setEvents(eventData);
       setSessions((current) => sessionData.reduce(upsertSession, current));
       setTransfers(transferData);
-      setFeeds(feedData);
-      setFeedsRefreshedAt(feedData.refreshedAt);
+      setFeeds(feedData ?? null);
+      setFeedsRefreshedAt(feedData?.refreshedAt ?? null);
       setLastUpdatedAt(new Date().toISOString());
+    } catch (error) {
+      console.warn("[Operations] Failed to refresh telemetry", error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -155,12 +165,34 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
     return ["ALL", ...Array.from(set).sort((a, b) => a.localeCompare(b))];
   }, [events, insights.corridorRows]);
 
+  const aiTelemetry = useMemo(() => {
+    const corridorRows = buildCorridorRows(snapshots);
+    const kpiResult = buildKpis({ transfers, sessions, snapshots, events });
+    const treasurySummary = buildTreasurySummary(snapshots, transfers);
+    const activeTransfers = buildActiveTransfers(sessions, transfers);
+
+    return {
+      live: realtimeStatus,
+      transfers24h: kpiResult.items.find((item) => item.key === "transfers")?.value ?? "0",
+      successRate: kpiResult.items.find((item) => item.key === "success")?.value ?? "0%",
+      activeExecutions: activeTransfers.length,
+      activeAlerts: events.length,
+      criticalAlerts: events.filter((item) => item.severity === "FAILOVER" || item.severity === "DEGRADED").length,
+      topCorridor: corridorRows[0]?.corridor ?? "Unknown",
+      treasuryPressure: treasurySummary.pressure,
+      treasuryUtilization: treasurySummary.utilization,
+      marketOpenCount: feeds?.marketHours.filter((item) => item.status === "OPEN").length ?? 0,
+      fxFeedsLive: feeds?.fx.length ?? 0,
+    };
+  }, [events, feeds, realtimeStatus, sessions, snapshots, transfers]);
+
   useEffect(() => {
     let active = true;
 
     async function generateMissionSummary() {
       if (!operationsAIEnabled) {
         setMissionSummary(null);
+        setMissionSummaryLoading(false);
         setMissionSummaryStatus("Nexus AI disabled for this screen");
         return;
       }
@@ -168,42 +200,36 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
       setMissionSummaryLoading(true);
       setMissionSummaryStatus("Generating live mission interpretation");
 
-      const topCorridor = insights.corridorRows[0]?.corridor ?? "Unknown";
-      const criticalCount = events.filter((item) => item.severity === "FAILOVER" || item.severity === "DEGRADED").length;
-
-      const result = await generateIntelligenceReport(
-        {
-          reportType: "corridor_analysis",
-          focus: "Operations command centre mission health",
-          telemetry: {
-            live: realtimeStatus,
-            transfers24h: insights.kpis.find((item) => item.key === "transfers")?.value ?? "0",
-            successRate: insights.kpis.find((item) => item.key === "success")?.value ?? "0%",
-            activeExecutions: insights.activeTransfers.length,
-            activeAlerts: events.length,
-            criticalAlerts: criticalCount,
-            topCorridor,
-            treasuryPressure: insights.treasurySummary.pressure,
-            treasuryUtilization: insights.treasurySummary.utilization,
-            marketOpenCount: feeds?.marketHours.filter((item) => item.status === "OPEN").length ?? 0,
-            fxFeedsLive: feeds?.fx.length ?? 0,
+      try {
+        const result = await generateIntelligenceReport(
+          {
+            reportType: "corridor_analysis",
+            focus: "Operations command centre mission health",
+            telemetry: aiTelemetry,
           },
-        },
-        settings?.sensitivity ?? "balanced",
-        { timeoutMs: 7000, maxRetries: 1 }
-      );
+          settings?.sensitivity ?? "balanced",
+          { timeoutMs: 7000, maxRetries: 1 }
+        );
 
-      if (!active) return;
+        if (!active) return;
 
-      if (result.ok) {
-        setMissionSummary(result.data);
-        setMissionSummaryStatus("Live Nexus AI interpretation");
-      } else {
+        if (result.ok) {
+          setMissionSummary(result.data);
+          setMissionSummaryStatus("Live Nexus AI interpretation");
+        } else {
+          setMissionSummary(null);
+          setMissionSummaryStatus("Mission summary unavailable. Using live telemetry and operational status cards.");
+        }
+      } catch (error) {
+        if (!active) return;
+        console.warn("[Operations] Failed to generate mission summary", error);
         setMissionSummary(null);
-        setMissionSummaryStatus("Nexus AI mission summary currently unavailable");
+        setMissionSummaryStatus("Mission summary unavailable. Using live telemetry and operational status cards.");
+      } finally {
+        if (active) {
+          setMissionSummaryLoading(false);
+        }
       }
-
-      setMissionSummaryLoading(false);
     }
 
     void generateMissionSummary();
@@ -212,15 +238,8 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
       active = false;
     };
   }, [
-    events,
-    feeds,
-    insights.activeTransfers.length,
-    insights.corridorRows,
-    insights.kpis,
-    insights.treasurySummary.pressure,
-    insights.treasurySummary.utilization,
+    aiTelemetry,
     operationsAIEnabled,
-    realtimeStatus,
     settings?.sensitivity,
   ]);
 
