@@ -274,10 +274,15 @@ export function OperationsCommandCentre() {
     setCorridorFilter,
     corridorFilterOptions,
     feedData,
+    debugStage,
   } = useOperationsCommandCentre();
+
+  // TEMPORARY: on-screen diagnostic stage tracker — remove once crash is identified
+  const [uiStage, setUiStage] = useState("OPS_DEBUG: render start");
 
   useEffect(() => {
     console.log("OPS_DEBUG: render complete");
+    setUiStage("OPS_DEBUG: UI render complete");
 
     return () => {
       console.log("OPS_DEBUG: component unmount");
@@ -376,6 +381,16 @@ export function OperationsCommandCentre() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void refresh(); }} tintColor="#FFFFFF" />}
         contentContainerStyle={styles.content}
       >
+        {/* TEMPORARY: OPS_DEBUG diagnostic banner — remove once crash is identified */}
+        <View style={styles.debugBanner}>
+          <AppText variant="caption" style={styles.debugBannerText} numberOfLines={1}>
+            {uiStage}
+          </AppText>
+          <AppText variant="caption" style={styles.debugBannerText} numberOfLines={1}>
+            {debugStage}
+          </AppText>
+        </View>
+
         <View style={styles.headerBlock}>
           <AppText variant="title" color={colors.textPrimary}>
             Operations Command Centre
@@ -703,6 +718,23 @@ const styles = StyleSheet.create({
   background: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.background,
+  },
+  // TEMPORARY: OPS_DEBUG diagnostic banner styles — remove once crash is identified
+  debugBanner: {
+    backgroundColor: "#0A0F1E",
+    borderWidth: 1,
+    borderColor: "#FFD700",
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    gap: 2,
+    marginHorizontal: 4,
+  },
+  debugBannerText: {
+    color: "#FFD700",
+    fontFamily: "monospace",
+    fontSize: 10,
+    letterSpacing: 0.2,
   },
   content: {
     gap: 14,

@@ -56,6 +56,7 @@ export type OperationsCommandCentreState = OperationsInsights & {
   corridorOptions: string[];
   corridorFilterOptions: string[];
   feedData: LiveIntelligenceFeeds | null;
+  debugStage: string;
 };
 
 const AI_MIN_REFRESH_INTERVAL_MS = 30_000;
@@ -105,6 +106,7 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
   const [aiRefreshNonce, setAiRefreshNonce] = useState(0);
   const [severityFilter, setSeverityFilter] = useState<OperationsAlertFilter>("ALL");
   const [corridorFilter, setCorridorFilter] = useState("ALL");
+  const [debugStage, setDebugStage] = useState("OPS_DEBUG: initializing");
   const isMountedRef = useRef(true);
   const aiInFlightRef = useRef(false);
   const aiLastRunAtRef = useRef(0);
@@ -153,6 +155,7 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
 
   const loadTelemetry = useCallback(async () => {
     console.log("OPS_DEBUG: telemetry loading start");
+    setDebugStage("OPS_DEBUG: telemetry loading start");
 
     try {
       const [snapshotData, eventData, sessionData, transferData, feedData] = await Promise.all([
@@ -172,6 +175,7 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
         transfers: transferData.length,
         hasFeeds: Boolean(feedData),
       });
+      setDebugStage(`OPS_DEBUG: telemetry loaded (snap=${snapshotData.length} ev=${eventData.length} sess=${sessionData.length} tx=${transferData.length})`);
 
       setSnapshots(snapshotData);
       setEvents(eventData);
@@ -182,6 +186,7 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
       setLastUpdatedAt(new Date().toISOString());
     } catch (error) {
       console.warn("OPS_DEBUG: telemetry loading failed", error);
+      setDebugStage(`OPS_DEBUG: telemetry loading failed - ${error instanceof Error ? error.message : String(error)}`);
       console.warn("[Operations] Failed to refresh telemetry", error);
     } finally {
       console.log("OPS_DEBUG: telemetry loading complete");
@@ -358,10 +363,12 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
 
   useEffect(() => {
     console.log("OPS_DEBUG: mission summary calculation effect start");
+    setDebugStage("OPS_DEBUG: mission summary effect start");
 
     async function generateMissionSummary() {
       if (!operationsAIEnabled) {
         console.log("OPS_DEBUG: mission summary skipped - AI disabled");
+        setDebugStage("OPS_DEBUG: mission summary skipped - AI disabled");
         aiRequestIdRef.current += 1;
         aiInFlightRef.current = false;
         aiLastSignatureRef.current = "";
@@ -375,6 +382,7 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
 
       if (!hasTelemetry) {
         console.log("OPS_DEBUG: mission summary skipped - waiting for telemetry");
+        setDebugStage("OPS_DEBUG: mission summary skipped - waiting for telemetry");
         if (isMountedRef.current) {
           setMissionSummaryStatus("Waiting for telemetry");
         }
@@ -396,6 +404,7 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
           throttled,
           inFlight: aiInFlightRef.current,
         });
+        setDebugStage(throttled ? "OPS_DEBUG: mission summary throttled (30s)" : "OPS_DEBUG: mission summary skipped - previous in flight");
         if (isMountedRef.current) {
           setMissionSummaryStatus("AI refresh throttled");
         }
@@ -423,6 +432,7 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
           requestId,
           sensitivity: settings?.sensitivity ?? "balanced",
         });
+        setDebugStage(`OPS_DEBUG: mission summary AI call start (req=${requestId})`);
 
         const result = await generateIntelligenceReport(
           {
@@ -443,6 +453,7 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
             requestId,
             ok: true,
           });
+          setDebugStage(`OPS_DEBUG: mission summary calculation complete (req=${requestId})`);
           setMissionSummary(result.data);
           setMissionSummaryStatus("Live Nexus AI interpretation");
         } else {
@@ -450,6 +461,7 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
             requestId,
             ok: false,
           });
+          setDebugStage(`OPS_DEBUG: mission summary unavailable (req=${requestId})`);
           setMissionSummary(null);
           setMissionSummaryStatus("Nexus AI temporarily unavailable");
         }
@@ -462,6 +474,7 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
           requestId,
           error,
         });
+        setDebugStage(`OPS_DEBUG: mission summary failed - ${error instanceof Error ? error.message : String(error)}`);
         console.warn("[Operations] Failed to generate mission summary", error);
         setMissionSummary(null);
         setMissionSummaryStatus("Nexus AI temporarily unavailable");
@@ -513,5 +526,6 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
     corridorOptions,
     corridorFilterOptions: corridorOptions,
     feedData: feeds,
+    debugStage,
   };
 }
