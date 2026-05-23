@@ -1,7 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import React, { useEffect, useMemo, useState } from "react";
 import {
-    FlatList,
     Modal,
     Pressable,
     RefreshControl,
@@ -461,19 +460,11 @@ export function OperationsCommandCentre() {
           </View>
         </AppCard>
 
-        <FlatList
-          data={kpis}
-          key={kpiColumns}
-          numColumns={kpiColumns}
-          scrollEnabled={false}
-          columnWrapperStyle={kpiColumns > 1 ? styles.kpiRow : undefined}
-          contentContainerStyle={styles.kpiGrid}
-          renderItem={({ item }) => (
-            <View style={[styles.kpiCell, { flexBasis: `${100 / kpiColumns}%` }]}>
-              <KpiCard item={item} />
-            </View>
-          )}
-        />
+        <AppCard>
+          <View>
+            <Text>SECTION DISABLED FOR DIAGNOSIS - KPI CARDS</Text>
+          </View>
+        </AppCard>
 
         <AppCard>
           <SectionHeader title="Corridor Health" subtitle="Live corridor intelligence from treasury and route telemetry" />
