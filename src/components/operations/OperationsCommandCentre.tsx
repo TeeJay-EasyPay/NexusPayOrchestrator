@@ -1,5 +1,5 @@
 import { Feather } from "@expo/vector-icons";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
     ActivityIndicator,
     FlatList,
@@ -240,6 +240,8 @@ function ServiceHealthSection({ items }: { items: OperationsServiceHealth[] }) {
 }
 
 export function OperationsCommandCentre() {
+  console.log("OPS_DEBUG: render start");
+
   const { width } = useWindowDimensions();
   const [filtersVisible, setFiltersVisible] = useState(false);
 
@@ -274,19 +276,53 @@ export function OperationsCommandCentre() {
     feedData,
   } = useOperationsCommandCentre();
 
+  useEffect(() => {
+    console.log("OPS_DEBUG: render complete");
+
+    return () => {
+      console.log("OPS_DEBUG: component unmount");
+    };
+  });
+
   const kpiColumns = width >= 1100 ? 4 : width >= 760 ? 3 : 2;
   const twoColumnLayout = width >= 820;
   const corridorRowsToShow = useMemo(() => {
-    return corridorRows.filter((item) => corridorFilter === "ALL" ? true : item.corridor === corridorFilter);
+    console.log("OPS_DEBUG: corridor calculations start");
+
+    try {
+      const rows = corridorRows.filter((item) => corridorFilter === "ALL" ? true : item.corridor === corridorFilter);
+      console.log("OPS_DEBUG: corridor rows built", { total: rows.length, corridorFilter });
+      return rows;
+    } catch (error) {
+      console.warn("OPS_DEBUG: corridor calculations failed", error);
+      throw error;
+    }
   }, [corridorFilter, corridorRows]);
 
   const filteredAlerts = useMemo(
-    () =>
-      events.filter((item) => {
-        const severityMatch = severityFilter === "ALL" ? true : mapEventToAlertFilter(item) === severityFilter;
-        const corridorMatch = corridorFilter === "ALL" ? true : (item.corridor ?? "Unknown corridor") === corridorFilter;
-        return severityMatch && corridorMatch;
-      }),
+    () => {
+      console.log("OPS_DEBUG: alert calculations start");
+
+      try {
+        const alerts = events.filter((item) => {
+          const severityMatch = severityFilter === "ALL" ? true : mapEventToAlertFilter(item) === severityFilter;
+          const corridorMatch = corridorFilter === "ALL" ? true : (item.corridor ?? "Unknown corridor") === corridorFilter;
+          return severityMatch && corridorMatch;
+        });
+
+        console.log("OPS_DEBUG: alerts processed", {
+          total: events.length,
+          filtered: alerts.length,
+          severityFilter,
+          corridorFilter,
+        });
+
+        return alerts;
+      } catch (error) {
+        console.warn("OPS_DEBUG: alert calculations failed", error);
+        throw error;
+      }
+    },
     [corridorFilter, events, severityFilter]
   );
 
@@ -298,16 +334,38 @@ export function OperationsCommandCentre() {
       month: "short",
     });
 
-  const missionAlertMessage = transferSuccessAnomaly ?? missionStatus.attentionSummary;
-  const missionExecutiveSummary =
-    typeof missionSummary?.executiveSummary === "string" && missionSummary.executiveSummary.trim().length > 0
-      ? missionSummary.executiveSummary
-      : "Live mission summary is temporarily unavailable.";
-  const missionKeyFindings = Array.isArray((missionSummary as { keyFindings?: unknown } | null)?.keyFindings)
-    ? ((missionSummary as { keyFindings: unknown[] }).keyFindings
-      .filter((line): line is string => typeof line === "string" && line.trim().length > 0)
-      .slice(0, 3))
-    : [];
+  const missionSummaryView = useMemo(() => {
+    console.log("OPS_DEBUG: mission summary calculations start");
+
+    try {
+      const missionAlertMessage = transferSuccessAnomaly ?? missionStatus.attentionSummary;
+      const missionExecutiveSummary =
+        typeof missionSummary?.executiveSummary === "string" && missionSummary.executiveSummary.trim().length > 0
+          ? missionSummary.executiveSummary
+          : "Live mission summary is temporarily unavailable.";
+      const missionKeyFindings = Array.isArray((missionSummary as { keyFindings?: unknown } | null)?.keyFindings)
+        ? ((missionSummary as { keyFindings: unknown[] }).keyFindings
+          .filter((line): line is string => typeof line === "string" && line.trim().length > 0)
+          .slice(0, 3))
+        : [];
+
+      console.log("OPS_DEBUG: mission summary calculations complete", {
+        hasMissionSummary: Boolean(missionSummary),
+        findings: missionKeyFindings.length,
+      });
+
+      return {
+        missionAlertMessage,
+        missionExecutiveSummary,
+        missionKeyFindings,
+      };
+    } catch (error) {
+      console.warn("OPS_DEBUG: mission summary calculations failed", error);
+      throw error;
+    }
+  }, [missionStatus.attentionSummary, missionSummary, transferSuccessAnomaly]);
+
+  console.log("OPS_DEBUG: render complete");
 
   return (
     <Screen>
@@ -378,7 +436,7 @@ export function OperationsCommandCentre() {
           </View>
 
           <AppText variant="body" color={colors.textDarkPrimary} style={styles.attentionSummary}>
-            {missionAlertMessage}
+            {missionSummaryView.missionAlertMessage}
           </AppText>
 
           <View style={styles.statusGrid}>
@@ -559,9 +617,9 @@ export function OperationsCommandCentre() {
           ) : missionSummary ? (
             <View style={styles.stack}>
               <AppText variant="body" color={colors.textDarkPrimary} style={{ lineHeight: 22, fontWeight: "700" }}>
-                {missionExecutiveSummary}
+                {missionSummaryView.missionExecutiveSummary}
               </AppText>
-              {missionKeyFindings.length > 0 ? missionKeyFindings.map((line, index) => (
+              {missionSummaryView.missionKeyFindings.length > 0 ? missionSummaryView.missionKeyFindings.map((line, index) => (
                 <View key={`finding-${index}`} style={styles.aiBulletRow}>
                   <View style={styles.aiBullet} />
                   <AppText variant="caption" color={colors.textDarkSecondary} style={{ flex: 1 }}>
