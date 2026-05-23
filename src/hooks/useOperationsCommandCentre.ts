@@ -211,37 +211,14 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
     }, [loadTelemetry])
   );
 
+  // TEMPORARY: realtime subscription disabled for crash diagnosis.
+  // To re-enable: restore the subscribeToRecentExecutionSessions call below and remove the stub.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  void subscribeToRecentExecutionSessions; // keep import live — easy to restore
   useEffect(() => {
-    const unsubscribe = subscribeToRecentExecutionSessions({
-      onSession: (session) => {
-        console.log("OPS_DEBUG: subscription onSession start", {
-          sessionId: session.id,
-          state: session.state,
-          transferId: session.transfer_id,
-        });
-
-        if (!isMountedRef.current) return;
-        setRealtimeStatus("Live");
-        setSessions((current) => upsertSession(current, session));
-
-        console.log("OPS_DEBUG: subscription onSession complete", {
-          sessionId: session.id,
-          state: session.state,
-        });
-      },
-      onError: () => {
-        console.warn("OPS_DEBUG: subscription onError callback");
-        if (!isMountedRef.current) return;
-        setRealtimeStatus("Polling");
-      },
-    });
-
-    console.log("OPS_DEBUG: realtime subscription active");
-
-    return () => {
-      console.log("OPS_DEBUG: realtime subscription cleanup");
-      unsubscribe();
-    };
+    console.log("OPS_DEBUG: realtime subscription disabled (diagnostic mode)");
+    setDebugStage("OPS_DEBUG: realtime subscription disabled");
+    setRealtimeStatus("Disabled (diagnostic)");
   }, []);
 
   const insights = useMemo(() => {
