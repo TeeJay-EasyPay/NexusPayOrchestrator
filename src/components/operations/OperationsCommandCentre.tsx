@@ -25,7 +25,6 @@ import type {
     OperationsServiceHealth,
     OperationsStatusChip,
 } from "../../utils/operationsCommandCentre";
-import { NexusAIToggleCard } from "../intelligence/NexusAIToggleCard";
 import { AppCard } from "../ui/AppCard";
 import { AppText } from "../ui/AppText";
 import { Screen } from "../ui/Screen";
@@ -428,14 +427,11 @@ export function OperationsCommandCentre() {
           </AppText>
         </View>
 
-        <NexusAIToggleCard
-          title="Nexus AI"
-          description="Controls mission interpretation and operational intelligence on this screen."
-          enabled={operationsAIEnabled}
-          disabled={operationsAIDisabled}
-          loading={nexusAILoading}
-          onToggle={toggleOperationsAI}
-        />
+        <AppCard>
+          <View>
+            <Text>SECTION DISABLED FOR DIAGNOSIS - NEXUS AI CARD</Text>
+          </View>
+        </AppCard>
 
         <AppCard>
           <View>
