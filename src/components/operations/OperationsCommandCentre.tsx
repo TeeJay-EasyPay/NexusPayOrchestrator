@@ -476,21 +476,78 @@ export function OperationsCommandCentre() {
         />
 
         <AppCard>
-          <View>
-            <Text>SECTION DISABLED FOR DIAGNOSIS</Text>
+          <SectionHeader title="Corridor Health" subtitle="Live corridor intelligence from treasury and route telemetry" />
+          <View style={styles.stack}>
+            {corridorRowsToShow.slice(0, 8).map((item) => (
+              <CorridorRow key={item.corridor} item={item} />
+            ))}
           </View>
         </AppCard>
 
         <AppCard>
-          <View>
-            <Text>SECTION DISABLED FOR DIAGNOSIS</Text>
+          <SectionHeader title="Active Alerts" subtitle="Critical, warning and informational events from the operational stream" />
+          <View style={styles.stack}>
+            {filteredAlerts.length === 0 ? (
+              <AppText variant="body" color={colors.textDarkSecondary}>
+                Alert cards remain driven by the live event stream.
+              </AppText>
+            ) : (
+              filteredAlerts.slice(0, 8).map((item) => (
+                <AlertRow
+                  key={item.id}
+                  item={item}
+                  alertFilter={mapEventToAlertFilter(item)}
+                  timeFormatter={timeFormatter}
+                />
+              ))
+            )}
           </View>
         </AppCard>
 
         <View style={twoColumnLayout ? styles.dualGrid : styles.singleStack}>
           <AppCard style={styles.flexCard}>
-            <View>
-              <Text>SECTION DISABLED FOR DIAGNOSIS</Text>
+            <SectionHeader title="Treasury & Liquidity" subtitle="Utilisation, available liquidity and capacity forecast" />
+            <View style={styles.metricTriple}>
+              <MetricTile label="Utilisation" value={`${treasurySummary.utilization}%`} />
+              <MetricTile label="Available" value={`${treasurySummary.availableCapacity}%`} />
+              <MetricTile label="FX feeds live" value={`${feedData?.fx.length ?? 0}`} />
+            </View>
+
+            <View style={styles.progressTrackLarge}>
+              <View
+                style={{
+                  width: `${Math.max(4, Math.min(100, treasurySummary.utilization))}%`,
+                  height: "100%",
+                  backgroundColor:
+                    treasurySummary.pressure === "CRITICAL"
+                      ? "#DC2626"
+                      : treasurySummary.pressure === "HIGH"
+                        ? "#D97706"
+                        : "#16A34A",
+                  borderRadius: 999,
+                }}
+              />
+            </View>
+
+            <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "700" }}>
+              {treasurySummary.forecast}
+            </AppText>
+
+            <View style={styles.stack}>
+              {treasurySummary.currencyDistribution.length > 0 ? treasurySummary.currencyDistribution.map((item) => (
+                <View key={item.currency} style={styles.currencyRow}>
+                  <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "800" }}>
+                    {item.currency}
+                  </AppText>
+                  <AppText variant="caption" color={colors.textDarkSecondary}>
+                    {item.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })} ({item.percentage.toFixed(1)}%)
+                  </AppText>
+                </View>
+              )) : (
+                <AppText variant="caption" color={colors.textDarkSecondary}>
+                  Wallet distribution will populate from live transfer history.
+                </AppText>
+              )}
             </View>
           </AppCard>
 
