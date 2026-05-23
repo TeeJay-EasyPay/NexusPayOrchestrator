@@ -22,13 +22,13 @@ import {
 } from "../services/treasuryIntelligenceService";
 import { Transfer } from "../types/transfer";
 import {
-  buildActiveTransfers,
-  buildCorridorRows,
-  buildKpis,
-  buildOperationsInsights,
-  buildTreasurySummary,
-  OperationsAlertFilter,
-  OperationsInsights,
+    buildActiveTransfers,
+    buildCorridorRows,
+    buildKpis,
+    buildOperationsInsights,
+    buildTreasurySummary,
+    OperationsAlertFilter,
+    OperationsInsights,
 } from "../utils/operationsCommandCentre";
 import { useNexusAIScreenSetting } from "./useNexusAISettings";
 
