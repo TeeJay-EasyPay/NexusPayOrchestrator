@@ -34,6 +34,12 @@ const MENU_ITEMS = [
     match: "/operations",
   },
   {
+    label: "Operations Command Centre V2",
+    description: "Mission Control — redesigned operational intelligence platform",
+    route: "/operations-v2",
+    match: "/operations-v2",
+  },
+  {
     label: "Live Intelligence Feeds",
     description: "Live FX, treasury and market intelligence feeds",
     route: "/live-intelligence-feeds",
