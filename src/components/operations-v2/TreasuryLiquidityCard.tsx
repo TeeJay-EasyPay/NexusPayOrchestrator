@@ -53,9 +53,7 @@ export function TreasuryLiquidityCard({ treasurySummary, feedData }: Props) {
 
   const pc = pressureColor(pressure);
 
-  const fxFeedsLive = feedData?.fxRates
-    ? Object.keys(feedData.fxRates).length
-    : 0;
+  const fxFeedsLive = Array.isArray(feedData?.fx) ? feedData.fx.length : 0;
 
   const feedHealthy = fxFeedsLive > 0;
   const feedColor = feedHealthy ? "#16A34A" : "#D97706";

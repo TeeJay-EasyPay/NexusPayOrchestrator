@@ -18,18 +18,8 @@ import { OperationsHeader } from "../src/components/operations-v2/OperationsHead
 import { TreasuryLiquidityCard } from "../src/components/operations-v2/TreasuryLiquidityCard";
 import { AppText } from "../src/components/ui/AppText";
 import { Screen } from "../src/components/ui/Screen";
-import {
-    formatDelta,
-    getAlertColor,
-    mapEventToAlertFilter,
-    useOperationsCommandCentre,
-} from "../src/hooks/useOperationsCommandCentre";
+import { useOperationsCommandCentre } from "../src/hooks/useOperationsCommandCentre";
 import { colors } from "../src/theme";
-
-// Ensure hook helpers are resolved to avoid unused import warnings
-void formatDelta;
-void getAlertColor;
-void mapEventToAlertFilter;
 
 export default function OperationsV2Screen() {
   const state = useOperationsCommandCentre();
@@ -122,6 +112,14 @@ export default function OperationsV2Screen() {
           missionSummaryStatus={state.missionSummaryStatus ?? ""}
           operationsAIEnabled={state.operationsAIEnabled ?? false}
           nexusAILoading={state.nexusAILoading ?? false}
+          corridorRows={state.corridorRows ?? []}
+          treasurySummary={state.treasurySummary ?? null}
+          serviceHealth={state.serviceHealth ?? []}
+          kpis={state.kpis ?? []}
+          alertCount={state.events?.length ?? 0}
+          criticalAlertCount={
+            state.events?.filter((e) => e.severity === "FAILOVER" || e.severity === "DEGRADED").length ?? 0
+          }
         />
 
         <View style={styles.bottomPad} />

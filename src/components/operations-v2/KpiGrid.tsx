@@ -102,12 +102,17 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   cell: {
-    backgroundColor: colors.backgroundSoft,
+    backgroundColor: '#FFFFFF',
     borderRadius: 18,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.cardBorder,
     gap: 6,
+    shadowColor: '#020713',
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
   },
   iconBubble: {
     width: 34,
@@ -120,10 +125,11 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
     letterSpacing: 0.4,
+    color: colors.textDarkMuted,
   },
   kpiValue: {
     fontWeight: "800",
-    color: colors.textPrimary,
+    color: colors.textDarkPrimary,
     fontSize: 20,
   },
   deltaRow: {

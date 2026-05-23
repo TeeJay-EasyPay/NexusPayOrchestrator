@@ -28,12 +28,6 @@ const MENU_ITEMS = [
     match: "/routes",
   },
   {
-    label: "Operations Command Centre",
-    description: "Treasury telemetry and orchestration intelligence",
-    route: "/operations",
-    match: "/operations",
-  },
-  {
     label: "Operations Command Centre V2",
     description: "Mission Control — redesigned operational intelligence platform",
     route: "/operations-v2",
