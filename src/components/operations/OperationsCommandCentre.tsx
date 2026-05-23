@@ -1,7 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import React, { useEffect, useMemo, useState } from "react";
 import {
-    ActivityIndicator,
     FlatList,
     Modal,
     Pressable,
@@ -10,7 +9,7 @@ import {
     StyleSheet,
     Text,
     useWindowDimensions,
-    View,
+    View
 } from "react-native";
 
 import {
@@ -477,115 +476,27 @@ export function OperationsCommandCentre() {
         />
 
         <AppCard>
-          <SectionHeader title="Corridor Health" subtitle="Live corridor intelligence from treasury and route telemetry" />
-          <View style={styles.stack}>
-            {corridorRowsToShow.slice(0, 8).map((item) => (
-              <CorridorRow key={item.corridor} item={item} />
-            ))}
+          <View>
+            <Text>SECTION DISABLED FOR DIAGNOSIS</Text>
           </View>
         </AppCard>
 
         <AppCard>
-          <SectionHeader title="Active Alerts" subtitle="Critical, warning and informational events from the operational stream" />
-          <View style={styles.stack}>
-            {filteredAlerts.length === 0 ? (
-              <AppText variant="body" color={colors.textDarkSecondary}>
-                Alert cards remain driven by the live event stream.
-              </AppText>
-            ) : (
-              filteredAlerts.slice(0, 8).map((item) => (
-                <AlertRow
-                  key={item.id}
-                  item={item}
-                  alertFilter={mapEventToAlertFilter(item)}
-                  timeFormatter={timeFormatter}
-                />
-              ))
-            )}
+          <View>
+            <Text>SECTION DISABLED FOR DIAGNOSIS</Text>
           </View>
         </AppCard>
 
         <View style={twoColumnLayout ? styles.dualGrid : styles.singleStack}>
           <AppCard style={styles.flexCard}>
-            <SectionHeader title="Treasury & Liquidity" subtitle="Utilisation, available liquidity and capacity forecast" />
-            <View style={styles.metricTriple}>
-              <MetricTile label="Utilisation" value={`${treasurySummary.utilization}%`} />
-              <MetricTile label="Available" value={`${treasurySummary.availableCapacity}%`} />
-              <MetricTile label="FX feeds live" value={`${feedData?.fx.length ?? 0}`} />
-            </View>
-
-            <View style={styles.progressTrackLarge}>
-              <View
-                style={{
-                  width: `${Math.max(4, Math.min(100, treasurySummary.utilization))}%`,
-                  height: "100%",
-                  backgroundColor:
-                    treasurySummary.pressure === "CRITICAL"
-                      ? "#DC2626"
-                      : treasurySummary.pressure === "HIGH"
-                        ? "#D97706"
-                        : "#16A34A",
-                  borderRadius: 999,
-                }}
-              />
-            </View>
-
-            <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "700" }}>
-              {treasurySummary.forecast}
-            </AppText>
-
-            <View style={styles.stack}>
-              {treasurySummary.currencyDistribution.length > 0 ? treasurySummary.currencyDistribution.map((item) => (
-                <View key={item.currency} style={styles.currencyRow}>
-                  <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "800" }}>
-                    {item.currency}
-                  </AppText>
-                  <AppText variant="caption" color={colors.textDarkSecondary}>
-                    {item.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })} ({item.percentage.toFixed(1)}%)
-                  </AppText>
-                </View>
-              )) : (
-                <AppText variant="caption" color={colors.textDarkSecondary}>
-                  Wallet distribution will populate from live transfer history.
-                </AppText>
-              )}
+            <View>
+              <Text>SECTION DISABLED FOR DIAGNOSIS</Text>
             </View>
           </AppCard>
 
           <AppCard style={styles.flexCard}>
-            <SectionHeader title="Live Transfers" subtitle="Active transfers from transaction history and execution state services" />
-            <View style={styles.stack}>
-              {activeTransfers.length === 0 ? (
-                <AppText variant="body" color={colors.textDarkSecondary}>
-                  No active transfers in-flight right now.
-                </AppText>
-              ) : (
-                activeTransfers.slice(0, 12).map((item) => (
-                  <View key={item.id} style={styles.transferRow}>
-                    <View style={{ flex: 1, gap: 3 }}>
-                      <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
-                        {item.corridor}
-                      </AppText>
-                      <AppText variant="caption" color={colors.textDarkSecondary}>
-                        {item.currency} {item.amount.toLocaleString()} • Route {item.routeId}
-                      </AppText>
-                      <AppText variant="caption" color={colors.textDarkSecondary}>
-                        Settlement {item.settlementEstimate} • {timeFormatter(item.updatedAt)}
-                      </AppText>
-                    </View>
-                    <View style={{ minWidth: 92, alignItems: "flex-end", gap: 6 }}>
-                      <View style={[styles.badge, { backgroundColor: "#EFF6FF", borderColor: "#BFDBFE" }]}>
-                        <AppText variant="caption" style={{ color: "#1D4ED8", fontWeight: "900" }}>
-                          {item.status}
-                        </AppText>
-                      </View>
-                      <AppText variant="caption" color={colors.textDarkMuted}>
-                        {item.progress}%
-                      </AppText>
-                    </View>
-                  </View>
-                ))
-              )}
+            <View>
+              <Text>SECTION DISABLED FOR DIAGNOSIS</Text>
             </View>
           </AppCard>
         </View>
@@ -593,67 +504,21 @@ export function OperationsCommandCentre() {
         <View style={twoColumnLayout ? styles.dualGrid : styles.singleStack}>
           <AppCard style={styles.flexCard}>
             <View>
-              <Text>Operational Health Disabled For Diagnosis</Text>
+              <Text>SECTION DISABLED FOR DIAGNOSIS</Text>
             </View>
           </AppCard>
 
           <AppCard style={styles.flexCard}>
-            <SectionHeader title="Global Flow Map" subtitle="Active route volume and utilisation across live corridors" />
-            <View style={styles.stack}>
-              {corridorRows.slice(0, 6).map((item, index) => (
-                <View key={item.corridor} style={styles.mapRow}>
-                  <View style={[styles.mapNode, { backgroundColor: ["#F59E0B", "#7C3AED", "#2563EB", "#10B981"][index % 4] }]} />
-                  <View style={{ flex: 1, gap: 4 }}>
-                    <View style={styles.corridorTopRow}>
-                      <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "800" }}>
-                        {item.corridor}
-                      </AppText>
-                      <AppText variant="caption" color={colors.textDarkMuted}>
-                        Volume {activeTransfers.filter((transfer) => transfer.corridor === item.corridor).length}
-                      </AppText>
-                    </View>
-                    <View style={styles.progressTrack}>
-                      <View style={[styles.progressFill, { width: `${Math.max(6, Math.min(100, item.capacity))}%` }]} />
-                    </View>
-                  </View>
-                </View>
-              ))}
+            <View>
+              <Text>SECTION DISABLED FOR DIAGNOSIS</Text>
             </View>
           </AppCard>
         </View>
 
         <AppCard style={styles.aiCard}>
-          <SectionHeader title="Nexus AI Mission Summary" subtitle="Mission Control interpretation based on live operational telemetry" />
-          {missionSummaryLoading ? (
-            <View style={styles.aiLoadingRow}>
-              <ActivityIndicator color="#7C3AED" />
-              <AppText variant="body" color={colors.textDarkSecondary}>
-                Generating live mission interpretation...
-              </AppText>
-            </View>
-          ) : missionSummary ? (
-            <View style={styles.stack}>
-              <AppText variant="body" color={colors.textDarkPrimary} style={{ lineHeight: 22, fontWeight: "700" }}>
-                {missionSummaryView.missionExecutiveSummary}
-              </AppText>
-              {missionSummaryView.missionKeyFindings.length > 0 ? missionSummaryView.missionKeyFindings.map((line, index) => (
-                <View key={`finding-${index}`} style={styles.aiBulletRow}>
-                  <View style={styles.aiBullet} />
-                  <AppText variant="caption" color={colors.textDarkSecondary} style={{ flex: 1 }}>
-                    {line}
-                  </AppText>
-                </View>
-              )) : (
-                <AppText variant="caption" color={colors.textDarkSecondary}>
-                  No key findings were returned for this mission snapshot.
-                </AppText>
-              )}
-            </View>
-          ) : (
-            <AppText variant="body" color={colors.textDarkSecondary}>
-              {missionSummaryStatus}
-            </AppText>
-          )}
+          <View>
+            <Text>SECTION DISABLED FOR DIAGNOSIS</Text>
+          </View>
         </AppCard>
       </ScrollView>
 
