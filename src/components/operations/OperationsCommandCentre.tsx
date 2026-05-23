@@ -8,6 +8,7 @@ import {
     RefreshControl,
     ScrollView,
     StyleSheet,
+    Text,
     useWindowDimensions,
     View,
 } from "react-native";
@@ -591,8 +592,9 @@ export function OperationsCommandCentre() {
 
         <View style={twoColumnLayout ? styles.dualGrid : styles.singleStack}>
           <AppCard style={styles.flexCard}>
-            <SectionHeader title="Operational Health" subtitle="Real-time service telemetry and platform subsystem status" />
-            <ServiceHealthSection items={serviceHealth} />
+            <View>
+              <Text>Operational Health Disabled For Diagnosis</Text>
+            </View>
           </AppCard>
 
           <AppCard style={styles.flexCard}>
