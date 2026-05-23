@@ -1,5 +1,5 @@
 import { useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
     loadRecoverableExecutionSessions,
@@ -58,6 +58,22 @@ export type OperationsCommandCentreState = OperationsInsights & {
   feedData: LiveIntelligenceFeeds | null;
 };
 
+const AI_MIN_REFRESH_INTERVAL_MS = 30_000;
+
+type OperationsAITelemetry = {
+  live: string;
+  transfers24h: string;
+  successRate: string;
+  activeExecutions: number;
+  activeAlerts: number;
+  criticalAlerts: number;
+  topCorridor: string;
+  treasuryPressure: OperationsInsights["treasurySummary"]["pressure"];
+  treasuryUtilization: number;
+  marketOpenCount: number;
+  fxFeedsLive: number;
+};
+
 function upsertSession(
   sessions: PersistedExecutionSession[],
   incoming: PersistedExecutionSession
@@ -86,8 +102,28 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
   const [missionSummary, setMissionSummary] = useState<IntelligenceReportResult | null>(null);
   const [missionSummaryLoading, setMissionSummaryLoading] = useState(false);
   const [missionSummaryStatus, setMissionSummaryStatus] = useState("Waiting for telemetry");
+  const [aiRefreshNonce, setAiRefreshNonce] = useState(0);
   const [severityFilter, setSeverityFilter] = useState<OperationsAlertFilter>("ALL");
   const [corridorFilter, setCorridorFilter] = useState("ALL");
+  const isMountedRef = useRef(true);
+  const aiInFlightRef = useRef(false);
+  const aiLastRunAtRef = useRef(0);
+  const aiRequestIdRef = useRef(0);
+  const aiLastSignatureRef = useRef<string>("");
+  const aiLastManualNonceRef = useRef(0);
+  const aiTelemetryRef = useRef<OperationsAITelemetry>({
+    live: "Connecting",
+    transfers24h: "0",
+    successRate: "0%",
+    activeExecutions: 0,
+    activeAlerts: 0,
+    criticalAlerts: 0,
+    topCorridor: "Unknown",
+    treasuryPressure: "LOW",
+    treasuryUtilization: 0,
+    marketOpenCount: 0,
+    fxFeedsLive: 0,
+  });
 
   const {
     loading: nexusAILoading,
@@ -96,6 +132,14 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
     settings,
     toggle: toggleOperationsAI,
   } = useNexusAIScreenSetting("corridor_enabled");
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      aiRequestIdRef.current += 1;
+      aiInFlightRef.current = false;
+    };
+  }, []);
 
   const loadTelemetry = useCallback(async () => {
     try {
@@ -107,6 +151,8 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
         getLiveIntelligenceFeeds(),
       ]);
 
+      if (!isMountedRef.current) return;
+
       setSnapshots(snapshotData);
       setEvents(eventData);
       setSessions((current) => sessionData.reduce(upsertSession, current));
@@ -117,10 +163,20 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
     } catch (error) {
       console.warn("[Operations] Failed to refresh telemetry", error);
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, []);
+
+  const refresh = useCallback(async () => {
+    await loadTelemetry();
+
+    if (isMountedRef.current) {
+      setAiRefreshNonce((current) => current + 1);
+    }
+  }, [loadTelemetry]);
 
   useFocusEffect(
     useCallback(() => {
@@ -131,10 +187,14 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
   useEffect(() => {
     const unsubscribe = subscribeToRecentExecutionSessions({
       onSession: (session) => {
+        if (!isMountedRef.current) return;
         setRealtimeStatus("Live");
         setSessions((current) => upsertSession(current, session));
       },
-      onError: () => setRealtimeStatus("Polling"),
+      onError: () => {
+        if (!isMountedRef.current) return;
+        setRealtimeStatus("Polling");
+      },
     });
 
     return () => {
@@ -165,7 +225,7 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
     return ["ALL", ...Array.from(set).sort((a, b) => a.localeCompare(b))];
   }, [events, insights.corridorRows]);
 
-  const aiTelemetry = useMemo(() => {
+  const aiTelemetry = useMemo<OperationsAITelemetry>(() => {
     const corridorRows = buildCorridorRows(snapshots);
     const kpiResult = buildKpis({ transfers, sessions, snapshots, events });
     const treasurySummary = buildTreasurySummary(snapshots, transfers);
@@ -186,59 +246,132 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
     };
   }, [events, feeds, realtimeStatus, sessions, snapshots, transfers]);
 
-  useEffect(() => {
-    let active = true;
+  const aiTelemetrySignature = useMemo(
+    () =>
+      [
+        aiTelemetry.live,
+        aiTelemetry.transfers24h,
+        aiTelemetry.successRate,
+        aiTelemetry.activeExecutions,
+        aiTelemetry.activeAlerts,
+        aiTelemetry.criticalAlerts,
+        aiTelemetry.topCorridor,
+        aiTelemetry.treasuryPressure,
+        aiTelemetry.treasuryUtilization,
+        aiTelemetry.marketOpenCount,
+        aiTelemetry.fxFeedsLive,
+      ].join("|"),
+    [aiTelemetry]
+  );
 
+  const hasTelemetry = useMemo(
+    () => snapshots.length > 0 || events.length > 0 || sessions.length > 0 || transfers.length > 0 || Boolean(feeds),
+    [events.length, feeds, sessions.length, snapshots.length, transfers.length]
+  );
+
+  useEffect(() => {
+    aiTelemetryRef.current = aiTelemetry;
+  }, [aiTelemetry]);
+
+  useEffect(() => {
     async function generateMissionSummary() {
       if (!operationsAIEnabled) {
+        aiRequestIdRef.current += 1;
+        aiInFlightRef.current = false;
+        aiLastSignatureRef.current = "";
+
+        if (!isMountedRef.current) return;
         setMissionSummary(null);
         setMissionSummaryLoading(false);
         setMissionSummaryStatus("Nexus AI disabled for this screen");
         return;
       }
 
-      setMissionSummaryLoading(true);
-      setMissionSummaryStatus("Generating live mission interpretation");
+      if (!hasTelemetry) {
+        if (isMountedRef.current) {
+          setMissionSummaryStatus("Waiting for telemetry");
+        }
+        return;
+      }
+
+      const manualRefreshRequested = aiRefreshNonce !== aiLastManualNonceRef.current;
+      if (manualRefreshRequested) {
+        aiLastManualNonceRef.current = aiRefreshNonce;
+      }
+
+      const now = Date.now();
+      const throttled =
+        !manualRefreshRequested &&
+        now - aiLastRunAtRef.current < AI_MIN_REFRESH_INTERVAL_MS;
+
+      if (throttled || aiInFlightRef.current) {
+        if (isMountedRef.current) {
+          setMissionSummaryStatus("AI refresh throttled");
+        }
+        return;
+      }
+
+      if (!manualRefreshRequested && aiTelemetrySignature === aiLastSignatureRef.current) {
+        return;
+      }
+
+      aiInFlightRef.current = true;
+      aiLastRunAtRef.current = now;
+      aiLastSignatureRef.current = aiTelemetrySignature;
+      aiRequestIdRef.current += 1;
+      const requestId = aiRequestIdRef.current;
+
+      if (isMountedRef.current) {
+        setMissionSummaryLoading(true);
+        setMissionSummaryStatus("Waiting for telemetry");
+      }
 
       try {
         const result = await generateIntelligenceReport(
           {
             reportType: "corridor_analysis",
             focus: "Operations command centre mission health",
-            telemetry: aiTelemetry,
+            telemetry: aiTelemetryRef.current,
           },
           settings?.sensitivity ?? "balanced",
           { timeoutMs: 7000, maxRetries: 1 }
         );
 
-        if (!active) return;
+        if (!isMountedRef.current || requestId !== aiRequestIdRef.current || !operationsAIEnabled) {
+          return;
+        }
 
         if (result.ok) {
           setMissionSummary(result.data);
           setMissionSummaryStatus("Live Nexus AI interpretation");
         } else {
           setMissionSummary(null);
-          setMissionSummaryStatus("Mission summary unavailable. Using live telemetry and operational status cards.");
+          setMissionSummaryStatus("Nexus AI temporarily unavailable");
         }
       } catch (error) {
-        if (!active) return;
+        if (!isMountedRef.current || requestId !== aiRequestIdRef.current || !operationsAIEnabled) {
+          return;
+        }
+
         console.warn("[Operations] Failed to generate mission summary", error);
         setMissionSummary(null);
-        setMissionSummaryStatus("Mission summary unavailable. Using live telemetry and operational status cards.");
+        setMissionSummaryStatus("Nexus AI temporarily unavailable");
       } finally {
-        if (active) {
+        if (requestId === aiRequestIdRef.current) {
+          aiInFlightRef.current = false;
+        }
+
+        if (isMountedRef.current && requestId === aiRequestIdRef.current) {
           setMissionSummaryLoading(false);
         }
       }
     }
 
     void generateMissionSummary();
-
-    return () => {
-      active = false;
-    };
   }, [
-    aiTelemetry,
+    aiRefreshNonce,
+    aiTelemetrySignature,
+    hasTelemetry,
     operationsAIEnabled,
     settings?.sensitivity,
   ]);
@@ -259,7 +392,7 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
     nexusAILoading,
     toggleOperationsAI,
     settingsSensitivity: settings?.sensitivity,
-    refresh: loadTelemetry,
+    refresh,
     setRefreshing,
     setSeverityFilter,
     setCorridorFilter,
