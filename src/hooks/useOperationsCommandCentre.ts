@@ -473,7 +473,7 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
         safeExitTimer = setTimeout(() => {
           if (cancelled || !isMountedRef.current) return;
           console.log("OPS_DEBUG: mission summary effect exited safely");
-          setDebugStage("OPS_DEBUG: mission summary effect exited safely");
+          void 0;
         }, 0);
       } catch (error) {
         console.warn(
