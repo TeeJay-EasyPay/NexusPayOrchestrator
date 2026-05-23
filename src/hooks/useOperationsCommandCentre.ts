@@ -2,33 +2,33 @@ import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
-    loadRecoverableExecutionSessions,
-    PersistedExecutionSession,
+  loadRecoverableExecutionSessions,
+  PersistedExecutionSession,
 } from "../services/execution/executionPersistenceService";
 import { subscribeToRecentExecutionSessions } from "../services/execution/executionRealtimeService";
 import { getLiveIntelligenceFeeds, LiveIntelligenceFeeds } from "../services/liveIntelligenceFeedService";
 import {
-    generateIntelligenceReport,
-    IntelligenceReportResult,
+  generateIntelligenceReport,
+  IntelligenceReportResult,
 } from "../services/nexusAIService";
 import {
-    loadRecentRouteOperationalEvents,
-    RouteOperationalEventRow,
+  loadRecentRouteOperationalEvents,
+  RouteOperationalEventRow,
 } from "../services/routeOperationalEventService";
 import { loadCompletedTransfers } from "../services/transferService";
 import {
-    loadRecentTreasurySnapshots,
-    TreasuryLiquiditySnapshotRow,
+  loadRecentTreasurySnapshots,
+  TreasuryLiquiditySnapshotRow,
 } from "../services/treasuryIntelligenceService";
 import { Transfer } from "../types/transfer";
 import {
-    buildActiveTransfers,
-    buildCorridorRows,
-    buildKpis,
-    buildOperationsInsights,
-    buildTreasurySummary,
-    OperationsAlertFilter,
-    OperationsInsights,
+  buildActiveTransfers,
+  buildCorridorRows,
+  buildKpis,
+  buildOperationsInsights,
+  buildTreasurySummary,
+  OperationsAlertFilter,
+  OperationsInsights,
 } from "../utils/operationsCommandCentre";
 import { useNexusAIScreenSetting } from "./useNexusAISettings";
 
