@@ -213,7 +213,6 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
 
   // TEMPORARY: realtime subscription disabled for crash diagnosis.
   // To re-enable: restore the subscribeToRecentExecutionSessions call below and remove the stub.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   void subscribeToRecentExecutionSessions; // keep import live — easy to restore
   useEffect(() => {
     console.log("OPS_DEBUG: realtime subscription disabled (diagnostic mode)");
@@ -341,11 +340,12 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
   useEffect(() => {
     console.log("OPS_DEBUG: mission summary calculation effect start");
     setDebugStage("OPS_DEBUG: mission summary effect start");
+    let safeExitTimer: ReturnType<typeof setTimeout> | null = null;
+    let cancelled = false;
 
     async function generateMissionSummary() {
       if (!operationsAIEnabled) {
         console.log("OPS_DEBUG: mission summary skipped - AI disabled");
-        setDebugStage("OPS_DEBUG: mission summary skipped - AI disabled");
         aiRequestIdRef.current += 1;
         aiInFlightRef.current = false;
         aiLastSignatureRef.current = "";
@@ -359,7 +359,6 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
 
       if (!hasTelemetry) {
         console.log("OPS_DEBUG: mission summary skipped - waiting for telemetry");
-        setDebugStage("OPS_DEBUG: mission summary skipped - waiting for telemetry");
         if (isMountedRef.current) {
           setMissionSummaryStatus("Waiting for telemetry");
         }
@@ -381,7 +380,6 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
           throttled,
           inFlight: aiInFlightRef.current,
         });
-        setDebugStage(throttled ? "OPS_DEBUG: mission summary throttled (30s)" : "OPS_DEBUG: mission summary skipped - previous in flight");
         if (isMountedRef.current) {
           setMissionSummaryStatus("AI refresh throttled");
         }
@@ -469,7 +467,29 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
       }
     }
 
-    void generateMissionSummary();
+    async function runMissionSummaryEffect() {
+      try {
+        await generateMissionSummary();
+        safeExitTimer = setTimeout(() => {
+          if (cancelled || !isMountedRef.current) return;
+          console.log("OPS_DEBUG: mission summary effect exited safely");
+          setDebugStage("OPS_DEBUG: mission summary effect exited safely");
+        }, 0);
+      } catch (error) {
+        console.warn(
+          `OPS_DEBUG: mission summary effect failed - ${error instanceof Error ? error.message : String(error)}`
+        );
+      }
+    }
+
+    void runMissionSummaryEffect();
+
+    return () => {
+      cancelled = true;
+      if (safeExitTimer) {
+        clearTimeout(safeExitTimer);
+      }
+    };
   }, [
     aiRefreshNonce,
     aiTelemetrySignature,
