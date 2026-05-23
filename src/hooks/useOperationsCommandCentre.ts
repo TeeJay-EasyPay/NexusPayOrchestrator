@@ -339,9 +339,9 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
 
   useEffect(() => {
     console.log("OPS_DEBUG: mission summary calculation effect start");
-    setDebugStage("OPS_DEBUG: mission summary effect start");
-    let safeExitTimer: ReturnType<typeof setTimeout> | null = null;
-    let cancelled = false;
+    console.log("OPS_DEBUG: mission summary effect bypassed");
+    setDebugStage("OPS_DEBUG: mission summary effect bypassed");
+    return;
 
     async function generateMissionSummary() {
       if (!operationsAIEnabled) {
@@ -482,14 +482,6 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
       }
     }
 
-    void runMissionSummaryEffect();
-
-    return () => {
-      cancelled = true;
-      if (safeExitTimer) {
-        clearTimeout(safeExitTimer);
-      }
-    };
   }, [
     aiRefreshNonce,
     aiTelemetrySignature,
