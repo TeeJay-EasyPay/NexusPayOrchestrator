@@ -285,7 +285,7 @@ export function OperationsCommandCentre() {
     return () => {
       console.log("OPS_DEBUG: component unmount");
     };
-  });
+  }, []);
 
   const kpiColumns = width >= 1100 ? 4 : width >= 760 ? 3 : 2;
   const twoColumnLayout = width >= 820;
