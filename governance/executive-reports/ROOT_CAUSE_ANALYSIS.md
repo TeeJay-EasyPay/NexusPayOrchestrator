@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-CTO analysis reviewed [governance/CORRIDOR_VALIDATION_REPORT.md](governance/CORRIDOR_VALIDATION_REPORT.md), corridor and payout mappings, execution state-machine design, and track-screen execution triggering.
+CTO analysis reviewed [governance/CORRIDOR_VALIDATION_REPORT.md](../executive-reports/CORRIDOR_VALIDATION_REPORT.md), corridor and payout mappings, execution state-machine design, and track-screen execution triggering.
 
 Most corridor mappings and payout simulation paths are structurally valid. The likely technical failure mode for the observed GBP -> KWD in-motion stall is runtime execution continuity loss before payout execution begins, resulting in a persisted non-terminal state that is not deterministically reconciled to a terminal state.
 
@@ -10,10 +10,10 @@ Most corridor mappings and payout simulation paths are structurally valid. The l
 
 ### Finding 1: Corridor mapping does not show a deterministic KWD-specific hard block
 Observation:
-- KWD is explicitly present in corridor catalog in [src/data/corridors.ts](src/data/corridors.ts).
-- KWD is explicitly supported in payout directory in [src/services/payout/payoutPartnerDirectory.ts](src/services/payout/payoutPartnerDirectory.ts).
-- Payout selection logic in [src/services/payout/payoutRoutingEngine.ts](src/services/payout/payoutRoutingEngine.ts) can select a supported partner or fallback.
-- Adapter fallback in [src/services/payout/payoutAdapter.ts](src/services/payout/payoutAdapter.ts) executes mock payout if real provider path is unavailable.
+- KWD is explicitly present in corridor catalog in [src/data/corridors.ts](../../src/data/corridors.ts).
+- KWD is explicitly supported in payout directory in [src/services/payout/payoutPartnerDirectory.ts](../../src/services/payout/payoutPartnerDirectory.ts).
+- Payout selection logic in [src/services/payout/payoutRoutingEngine.ts](../../src/services/payout/payoutRoutingEngine.ts) can select a supported partner or fallback.
+- Adapter fallback in [src/services/payout/payoutAdapter.ts](../../src/services/payout/payoutAdapter.ts) executes mock payout if real provider path is unavailable.
 
 Impact:
 A static mapping defect alone is unlikely to explain observed payout-not-started for KWD.
@@ -26,7 +26,7 @@ Approve root-cause scope shift toward execution continuity and state reconciliat
 
 ### Finding 2: Execution can remain non-terminal if interrupted before payout step completes
 Observation:
-Execution engine in [src/services/execution/executionEngine.ts](src/services/execution/executionEngine.ts) progresses through route authorization and optional bridge settlement before payout execution. If runtime is interrupted mid-lifecycle, persisted session can reflect non-terminal state with payout status NOT_STARTED.
+Execution engine in [src/services/execution/executionEngine.ts](../../src/services/execution/executionEngine.ts) progresses through route authorization and optional bridge settlement before payout execution. If runtime is interrupted mid-lifecycle, persisted session can reflect non-terminal state with payout status NOT_STARTED.
 
 Impact:
 Operational view can show perpetual in-motion transfer until an explicit successful continuation run reaches COMPLETED or FAILED terminal state.
@@ -39,8 +39,8 @@ Approve this as primary technical hypothesis for remediation planning.
 
 ### Finding 3: Recovery path exists in engine but is not explicitly consumed by track execution call
 Observation:
-- Engine supports resume semantics via optional resume snapshot input in [src/services/execution/executionEngine.ts](src/services/execution/executionEngine.ts).
-- Track execution call in [app/track.tsx](app/track.tsx) invokes runTransferExecution without supplying resumeFromSnapshot.
+- Engine supports resume semantics via optional resume snapshot input in [src/services/execution/executionEngine.ts](../../src/services/execution/executionEngine.ts).
+- Track execution call in [app/track.tsx](../../app/track.tsx) invokes runTransferExecution without supplying resumeFromSnapshot.
 
 Impact:
 Recovery is best-effort via fresh execution invocation rather than explicit checkpoint-driven resume, increasing risk of non-deterministic behavior after interruption.
@@ -53,7 +53,7 @@ Approve deterministic resume design as remediation candidate.
 
 ### Finding 4: Runtime dependency concentration before payout step increases stall exposure
 Observation:
-Bridge settlement and early-state telemetry persistence occur before payout initiation in [src/services/execution/executionEngine.ts](src/services/execution/executionEngine.ts), with track UI defaulting to in-motion while no terminal state exists in [app/track.tsx](app/track.tsx).
+Bridge settlement and early-state telemetry persistence occur before payout initiation in [src/services/execution/executionEngine.ts](../../src/services/execution/executionEngine.ts), with track UI defaulting to in-motion while no terminal state exists in [app/track.tsx](../../app/track.tsx).
 
 Impact:
 Users can observe prolonged in-motion + payout-not-started if progression halts before payout execution step is reached.
@@ -67,40 +67,40 @@ Approve pre-payout guardrail strengthening for next sprint.
 ## Evidence
 
 Primary artifacts reviewed:
-- [governance/CORRIDOR_VALIDATION_REPORT.md](governance/CORRIDOR_VALIDATION_REPORT.md)
-- [src/data/corridors.ts](src/data/corridors.ts)
-- [src/services/payout/payoutPartnerDirectory.ts](src/services/payout/payoutPartnerDirectory.ts)
-- [src/services/payout/payoutRoutingEngine.ts](src/services/payout/payoutRoutingEngine.ts)
-- [src/services/payout/payoutAdapter.ts](src/services/payout/payoutAdapter.ts)
-- [src/services/payout/mockPayoutProvider.ts](src/services/payout/mockPayoutProvider.ts)
-- [src/services/execution/executionEngine.ts](src/services/execution/executionEngine.ts)
-- [src/services/execution/executionPersistenceService.ts](src/services/execution/executionPersistenceService.ts)
-- [app/track.tsx](app/track.tsx)
-- [src/lib/xrplSettlement.ts](src/lib/xrplSettlement.ts)
+- [governance/CORRIDOR_VALIDATION_REPORT.md](../executive-reports/CORRIDOR_VALIDATION_REPORT.md)
+- [src/data/corridors.ts](../../src/data/corridors.ts)
+- [src/services/payout/payoutPartnerDirectory.ts](../../src/services/payout/payoutPartnerDirectory.ts)
+- [src/services/payout/payoutRoutingEngine.ts](../../src/services/payout/payoutRoutingEngine.ts)
+- [src/services/payout/payoutAdapter.ts](../../src/services/payout/payoutAdapter.ts)
+- [src/services/payout/mockPayoutProvider.ts](../../src/services/payout/mockPayoutProvider.ts)
+- [src/services/execution/executionEngine.ts](../../src/services/execution/executionEngine.ts)
+- [src/services/execution/executionPersistenceService.ts](../../src/services/execution/executionPersistenceService.ts)
+- [app/track.tsx](../../app/track.tsx)
+- [src/lib/xrplSettlement.ts](../../src/lib/xrplSettlement.ts)
 
 Reference context:
-- [docs/PROJECT_MAP.md](docs/PROJECT_MAP.md)
-- [docs/BUILD_OPERATIONS_INSIGHTS_AUDIT.md](docs/BUILD_OPERATIONS_INSIGHTS_AUDIT.md)
-- [docs/corridor-intelligence-expansion-report.md](docs/corridor-intelligence-expansion-report.md)
+- [docs/PROJECT_MAP.md](../../docs/PROJECT_MAP.md)
+- [docs/BUILD_OPERATIONS_INSIGHTS_AUDIT.md](../../docs/BUILD_OPERATIONS_INSIGHTS_AUDIT.md)
+- [docs/corridor-intelligence-expansion-report.md](../../docs/corridor-intelligence-expansion-report.md)
 
 ## Components Affected
 
-- Execution state machine orchestration: [src/services/execution/executionEngine.ts](src/services/execution/executionEngine.ts)
-- Execution persistence/recovery surface: [src/services/execution/executionPersistenceService.ts](src/services/execution/executionPersistenceService.ts)
-- Track-screen runtime trigger and session hydration behavior: [app/track.tsx](app/track.tsx)
-- Payout routing and adapter layer (secondary review): [src/services/payout/payoutRoutingEngine.ts](src/services/payout/payoutRoutingEngine.ts), [src/services/payout/payoutAdapter.ts](src/services/payout/payoutAdapter.ts)
+- Execution state machine orchestration: [src/services/execution/executionEngine.ts](../../src/services/execution/executionEngine.ts)
+- Execution persistence/recovery surface: [src/services/execution/executionPersistenceService.ts](../../src/services/execution/executionPersistenceService.ts)
+- Track-screen runtime trigger and session hydration behavior: [app/track.tsx](../../app/track.tsx)
+- Payout routing and adapter layer (secondary review): [src/services/payout/payoutRoutingEngine.ts](../../src/services/payout/payoutRoutingEngine.ts), [src/services/payout/payoutAdapter.ts](../../src/services/payout/payoutAdapter.ts)
 
 ## Affected Files
 
 Primary:
-- [app/track.tsx](app/track.tsx)
-- [src/services/execution/executionEngine.ts](src/services/execution/executionEngine.ts)
-- [src/services/execution/executionPersistenceService.ts](src/services/execution/executionPersistenceService.ts)
+- [app/track.tsx](../../app/track.tsx)
+- [src/services/execution/executionEngine.ts](../../src/services/execution/executionEngine.ts)
+- [src/services/execution/executionPersistenceService.ts](../../src/services/execution/executionPersistenceService.ts)
 
 Secondary:
-- [src/services/payout/payoutAdapter.ts](src/services/payout/payoutAdapter.ts)
-- [src/services/payout/payoutRoutingEngine.ts](src/services/payout/payoutRoutingEngine.ts)
-- [src/services/payout/payoutPartnerDirectory.ts](src/services/payout/payoutPartnerDirectory.ts)
+- [src/services/payout/payoutAdapter.ts](../../src/services/payout/payoutAdapter.ts)
+- [src/services/payout/payoutRoutingEngine.ts](../../src/services/payout/payoutRoutingEngine.ts)
+- [src/services/payout/payoutPartnerDirectory.ts](../../src/services/payout/payoutPartnerDirectory.ts)
 
 ## Technical Risk Assessment
 

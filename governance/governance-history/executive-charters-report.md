@@ -1,10 +1,10 @@
 # Documents Created
 
-1. [governance/EXECUTIVE_CHARTER_TEMPLATE.md](governance/EXECUTIVE_CHARTER_TEMPLATE.md)
-2. [governance/CHIEF_ORCHESTRATOR_CHARTER.md](governance/CHIEF_ORCHESTRATOR_CHARTER.md)
-3. [governance/CHIEF_TECHNOLOGY_OFFICER_CHARTER.md](governance/CHIEF_TECHNOLOGY_OFFICER_CHARTER.md)
-4. [governance/TESTING_DIRECTOR_CHARTER.md](governance/TESTING_DIRECTOR_CHARTER.md)
-5. [governance/executive-charters-report.md](governance/executive-charters-report.md)
+1. [governance/EXECUTIVE_CHARTER_TEMPLATE.md](../governance-core/EXECUTIVE_CHARTER_TEMPLATE.md)
+2. [governance/CHIEF_ORCHESTRATOR_CHARTER.md](../governance-core/CHIEF_ORCHESTRATOR_CHARTER.md)
+3. [governance/CHIEF_TECHNOLOGY_OFFICER_CHARTER.md](../governance-core/CHIEF_TECHNOLOGY_OFFICER_CHARTER.md)
+4. [governance/TESTING_DIRECTOR_CHARTER.md](../governance-core/TESTING_DIRECTOR_CHARTER.md)
+5. [governance/executive-charters-report.md](../governance-history/executive-charters-report.md)
 
 # Charter Summary
 
@@ -69,7 +69,7 @@ Cadence model:
 
 # Recommendations
 
-1. Use [governance/EXECUTIVE_CHARTER_TEMPLATE.md](governance/EXECUTIVE_CHARTER_TEMPLATE.md) as the baseline for all additional executive role charters (CFO, CRO, CPO, CCO, CIO, CXO, EQAO).
+1. Use [governance/EXECUTIVE_CHARTER_TEMPLATE.md](../governance-core/EXECUTIVE_CHARTER_TEMPLATE.md) as the baseline for all additional executive role charters (CFO, CRO, CPO, CCO, CIO, CXO, EQAO).
 2. Add a governance review checkpoint to every implementation report to confirm charter compliance.
 3. Maintain a single register of escalations and decisions referenced by all role reports.
 4. Introduce periodic charter compliance audits to verify reporting quality and decision traceability.

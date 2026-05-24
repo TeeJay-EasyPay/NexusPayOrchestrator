@@ -1,4 +1,4 @@
-# Program Status — 2026-05-24
+# Program Status - 2026-05-24
 
 ## Executive Status
 

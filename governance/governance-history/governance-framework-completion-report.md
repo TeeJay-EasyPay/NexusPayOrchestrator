@@ -8,22 +8,22 @@ No application source code was modified.
 
 # Documents Created
 
-- [governance/EQAO_CHARTER.md](governance/EQAO_CHARTER.md)
-- [founder-briefings/FOUNDER_BRIEFING_INDEX.md](founder-briefings/FOUNDER_BRIEFING_INDEX.md)
-- [founder-briefings/PROGRAM_STATUS_2026-05-24.md](founder-briefings/PROGRAM_STATUS_2026-05-24.md)
-- [founder-briefings/FOUNDER_NEXT_ACTIONS.md](founder-briefings/FOUNDER_NEXT_ACTIONS.md)
-- [founder-briefings/FOUNDER_BRIEFING_001_EXECUTION_CONTINUITY.md](founder-briefings/FOUNDER_BRIEFING_001_EXECUTION_CONTINUITY.md)
-- [executive-reports/EXECUTIVE_REPORT_INDEX.md](executive-reports/EXECUTIVE_REPORT_INDEX.md)
-- [governance/governance-framework-completion-report.md](governance/governance-framework-completion-report.md)
+- [governance/EQAO_CHARTER.md](../governance-core/EQAO_CHARTER.md)
+- [founder-briefings/FOUNDER_BRIEFING_INDEX.md](../founder-briefings/FOUNDER_BRIEFING_INDEX.md)
+- [founder-briefings/PROGRAM_STATUS_2026-05-24.md](../founder-briefings/PROGRAM_STATUS_2026-05-24.md)
+- [founder-briefings/action-snapshots/FOUNDER_NEXT_ACTIONS_2026-05-24.md](../founder-briefings/action-snapshots/FOUNDER_NEXT_ACTIONS_2026-05-24.md)
+- [founder-briefings/briefings/FOUNDER_BRIEFING_001_EXECUTION_CONTINUITY.md](../founder-briefings/briefings/FOUNDER_BRIEFING_001_EXECUTION_CONTINUITY.md)
+- [executive-reports/EXECUTIVE_REPORT_INDEX.md](../executive-reports/EXECUTIVE_REPORT_INDEX.md)
+- [governance/governance-framework-completion-report.md](../governance-history/governance-framework-completion-report.md)
 
 Existing documents maintained and aligned:
-- [governance/FOUNDER_COMMUNICATION_STANDARD.md](governance/FOUNDER_COMMUNICATION_STANDARD.md)
-- [governance/FOUNDER_BRIEFING_TEMPLATE.md](governance/FOUNDER_BRIEFING_TEMPLATE.md)
+- [governance/FOUNDER_COMMUNICATION_STANDARD.md](../governance-core/FOUNDER_COMMUNICATION_STANDARD.md)
+- [governance/FOUNDER_BRIEFING_TEMPLATE.md](../governance-core/FOUNDER_BRIEFING_TEMPLATE.md)
 
 # Folders Created
 
-- [founder-briefings](founder-briefings)
-- [executive-reports](executive-reports)
+- [founder-briefings](../founder-briefings)
+- [executive-reports](../executive-reports)
 
 # Governance Enhancements
 
@@ -35,7 +35,7 @@ Existing documents maintained and aligned:
 # New Executive Role
 
 New role added:
-- [governance/EQAO_CHARTER.md](governance/EQAO_CHARTER.md)
+- [governance/EQAO_CHARTER.md](../governance-core/EQAO_CHARTER.md)
 
 Role summary:
 - Engineering Quality & Assurance Officer (EQAO)
@@ -61,12 +61,12 @@ Mandatory communication standard:
 # Founder Communication Framework
 
 Framework elements now in place:
-- Standard: [governance/FOUNDER_COMMUNICATION_STANDARD.md](governance/FOUNDER_COMMUNICATION_STANDARD.md)
-- Template: [governance/FOUNDER_BRIEFING_TEMPLATE.md](governance/FOUNDER_BRIEFING_TEMPLATE.md)
-- Repository index: [founder-briefings/FOUNDER_BRIEFING_INDEX.md](founder-briefings/FOUNDER_BRIEFING_INDEX.md)
-- Program status tracker: [founder-briefings/PROGRAM_STATUS_2026-05-24.md](founder-briefings/PROGRAM_STATUS_2026-05-24.md)
-- Founder decision tracker: [founder-briefings/FOUNDER_NEXT_ACTIONS.md](founder-briefings/FOUNDER_NEXT_ACTIONS.md)
-- Initial briefing: [founder-briefings/FOUNDER_BRIEFING_001_EXECUTION_CONTINUITY.md](founder-briefings/FOUNDER_BRIEFING_001_EXECUTION_CONTINUITY.md)
+- Standard: [governance/FOUNDER_COMMUNICATION_STANDARD.md](../governance-core/FOUNDER_COMMUNICATION_STANDARD.md)
+- Template: [governance/FOUNDER_BRIEFING_TEMPLATE.md](../governance-core/FOUNDER_BRIEFING_TEMPLATE.md)
+- Repository index: [founder-briefings/FOUNDER_BRIEFING_INDEX.md](../founder-briefings/FOUNDER_BRIEFING_INDEX.md)
+- Program status tracker: [founder-briefings/PROGRAM_STATUS_2026-05-24.md](../founder-briefings/PROGRAM_STATUS_2026-05-24.md)
+- Founder decision tracker: [founder-briefings/action-snapshots/FOUNDER_NEXT_ACTIONS_2026-05-24.md](../founder-briefings/action-snapshots/FOUNDER_NEXT_ACTIONS_2026-05-24.md)
+- Initial briefing: [founder-briefings/briefings/FOUNDER_BRIEFING_001_EXECUTION_CONTINUITY.md](../founder-briefings/briefings/FOUNDER_BRIEFING_001_EXECUTION_CONTINUITY.md)
 
 Requirements enforced:
 - Audience: Founder / CEO
@@ -77,7 +77,7 @@ Requirements enforced:
 # Reporting Framework
 
 Executive reporting repository established:
-- [executive-reports/EXECUTIVE_REPORT_INDEX.md](executive-reports/EXECUTIVE_REPORT_INDEX.md)
+- [executive-reports/EXECUTIVE_REPORT_INDEX.md](../executive-reports/EXECUTIVE_REPORT_INDEX.md)
 
 Coverage provided:
 - Certification reports
@@ -92,21 +92,21 @@ Organization approach:
 
 # Governance Index Updates
 
-Updated authority references in [governance/GOVERNANCE_INDEX.md](governance/GOVERNANCE_INDEX.md):
-- Added [governance/EQAO_CHARTER.md](governance/EQAO_CHARTER.md)
-- Confirmed [governance/FOUNDER_COMMUNICATION_STANDARD.md](governance/FOUNDER_COMMUNICATION_STANDARD.md)
-- Confirmed [governance/FOUNDER_BRIEFING_TEMPLATE.md](governance/FOUNDER_BRIEFING_TEMPLATE.md)
-- Updated founder briefing repository reference to [founder-briefings](founder-briefings)
-- Added executive report discovery reference to [executive-reports/EXECUTIVE_REPORT_INDEX.md](executive-reports/EXECUTIVE_REPORT_INDEX.md)
+Updated authority references in [governance/GOVERNANCE_INDEX.md](../governance-core/GOVERNANCE_INDEX.md):
+- Added [governance/EQAO_CHARTER.md](../governance-core/EQAO_CHARTER.md)
+- Confirmed [governance/FOUNDER_COMMUNICATION_STANDARD.md](../governance-core/FOUNDER_COMMUNICATION_STANDARD.md)
+- Confirmed [governance/FOUNDER_BRIEFING_TEMPLATE.md](../governance-core/FOUNDER_BRIEFING_TEMPLATE.md)
+- Updated founder briefing repository reference to [founder-briefings](../founder-briefings)
+- Added executive report discovery reference to [executive-reports/EXECUTIVE_REPORT_INDEX.md](../executive-reports/EXECUTIVE_REPORT_INDEX.md)
 
-Updated closure obligations in [governance/CHIEF_ORCHESTRATOR_CHARTER.md](governance/CHIEF_ORCHESTRATOR_CHARTER.md):
+Updated closure obligations in [governance/CHIEF_ORCHESTRATOR_CHARTER.md](../governance-core/CHIEF_ORCHESTRATOR_CHARTER.md):
 - Founder Briefing required at completion of every governance activity
 - Program Status update required at completion of every governance activity
 - Founder Next Actions update required whenever founder decision is required
 
 # Decision Register Updates
 
-Updated [governance/DECISION_REGISTER.md](governance/DECISION_REGISTER.md) with:
+Updated [governance/DECISION_REGISTER.md](../governance-core/DECISION_REGISTER.md) with:
 - D-005: Approval of Governance Completion Sprint
 - Status: Completed
 

@@ -12,7 +12,7 @@ Coordinate delivery and governance activities across NexusPay to ensure aligned 
 - Approve completion only when defined scope and validation obligations are satisfied.
 - Require a Founder Briefing at the conclusion of every governance activity, aligned to founder communication standards.
 - Require a Program Status update at the conclusion of every governance activity.
-- Require a Founder Next Actions update whenever a founder decision is required.
+- Require Founder Action Register maintenance whenever founder decisions are opened or closed.
 - Escalate unresolved issues, blockers, or governance conflicts.
 
 ## Authority
@@ -41,7 +41,7 @@ Coordinate delivery and governance activities across NexusPay to ensure aligned 
 - Escalation briefs for unresolved governance issues.
 - Founder Briefings for each completed governance activity.
 - Program Status updates for each completed governance activity.
-- Founder Next Actions updates when founder decisions are pending.
+- Founder Action Register updates when founder decisions are pending.
 
 ## KPIs
 - Objective-to-workstream translation cycle time.
@@ -55,7 +55,7 @@ Cadence:
 - Weekly executive governance summary.
 - Founder Briefing at governance activity closure.
 - Program Status update at governance activity closure.
-- Founder Next Actions update whenever founder direction is needed.
+- Founder Action Register update whenever founder direction is needed.
 
 Recipients:
 - Executive leadership
@@ -71,9 +71,24 @@ Format requirements:
 - Recommendations
 - Risks
 - Next Actions
-- Founder Briefing compliant with [governance/FOUNDER_COMMUNICATION_STANDARD.md](governance/FOUNDER_COMMUNICATION_STANDARD.md)
-- Program Status update in [founder-briefings/PROGRAM_STATUS_YYYY-MM-DD.md](founder-briefings/PROGRAM_STATUS_YYYY-MM-DD.md) format
-- Founder Next Actions update in [founder-briefings/FOUNDER_NEXT_ACTIONS.md](founder-briefings/FOUNDER_NEXT_ACTIONS.md) format
+- Founder Briefing compliant with [FOUNDER_COMMUNICATION_STANDARD.md](FOUNDER_COMMUNICATION_STANDARD.md)
+- Program Status update in [../founder-briefings/PROGRAM_STATUS_LATEST.md](../founder-briefings/PROGRAM_STATUS_LATEST.md) format, with dated snapshots retained as PROGRAM_STATUS_YYYY-MM-DD.md
+- Founder Action Register update in [../founder-briefings/FOUNDER_ACTION_REGISTER.md](../founder-briefings/FOUNDER_ACTION_REGISTER.md) format
+
+## Mandatory Governance Closure Responsibilities
+
+At completion of every governance activity, the Chief Orchestrator must ensure the following closure actions are completed:
+
+1. Update [DECISION_REGISTER.md](DECISION_REGISTER.md).
+2. Update [../founder-briefings/PROGRAM_STATUS_LATEST.md](../founder-briefings/PROGRAM_STATUS_LATEST.md).
+3. Update [../founder-briefings/FOUNDER_ACTION_REGISTER.md](../founder-briefings/FOUNDER_ACTION_REGISTER.md).
+4. Create a dated founder action snapshot in [../founder-briefings/action-snapshots](../founder-briefings/action-snapshots).
+5. Create a founder briefing in [../founder-briefings/briefings](../founder-briefings/briefings).
+6. Archive sprint outcome under [../sprint-archives](../sprint-archives).
+7. Update [../sprint-archives/SPRINT_ARCHIVE_INDEX.md](../sprint-archives/SPRINT_ARCHIVE_INDEX.md).
+8. Ensure governance references remain current across all updated governance artefacts.
+
+These activities are mandatory.
 
 ## Escalation Paths
 - Technical risk unresolved beyond agreed SLA -> escalate to CTO.

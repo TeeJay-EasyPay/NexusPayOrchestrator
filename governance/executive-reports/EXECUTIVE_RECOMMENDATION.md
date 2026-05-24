@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-Based on [governance/CORRIDOR_VALIDATION_REPORT.md](governance/CORRIDOR_VALIDATION_REPORT.md) and [governance/ROOT_CAUSE_ANALYSIS.md](governance/ROOT_CAUSE_ANALYSIS.md), the governance pilot indicates a credible production reliability issue: at least one newly-added corridor (GBP -> KWD) can remain in a non-terminal in-motion state with payout not started.
+Based on [governance/CORRIDOR_VALIDATION_REPORT.md](../executive-reports/CORRIDOR_VALIDATION_REPORT.md) and [governance/ROOT_CAUSE_ANALYSIS.md](../executive-reports/ROOT_CAUSE_ANALYSIS.md), the governance pilot indicates a credible production reliability issue: at least one newly-added corridor (GBP -> KWD) can remain in a non-terminal in-motion state with payout not started.
 
 Issue is material and actionable. Immediate remediation planning is required, but release-quality governance remains achievable with controlled scope and explicit validation gates.
 
@@ -84,11 +84,11 @@ Conditions:
 
 ## Evidence
 
-- [governance/CORRIDOR_VALIDATION_REPORT.md](governance/CORRIDOR_VALIDATION_REPORT.md)
-- [governance/ROOT_CAUSE_ANALYSIS.md](governance/ROOT_CAUSE_ANALYSIS.md)
-- [src/services/execution/executionEngine.ts](src/services/execution/executionEngine.ts)
-- [app/track.tsx](app/track.tsx)
-- [src/services/payout/payoutAdapter.ts](src/services/payout/payoutAdapter.ts)
+- [governance/CORRIDOR_VALIDATION_REPORT.md](../executive-reports/CORRIDOR_VALIDATION_REPORT.md)
+- [governance/ROOT_CAUSE_ANALYSIS.md](../executive-reports/ROOT_CAUSE_ANALYSIS.md)
+- [src/services/execution/executionEngine.ts](../../src/services/execution/executionEngine.ts)
+- [app/track.tsx](../../app/track.tsx)
+- [src/services/payout/payoutAdapter.ts](../../src/services/payout/payoutAdapter.ts)
 
 ## Recommendations
 

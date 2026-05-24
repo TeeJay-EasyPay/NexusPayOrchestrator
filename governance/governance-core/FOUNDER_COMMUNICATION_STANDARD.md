@@ -19,7 +19,7 @@ This standard applies to:
 - Root-cause governance activities
 - Executive governance review cycles
 
-This standard is mandatory for all governance activities coordinated under [governance/CHIEF_ORCHESTRATOR_CHARTER.md](governance/CHIEF_ORCHESTRATOR_CHARTER.md).
+This standard is mandatory for all governance activities coordinated under [CHIEF_ORCHESTRATOR_CHARTER.md](CHIEF_ORCHESTRATOR_CHARTER.md).
 
 ## Language and Style Requirements
 
@@ -59,7 +59,7 @@ Each briefing must:
 
 ## Governance Alignment Rules
 
-- Governance authority remains defined by [governance/GOVERNANCE_INDEX.md](governance/GOVERNANCE_INDEX.md).
+- Governance authority remains defined by [GOVERNANCE_INDEX.md](GOVERNANCE_INDEX.md).
 - Founder briefing does not replace detailed technical governance artefacts.
 - Founder briefing must reference detailed reports used as evidence.
 - If evidence is incomplete, briefing must explicitly state uncertainty.
@@ -72,7 +72,7 @@ Each briefing must:
 
 ## Publication and Storage
 
-- Founder briefing files are stored in [founder-briefings](founder-briefings).
+- Founder briefing files are stored in [../founder-briefings](../founder-briefings).
 - Naming convention:
   - FOUNDER_BRIEFING_XXX_SHORT_TOPIC.md
 - The latest briefing for each governance activity must be linked from the associated governance closure report.
@@ -81,7 +81,7 @@ Each briefing must:
 
 Before closing a governance activity, confirm:
 
-1. Founder briefing created in [founder-briefings](founder-briefings).
+1. Founder briefing created in [../founder-briefings](../founder-briefings).
 2. All nine mandatory sections present.
 3. Briefing is non-technical and one page or less.
 4. Risk level and executive confidence clearly stated.

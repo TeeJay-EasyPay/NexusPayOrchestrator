@@ -50,7 +50,7 @@ Confidence is medium because findings are evidence-backed, but nine corridors re
 
 ## Reference Documents
 
-- [governance/execution-continuity-investigation-report.md](governance/execution-continuity-investigation-report.md)
-- [governance/CORRIDOR_CERTIFICATION_REPORT.md](governance/CORRIDOR_CERTIFICATION_REPORT.md)
-- [governance/EXECUTION_CONTINUITY_ANALYSIS.md](governance/EXECUTION_CONTINUITY_ANALYSIS.md)
-- [governance/EXECUTION_CONTINUITY_EXECUTIVE_REVIEW.md](governance/EXECUTION_CONTINUITY_EXECUTIVE_REVIEW.md)
+- [../../executive-reports/execution-continuity-investigation-report.md](../../executive-reports/execution-continuity-investigation-report.md)
+- [../../executive-reports/CORRIDOR_CERTIFICATION_REPORT.md](../../executive-reports/CORRIDOR_CERTIFICATION_REPORT.md)
+- [../../executive-reports/EXECUTION_CONTINUITY_ANALYSIS.md](../../executive-reports/EXECUTION_CONTINUITY_ANALYSIS.md)
+- [../../executive-reports/EXECUTION_CONTINUITY_EXECUTIVE_REVIEW.md](../../executive-reports/EXECUTION_CONTINUITY_EXECUTIVE_REVIEW.md)

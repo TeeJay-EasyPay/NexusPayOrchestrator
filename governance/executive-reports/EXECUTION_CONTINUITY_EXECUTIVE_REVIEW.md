@@ -1,6 +1,6 @@
 # Executive Summary
 
-Chief Orchestrator review of [governance/CORRIDOR_CERTIFICATION_REPORT.md](governance/CORRIDOR_CERTIFICATION_REPORT.md) and [governance/EXECUTION_CONTINUITY_ANALYSIS.md](governance/EXECUTION_CONTINUITY_ANALYSIS.md) concludes:
+Chief Orchestrator review of [governance/CORRIDOR_CERTIFICATION_REPORT.md](../executive-reports/CORRIDOR_CERTIFICATION_REPORT.md) and [governance/EXECUTION_CONTINUITY_ANALYSIS.md](../executive-reports/EXECUTION_CONTINUITY_ANALYSIS.md) concludes:
 - Execution continuity hypothesis is PARTIALLY PROVEN.
 - Remediation is justified.
 - Corridor reliability risk remains active, led by GBP -> KWD FAIL status and nine UNKNOWN expanded corridors.
@@ -76,13 +76,13 @@ Approve remediation-scope authorization.
 
 # Evidence
 
-- [governance/CORRIDOR_CERTIFICATION_REPORT.md](governance/CORRIDOR_CERTIFICATION_REPORT.md)
-- [governance/EXECUTION_CONTINUITY_ANALYSIS.md](governance/EXECUTION_CONTINUITY_ANALYSIS.md)
-- [app/track.tsx](app/track.tsx)
-- [src/services/execution/executionEngine.ts](src/services/execution/executionEngine.ts)
-- [src/services/execution/executionPersistenceService.ts](src/services/execution/executionPersistenceService.ts)
-- [src/services/payout/payoutRoutingEngine.ts](src/services/payout/payoutRoutingEngine.ts)
-- [src/services/payout/payoutAdapter.ts](src/services/payout/payoutAdapter.ts)
+- [governance/CORRIDOR_CERTIFICATION_REPORT.md](../executive-reports/CORRIDOR_CERTIFICATION_REPORT.md)
+- [governance/EXECUTION_CONTINUITY_ANALYSIS.md](../executive-reports/EXECUTION_CONTINUITY_ANALYSIS.md)
+- [app/track.tsx](../../app/track.tsx)
+- [src/services/execution/executionEngine.ts](../../src/services/execution/executionEngine.ts)
+- [src/services/execution/executionPersistenceService.ts](../../src/services/execution/executionPersistenceService.ts)
+- [src/services/payout/payoutRoutingEngine.ts](../../src/services/payout/payoutRoutingEngine.ts)
+- [src/services/payout/payoutAdapter.ts](../../src/services/payout/payoutAdapter.ts)
 
 # Recommendations
 

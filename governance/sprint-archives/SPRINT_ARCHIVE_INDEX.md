@@ -1,0 +1,23 @@
+# Sprint Archive Index
+
+## Purpose
+
+This repository maintains historical records of completed governance and delivery sprints to preserve institutional memory, decision continuity, and traceability.
+
+## Sprint Entries
+
+1. [SPRINT_001_GOVERNANCE_PILOT.md](SPRINT_001_GOVERNANCE_PILOT.md)
+2. [SPRINT_002_EXECUTION_CONTINUITY_INVESTIGATION.md](SPRINT_002_EXECUTION_CONTINUITY_INVESTIGATION.md)
+3. [SPRINT_003_GOVERNANCE_FRAMEWORK_COMPLETION.md](SPRINT_003_GOVERNANCE_FRAMEWORK_COMPLETION.md)
+4. [SPRINT_004_FOUNDER_REPORTING_GOVERNANCE_CLOSURE_ENHANCEMENT.md](SPRINT_004_FOUNDER_REPORTING_GOVERNANCE_CLOSURE_ENHANCEMENT.md)
+
+## Archive Standard
+
+Each sprint archive entry includes:
+- Sprint Name
+- Objective
+- Outcome
+- Decisions Made
+- Artefacts Produced
+- Follow-up Actions
+- Reference Documents

@@ -12,7 +12,7 @@ Objectives:
 - Provide historical context for future executives and AI agents
 
 Governance authority precedence:
-1. Governance documents under [governance/GOVERNANCE_INDEX.md](governance/GOVERNANCE_INDEX.md)
+1. Governance documents under [governance/GOVERNANCE_INDEX.md](GOVERNANCE_INDEX.md)
 2. Architecture authority documents referenced by the governance index
 3. Historical reports as informational context
 
@@ -85,12 +85,12 @@ Approved and Active
 3. Include governance-compliance checks in future governance reports.
 
 ## Reference Documents
-- [governance/GOVERNANCE_INDEX.md](governance/GOVERNANCE_INDEX.md)
-- [governance/EXECUTIVE_CHARTER_TEMPLATE.md](governance/EXECUTIVE_CHARTER_TEMPLATE.md)
-- [governance/CHIEF_ORCHESTRATOR_CHARTER.md](governance/CHIEF_ORCHESTRATOR_CHARTER.md)
-- [governance/CHIEF_TECHNOLOGY_OFFICER_CHARTER.md](governance/CHIEF_TECHNOLOGY_OFFICER_CHARTER.md)
-- [governance/TESTING_DIRECTOR_CHARTER.md](governance/TESTING_DIRECTOR_CHARTER.md)
-- [governance/executive-charters-report.md](governance/executive-charters-report.md)
+- [governance/GOVERNANCE_INDEX.md](GOVERNANCE_INDEX.md)
+- [governance/EXECUTIVE_CHARTER_TEMPLATE.md](EXECUTIVE_CHARTER_TEMPLATE.md)
+- [governance/CHIEF_ORCHESTRATOR_CHARTER.md](CHIEF_ORCHESTRATOR_CHARTER.md)
+- [governance/CHIEF_TECHNOLOGY_OFFICER_CHARTER.md](CHIEF_TECHNOLOGY_OFFICER_CHARTER.md)
+- [governance/TESTING_DIRECTOR_CHARTER.md](TESTING_DIRECTOR_CHARTER.md)
+- [governance/executive-charters-report.md](../governance-history/executive-charters-report.md)
 
 ---
 
@@ -139,10 +139,10 @@ Completed
 2. Track unresolved risks in subsequent governance reviews.
 
 ## Reference Documents
-- [governance/governance-pilot-report.md](governance/governance-pilot-report.md)
-- [governance/CORRIDOR_VALIDATION_REPORT.md](governance/CORRIDOR_VALIDATION_REPORT.md)
-- [governance/ROOT_CAUSE_ANALYSIS.md](governance/ROOT_CAUSE_ANALYSIS.md)
-- [governance/EXECUTIVE_RECOMMENDATION.md](governance/EXECUTIVE_RECOMMENDATION.md)
+- [governance/governance-pilot-report.md](../executive-reports/governance-pilot-report.md)
+- [governance/CORRIDOR_VALIDATION_REPORT.md](../executive-reports/CORRIDOR_VALIDATION_REPORT.md)
+- [governance/ROOT_CAUSE_ANALYSIS.md](../executive-reports/ROOT_CAUSE_ANALYSIS.md)
+- [governance/EXECUTIVE_RECOMMENDATION.md](../executive-reports/EXECUTIVE_RECOMMENDATION.md)
 
 ---
 
@@ -192,10 +192,10 @@ Completed
 3. Use identified affected components as the baseline for next sprint scope.
 
 ## Reference Documents
-- [governance/execution-continuity-investigation-report.md](governance/execution-continuity-investigation-report.md)
-- [governance/CORRIDOR_CERTIFICATION_REPORT.md](governance/CORRIDOR_CERTIFICATION_REPORT.md)
-- [governance/EXECUTION_CONTINUITY_ANALYSIS.md](governance/EXECUTION_CONTINUITY_ANALYSIS.md)
-- [governance/EXECUTION_CONTINUITY_EXECUTIVE_REVIEW.md](governance/EXECUTION_CONTINUITY_EXECUTIVE_REVIEW.md)
+- [governance/execution-continuity-investigation-report.md](../executive-reports/execution-continuity-investigation-report.md)
+- [governance/CORRIDOR_CERTIFICATION_REPORT.md](../executive-reports/CORRIDOR_CERTIFICATION_REPORT.md)
+- [governance/EXECUTION_CONTINUITY_ANALYSIS.md](../executive-reports/EXECUTION_CONTINUITY_ANALYSIS.md)
+- [governance/EXECUTION_CONTINUITY_EXECUTIVE_REVIEW.md](../executive-reports/EXECUTION_CONTINUITY_EXECUTIVE_REVIEW.md)
 
 ---
 
@@ -245,9 +245,9 @@ Approved for Planning
 3. Require PASS/FAIL reclassification for all currently UNKNOWN corridors in the next evidence cycle.
 
 ## Reference Documents
-- [governance/execution-continuity-investigation-report.md](governance/execution-continuity-investigation-report.md)
-- [governance/EXECUTION_CONTINUITY_EXECUTIVE_REVIEW.md](governance/EXECUTION_CONTINUITY_EXECUTIVE_REVIEW.md)
-- [governance/governance-pilot-report.md](governance/governance-pilot-report.md)
+- [governance/execution-continuity-investigation-report.md](../executive-reports/execution-continuity-investigation-report.md)
+- [governance/EXECUTION_CONTINUITY_EXECUTIVE_REVIEW.md](../executive-reports/EXECUTION_CONTINUITY_EXECUTIVE_REVIEW.md)
+- [governance/governance-pilot-report.md](../executive-reports/governance-pilot-report.md)
 
 ---
 
@@ -298,13 +298,124 @@ Completed
 3. Include EQAO participation in remediation plan quality gates.
 
 ## Reference Documents
-- [governance/GOVERNANCE_INDEX.md](governance/GOVERNANCE_INDEX.md)
-- [governance/EQAO_CHARTER.md](governance/EQAO_CHARTER.md)
-- [governance/FOUNDER_COMMUNICATION_STANDARD.md](governance/FOUNDER_COMMUNICATION_STANDARD.md)
-- [governance/FOUNDER_BRIEFING_TEMPLATE.md](governance/FOUNDER_BRIEFING_TEMPLATE.md)
-- [governance/CHIEF_ORCHESTRATOR_CHARTER.md](governance/CHIEF_ORCHESTRATOR_CHARTER.md)
-- [executive-reports/EXECUTIVE_REPORT_INDEX.md](executive-reports/EXECUTIVE_REPORT_INDEX.md)
-- [founder-briefings/FOUNDER_BRIEFING_INDEX.md](founder-briefings/FOUNDER_BRIEFING_INDEX.md)
+- [governance/GOVERNANCE_INDEX.md](GOVERNANCE_INDEX.md)
+- [governance/EQAO_CHARTER.md](EQAO_CHARTER.md)
+- [governance/FOUNDER_COMMUNICATION_STANDARD.md](FOUNDER_COMMUNICATION_STANDARD.md)
+- [governance/FOUNDER_BRIEFING_TEMPLATE.md](FOUNDER_BRIEFING_TEMPLATE.md)
+- [governance/CHIEF_ORCHESTRATOR_CHARTER.md](CHIEF_ORCHESTRATOR_CHARTER.md)
+- [executive-reports/EXECUTIVE_REPORT_INDEX.md](../executive-reports/EXECUTIVE_REPORT_INDEX.md)
+- [founder-briefings/FOUNDER_BRIEFING_INDEX.md](../founder-briefings/FOUNDER_BRIEFING_INDEX.md)
+
+---
+
+## Decision ID
+D-006
+
+## Title
+Governance Repository Refactoring Sprint
+
+## Date
+2026-05-24
+
+## Decision Owner
+Chief Orchestrator
+
+## Participating Roles
+- Chief Orchestrator
+- Chief Technology Officer
+- Testing Director
+- Engineering Quality & Assurance Officer
+
+## Background
+Governance documents were created across multiple root-level locations, reducing discoverability and making audit traversal, executive reporting, and historical sprint tracking harder to execute consistently.
+
+## Decision
+Approve and complete a governance-only repository refactor that consolidates all governance artefacts under a single `governance/` structure with dedicated repositories for core governance, founder briefings, executive reports, governance history, and sprint archives.
+
+## Rationale
+Repository normalization improves governance clarity, document discoverability, cross-repository traceability, auditability, and reporting readiness for founders and executives while preserving governance authority precedence.
+
+## Alternatives Considered
+- Keep existing mixed root-level governance layout and rely on manual navigation.
+- Delay structural normalization until after remediation workstreams.
+
+## Risks
+- Low: Temporary link maintenance overhead during migration.
+- Medium: Future reference drift if indexes and decision records are not maintained at governance closure.
+
+## Expected Outcome
+Final governance repository baseline established for remediation and future delivery, with clear ownership boundaries, stable authority indexing, and durable historical sprint memory.
+
+## Status
+Completed
+
+## Follow-up Actions
+1. Enforce governance closure checklist updates across index, decision register, and sprint archive for every governance sprint.
+2. Include link-integrity checks as part of governance completion validation.
+3. Keep founder and executive repositories synchronized with decision register updates.
+
+## Reference Documents
+- [GOVERNANCE_INDEX.md](GOVERNANCE_INDEX.md)
+- [CHIEF_ORCHESTRATOR_CHARTER.md](CHIEF_ORCHESTRATOR_CHARTER.md)
+- [../executive-reports/EXECUTIVE_REPORT_INDEX.md](../executive-reports/EXECUTIVE_REPORT_INDEX.md)
+- [../founder-briefings/FOUNDER_BRIEFING_INDEX.md](../founder-briefings/FOUNDER_BRIEFING_INDEX.md)
+- [../governance-history/governance-repository-refactoring-report.md](../governance-history/governance-repository-refactoring-report.md)
+
+---
+
+## Decision ID
+D-007
+
+## Title
+Founder Reporting & Governance Closure Enhancement Sprint
+
+## Date
+2026-05-24
+
+## Decision Owner
+Chief Orchestrator
+
+## Participating Roles
+- Chief Orchestrator
+- Chief Technology Officer
+- Testing Director
+- Engineering Quality & Assurance Officer
+
+## Background
+Final governance closure controls required stronger founder reporting structure, permanent action retention, a current program status dashboard, and explicit closure maintenance responsibilities to prevent governance drift.
+
+## Decision
+Approve and complete the Founder Reporting & Governance Closure Enhancement Sprint, including founder briefing repository restructuring, permanent founder action register adoption, latest program status model introduction, and mandatory closure-responsibility formalization.
+
+## Rationale
+The enhancement closes governance maintenance gaps, improves founder reporting clarity, preserves historical traceability, strengthens action management, and ensures closure artefacts are consistently maintained.
+
+## Alternatives Considered
+- Keep legacy founder files in a flat structure and continue manual closure updates.
+- Delay closure discipline improvements until remediation planning begins.
+
+## Risks
+- Low: Additional governance maintenance overhead.
+- Medium: Risk of reference drift if closure updates are not followed every sprint.
+
+## Expected Outcome
+Founder communications become clearer and easier to navigate, action history is durable, current status is always visible, and governance closure discipline is enforced through explicit charter responsibilities.
+
+## Status
+Completed
+
+## Follow-up Actions
+1. Update [../founder-briefings/PROGRAM_STATUS_LATEST.md](../founder-briefings/PROGRAM_STATUS_LATEST.md) at every governance activity closure.
+2. Append all new founder actions in [../founder-briefings/FOUNDER_ACTION_REGISTER.md](../founder-briefings/FOUNDER_ACTION_REGISTER.md) and never delete historical records.
+3. Archive each closure sprint in [../sprint-archives](../sprint-archives) and maintain [../sprint-archives/SPRINT_ARCHIVE_INDEX.md](../sprint-archives/SPRINT_ARCHIVE_INDEX.md).
+
+## Reference Documents
+- [GOVERNANCE_INDEX.md](GOVERNANCE_INDEX.md)
+- [CHIEF_ORCHESTRATOR_CHARTER.md](CHIEF_ORCHESTRATOR_CHARTER.md)
+- [../founder-briefings/FOUNDER_BRIEFING_INDEX.md](../founder-briefings/FOUNDER_BRIEFING_INDEX.md)
+- [../founder-briefings/FOUNDER_ACTION_REGISTER.md](../founder-briefings/FOUNDER_ACTION_REGISTER.md)
+- [../founder-briefings/PROGRAM_STATUS_LATEST.md](../founder-briefings/PROGRAM_STATUS_LATEST.md)
+- [../sprint-archives/SPRINT_004_FOUNDER_REPORTING_GOVERNANCE_CLOSURE_ENHANCEMENT.md](../sprint-archives/SPRINT_004_FOUNDER_REPORTING_GOVERNANCE_CLOSURE_ENHANCEMENT.md)
 
 ---
 

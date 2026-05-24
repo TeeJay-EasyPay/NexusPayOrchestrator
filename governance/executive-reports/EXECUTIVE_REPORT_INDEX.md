@@ -1,0 +1,46 @@
+# Executive Report Index
+
+## Purpose
+
+This index provides fast access to executive-level governance outputs, including certification reports, root-cause analyses, investigations, recommendations, and risk assessments.
+
+## Certification Reports
+
+- [CORRIDOR_VALIDATION_REPORT.md](CORRIDOR_VALIDATION_REPORT.md)
+- [CORRIDOR_CERTIFICATION_REPORT.md](CORRIDOR_CERTIFICATION_REPORT.md)
+
+## Root Cause Analyses
+
+- [ROOT_CAUSE_ANALYSIS.md](ROOT_CAUSE_ANALYSIS.md)
+- [EXECUTION_CONTINUITY_ANALYSIS.md](EXECUTION_CONTINUITY_ANALYSIS.md)
+
+## Investigations
+
+- [governance-pilot-report.md](governance-pilot-report.md)
+- [execution-continuity-investigation-report.md](execution-continuity-investigation-report.md)
+
+## Executive Recommendations and Reviews
+
+- [EXECUTIVE_RECOMMENDATION.md](EXECUTIVE_RECOMMENDATION.md)
+- [EXECUTION_CONTINUITY_EXECUTIVE_REVIEW.md](EXECUTION_CONTINUITY_EXECUTIVE_REVIEW.md)
+
+## Governance Framework and Decision Records
+
+- [../governance-history/executive-charters-report.md](../governance-history/executive-charters-report.md)
+- [../governance-history/decision-register-creation-report.md](../governance-history/decision-register-creation-report.md)
+- [../governance-core/DECISION_REGISTER.md](../governance-core/DECISION_REGISTER.md)
+
+## Founder Communication and Status Reports
+
+- [../governance-history/founder-communication-framework-report.md](../governance-history/founder-communication-framework-report.md)
+- [../founder-briefings/FOUNDER_BRIEFING_INDEX.md](../founder-briefings/FOUNDER_BRIEFING_INDEX.md)
+- [../founder-briefings/PROGRAM_STATUS_LATEST.md](../founder-briefings/PROGRAM_STATUS_LATEST.md)
+- [../founder-briefings/PROGRAM_STATUS_2026-05-24.md](../founder-briefings/PROGRAM_STATUS_2026-05-24.md)
+- [../founder-briefings/FOUNDER_ACTION_REGISTER.md](../founder-briefings/FOUNDER_ACTION_REGISTER.md)
+- [../founder-briefings/action-snapshots/FOUNDER_NEXT_ACTIONS_2026-05-24.md](../founder-briefings/action-snapshots/FOUNDER_NEXT_ACTIONS_2026-05-24.md)
+
+## Organization Notes
+
+Reports remain in their source governance locations to preserve link integrity and historical traceability.
+
+This executive repository serves as a discovery layer for rapid executive navigation.

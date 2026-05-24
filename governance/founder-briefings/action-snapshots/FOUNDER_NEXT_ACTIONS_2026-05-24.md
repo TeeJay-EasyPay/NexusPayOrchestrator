@@ -28,6 +28,6 @@ Immediate (before rollout confidence changes)
 
 ## Supporting References
 
-- [governance/governance-pilot-report.md](governance/governance-pilot-report.md)
-- [governance/execution-continuity-investigation-report.md](governance/execution-continuity-investigation-report.md)
-- [governance/DECISION_REGISTER.md](governance/DECISION_REGISTER.md)
+- [../../executive-reports/governance-pilot-report.md](../../executive-reports/governance-pilot-report.md)
+- [../../executive-reports/execution-continuity-investigation-report.md](../../executive-reports/execution-continuity-investigation-report.md)
+- [../../governance-core/DECISION_REGISTER.md](../../governance-core/DECISION_REGISTER.md)

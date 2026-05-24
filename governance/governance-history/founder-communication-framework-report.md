@@ -8,30 +8,30 @@ No application source code was modified.
 
 # Documents Created
 
-1. [governance/FOUNDER_COMMUNICATION_STANDARD.md](governance/FOUNDER_COMMUNICATION_STANDARD.md)
-2. [governance/FOUNDER_BRIEFING_TEMPLATE.md](governance/FOUNDER_BRIEFING_TEMPLATE.md)
-3. [governance/founder-briefings/FOUNDER_BRIEFING_001_EXECUTION_CONTINUITY.md](governance/founder-briefings/FOUNDER_BRIEFING_001_EXECUTION_CONTINUITY.md)
-4. [governance/founder-briefings](governance/founder-briefings)
+1. [governance/FOUNDER_COMMUNICATION_STANDARD.md](../governance-core/FOUNDER_COMMUNICATION_STANDARD.md)
+2. [governance/FOUNDER_BRIEFING_TEMPLATE.md](../governance-core/FOUNDER_BRIEFING_TEMPLATE.md)
+3. [../founder-briefings/briefings/FOUNDER_BRIEFING_001_EXECUTION_CONTINUITY.md](../founder-briefings/briefings/FOUNDER_BRIEFING_001_EXECUTION_CONTINUITY.md)
+4. [governance/founder-briefings](../founder-briefings)
 
 # Charter Updates
 
 Updated document:
-- [governance/CHIEF_ORCHESTRATOR_CHARTER.md](governance/CHIEF_ORCHESTRATOR_CHARTER.md)
+- [governance/CHIEF_ORCHESTRATOR_CHARTER.md](../governance-core/CHIEF_ORCHESTRATOR_CHARTER.md)
 
 Updates applied:
 - Added responsibility requiring a Founder Briefing at the conclusion of every governance activity.
 - Added Founder Briefings to required outputs.
 - Added founder briefing cadence at governance closure.
 - Added Founder / CEO to recipients.
-- Added mandatory compliance with [governance/FOUNDER_COMMUNICATION_STANDARD.md](governance/FOUNDER_COMMUNICATION_STANDARD.md) in reporting format requirements.
+- Added mandatory compliance with [governance/FOUNDER_COMMUNICATION_STANDARD.md](../governance-core/FOUNDER_COMMUNICATION_STANDARD.md) in reporting format requirements.
 
 Updated governance index:
-- [governance/GOVERNANCE_INDEX.md](governance/GOVERNANCE_INDEX.md)
+- [governance/GOVERNANCE_INDEX.md](../governance-core/GOVERNANCE_INDEX.md)
 
 Index updates applied:
-- Added [governance/FOUNDER_COMMUNICATION_STANDARD.md](governance/FOUNDER_COMMUNICATION_STANDARD.md) to governance authority references.
-- Added [governance/FOUNDER_BRIEFING_TEMPLATE.md](governance/FOUNDER_BRIEFING_TEMPLATE.md) to governance authority references.
-- Added requirement statement linking governance closure artefacts to [governance/founder-briefings](governance/founder-briefings).
+- Added [governance/FOUNDER_COMMUNICATION_STANDARD.md](../governance-core/FOUNDER_COMMUNICATION_STANDARD.md) to governance authority references.
+- Added [governance/FOUNDER_BRIEFING_TEMPLATE.md](../governance-core/FOUNDER_BRIEFING_TEMPLATE.md) to governance authority references.
+- Added requirement statement linking governance closure artefacts to [governance/founder-briefings](../founder-briefings).
 
 # Founder Communication Framework
 
@@ -60,7 +60,7 @@ Operational outcome:
 # Example Founder Briefing
 
 Created example:
-- [governance/founder-briefings/FOUNDER_BRIEFING_001_EXECUTION_CONTINUITY.md](governance/founder-briefings/FOUNDER_BRIEFING_001_EXECUTION_CONTINUITY.md)
+- [../founder-briefings/briefings/FOUNDER_BRIEFING_001_EXECUTION_CONTINUITY.md](../founder-briefings/briefings/FOUNDER_BRIEFING_001_EXECUTION_CONTINUITY.md)
 
 Summary of briefing content:
 - Explains execution continuity investigation outcome in non-technical language.
@@ -72,6 +72,6 @@ Summary of briefing content:
 
 1. Make founder briefing publication a hard closure gate for all governance activities.
 2. Require each governance closure report to link its corresponding founder briefing.
-3. Add a sequential registry index for founder briefings in [governance/founder-briefings](governance/founder-briefings).
+3. Add a sequential registry index for founder briefings in [governance/founder-briefings](../founder-briefings).
 4. Add quarterly quality review of founder briefings for clarity, length compliance, and decision readiness.
 5. Extend this framework to future executive roles added via the charter template.
