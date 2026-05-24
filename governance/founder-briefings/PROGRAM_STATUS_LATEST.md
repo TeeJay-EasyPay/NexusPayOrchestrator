@@ -15,11 +15,11 @@ Overall programme health: Amber
 Executive status summary:
 - Governance framework, authority model, and reporting repositories are complete and operational.
 - Corridor reliability remains mixed, with one confirmed FAIL corridor and nine UNKNOWN expanded corridors.
-- Remediation planning has not started because founder decisions are still open.
+- Remediation planning is now approved and sprint kickoff is initiated.
 
 Current transition point:
-- Founder Program Status & Executive Briefing Sprint completed.
-- Programme is ready to enter execution continuity remediation planning immediately after founder decisions are confirmed.
+- Founder approval received for remediation planning and mandatory re-certification gates.
+- Sprint 005 kickoff is now active for execution continuity remediation and corridor re-certification.
 
 ## Executive Summary
 
@@ -30,7 +30,7 @@ Operational risk remains concentrated in execution continuity reliability for ex
 ## Key Achievements Completed
 
 1. Governance authority framework established and expanded across orchestrator, CTO, Testing Director, and EQAO roles.
-2. Governance decision register established and maintained through D-007.
+2. Governance decision register established and maintained through D-008.
 3. Founder reporting framework completed with permanent action register and briefing standards.
 4. Executive reporting discovery framework completed and linked to governance authority.
 5. Sprint archival discipline established with institutional history through Sprint 004.
@@ -38,7 +38,7 @@ Operational risk remains concentrated in execution continuity reliability for ex
 
 ## Current Priorities
 
-1. Start execution continuity remediation planning sprint under governance gates.
+1. Execute Sprint 005 remediation planning scope under governance gates.
 2. Define deterministic resume and terminal-state acceptance criteria.
 3. Execute controlled re-certification runs for all currently UNKNOWN corridors.
 4. Maintain closure discipline across decision register, founder action register, and sprint archives.
@@ -50,20 +50,20 @@ High:
 - Misclassification risk if UNKNOWN corridors are treated as production-ready without runtime evidence.
 
 Medium:
-- Programme delay risk while founder decisions remain open.
-- Operational support burden risk if remediation planning does not begin in the next cycle.
+- Operational support burden risk if remediation planning drifts from agreed sprint sequence.
+- Re-certification timeline risk if evidence capture quality is inconsistent.
 
-## Decisions Awaiting Founder Input
+## Founder Decisions Status
 
-1. Approve execution continuity remediation planning sprint as next priority governance workstream.
-2. Approve mandatory re-certification gates before expanded corridors are treated as production-ready.
+1. Execution continuity remediation planning sprint: Approved.
+2. Mandatory re-certification gates before expanded-corridor confidence upgrades: Approved.
 
 ## Recommended Next Actions
 
-1. Confirm founder approval for remediation planning scope in the current governance cycle.
-2. Confirm PASS/FAIL evidence policy for all currently UNKNOWN corridors.
-3. Launch remediation planning with Chief Orchestrator ownership and CTO/Testing Director/EQAO co-governance.
-4. Require updated founder snapshot and latest status refresh at the end of the next sprint.
+1. Launch deterministic resume and terminal-state remediation design under CTO ownership.
+2. Execute Testing Director runbook beginning with GBP -> KWD sentinel corridor.
+3. Hold corridor confidence at current levels until re-certification evidence is approved.
+4. Submit Sprint 005 checkpoint pack for founder review under Action A-003.
 
 ## CTO Technical Status
 

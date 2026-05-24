@@ -25,6 +25,35 @@ Each founder action must include:
 ## Open Actions
 
 ### Action ID
+A-003
+
+### Date Raised
+2026-05-24
+
+### Description
+Review Sprint 005 remediation checkpoint pack and confirm continuation to full re-certification cycle.
+
+### Recommendation
+Review checkpoint evidence within 24 hours of submission and approve continuation if acceptance criteria are on track.
+
+### Priority
+Medium
+
+### Status
+Open
+
+### Date Closed
+Not Closed
+
+### Related Decision
+D-008
+
+### Related Sprint
+Sprint 005 - Execution Continuity Remediation and Re-Certification
+
+## Closed Actions
+
+### Action ID
 A-001
 
 ### Date Raised
@@ -40,10 +69,10 @@ Approve remediation planning immediately and require governance-defined acceptan
 High
 
 ### Status
-Open
+Closed
 
 ### Date Closed
-Not Closed
+2026-05-24
 
 ### Related Decision
 D-004
@@ -69,20 +98,16 @@ Approve PASS/FAIL evidence gates for all currently UNKNOWN corridors before conf
 High
 
 ### Status
-Open
+Closed
 
 ### Date Closed
-Not Closed
+2026-05-24
 
 ### Related Decision
 D-004
 
 ### Related Sprint
 Sprint 002 - Execution Continuity Investigation
-
-## Closed Actions
-
-- None recorded yet.
 
 ## Governance Maintenance Rules
 

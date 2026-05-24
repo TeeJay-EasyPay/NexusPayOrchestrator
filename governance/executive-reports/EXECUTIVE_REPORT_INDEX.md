@@ -24,6 +24,12 @@ This index provides fast access to executive-level governance outputs, including
 - [EXECUTIVE_RECOMMENDATION.md](EXECUTIVE_RECOMMENDATION.md)
 - [EXECUTION_CONTINUITY_EXECUTIVE_REVIEW.md](EXECUTION_CONTINUITY_EXECUTIVE_REVIEW.md)
 
+## Sprint 005 Execution Planning Package
+
+- [CTO_REMEDIATION_DESIGN_SPRINT_005.md](CTO_REMEDIATION_DESIGN_SPRINT_005.md)
+- [TESTING_DIRECTOR_CERTIFICATION_PLAN_SPRINT_005.md](TESTING_DIRECTOR_CERTIFICATION_PLAN_SPRINT_005.md)
+- [EQAO_QUALITY_ASSESSMENT_SPRINT_005.md](EQAO_QUALITY_ASSESSMENT_SPRINT_005.md)
+
 ## Governance Framework and Decision Records
 
 - [../governance-history/executive-charters-report.md](../governance-history/executive-charters-report.md)

@@ -1,18 +1,21 @@
 # Founder Next Actions - 2026-05-24
 
+Approval note:
+- Founder approval granted to initiate remediation planning and enforce mandatory re-certification gates.
+
 ## Priority 1 Actions
 
 ### Action
-Approve execution continuity remediation planning sprint as immediate next governance workstream.
+Initiate Sprint 005 execution continuity remediation planning with Chief Orchestrator, CTO, Testing Director, and EQAO ownership.
 
 ### Owner
-Founder / CEO
+Chief Orchestrator
 
 ### Reason
-Current governance evidence classifies continuity risk as material, with one FAIL corridor and unresolved expanded-corridor uncertainty.
+Approval has been granted; execution must now begin without governance delay.
 
 ### Expected Outcome
-Remediation planning begins immediately with explicit acceptance criteria and executive ownership.
+Sprint scope, acceptance criteria, and checkpoint cadence are active.
 
 ### Target Date
 2026-05-25
@@ -20,13 +23,13 @@ Remediation planning begins immediately with explicit acceptance criteria and ex
 ---
 
 ### Action
-Approve mandatory re-certification gates before expanded corridors are treated as production-ready.
+Execute controlled corridor re-certification runbook with GBP -> KWD as sentinel corridor.
 
 ### Owner
-Founder / CEO
+Testing Director
 
 ### Reason
-Nine corridors remain UNKNOWN and cannot be responsibly upgraded without runtime evidence.
+Nine corridors remain UNKNOWN and require runtime evidence before status upgrades.
 
 ### Expected Outcome
 All UNKNOWN corridors move to PASS or FAIL via controlled certification runs.
@@ -37,10 +40,10 @@ All UNKNOWN corridors move to PASS or FAIL via controlled certification runs.
 ## Priority 2 Actions
 
 ### Action
-Approve remediation governance gate requiring EQAO quality review before implementation begins.
+Apply EQAO quality gate to remediation plan acceptance criteria before implementation transitions.
 
 ### Owner
-Founder / CEO
+EQAO
 
 ### Reason
 Pre-implementation quality control reduces rework risk and architecture drift.
@@ -54,7 +57,7 @@ Improved implementation quality and reduced remediation-cycle risk.
 ## Priority 3 Actions
 
 ### Action
-Approve weekly founder checkpoint cadence until continuity remediation planning and first re-certification cycle are completed.
+Issue weekly founder checkpoint packs until first remediation cycle and re-certification tranche are complete.
 
 ### Owner
 Chief Orchestrator

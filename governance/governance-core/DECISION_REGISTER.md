@@ -419,6 +419,63 @@ Completed
 
 ---
 
+## Decision ID
+D-008
+
+## Title
+Approval to Initiate Execution Continuity Remediation and Re-Certification Sprint
+
+## Date
+2026-05-24
+
+## Decision Owner
+Chief Orchestrator
+
+## Participating Roles
+- Founder / CEO
+- Chief Orchestrator
+- Chief Technology Officer
+- Testing Director
+- Engineering Quality & Assurance Officer
+
+## Background
+Governance investigation concluded that GBP -> KWD remains FAIL and nine expanded corridors remain UNKNOWN. Founder approval has now been granted to initiate remediation planning and enforce evidence-gated re-certification.
+
+## Decision
+Initiate Sprint 005 execution continuity remediation and re-certification immediately, with mandatory PASS/FAIL evidence gates and sentinel-first validation starting with GBP -> KWD.
+
+## Rationale
+Immediate kickoff converts approved governance direction into controlled execution activity, reduces decision latency risk, and preserves reliability discipline before confidence upgrades.
+
+## Alternatives Considered
+- Delay sprint kickoff to a later governance cycle.
+- Begin implementation activity without full remediation planning and evidence gate enforcement.
+
+## Risks
+- Medium: Schedule compression risk if runbook evidence capture quality is insufficient.
+- Medium: Continued trust risk if sentinel corridor does not reach deterministic terminal behavior quickly.
+
+## Expected Outcome
+Sprint 005 executes with clear ownership, deterministic acceptance criteria, and corridor re-certification governance controls, enabling reliable reclassification of current FAIL/UNKNOWN states.
+
+## Status
+Approved and Active
+
+## Follow-up Actions
+1. CTO to publish deterministic resume and terminal-state remediation design.
+2. Testing Director to execute sentinel-first re-certification sequence with reproducible traces.
+3. EQAO to enforce quality gate approval before implementation transition.
+4. Chief Orchestrator to issue weekly founder checkpoint packs and update governance closure artefacts.
+
+## Reference Documents
+- [../executive-reports/EXECUTION_CONTINUITY_EXECUTIVE_REVIEW.md](../executive-reports/EXECUTION_CONTINUITY_EXECUTIVE_REVIEW.md)
+- [../executive-reports/CORRIDOR_CERTIFICATION_REPORT.md](../executive-reports/CORRIDOR_CERTIFICATION_REPORT.md)
+- [../founder-briefings/PROGRAM_STATUS_LATEST.md](../founder-briefings/PROGRAM_STATUS_LATEST.md)
+- [../founder-briefings/FOUNDER_ACTION_REGISTER.md](../founder-briefings/FOUNDER_ACTION_REGISTER.md)
+- [../sprint-archives/SPRINT_005_EXECUTION_CONTINUITY_REMEDIATION_AND_RECERTIFICATION.md](../sprint-archives/SPRINT_005_EXECUTION_CONTINUITY_REMEDIATION_AND_RECERTIFICATION.md)
+
+---
+
 ## Register Maintenance Guidance
 
 1. Add new decisions in ascending ID order.
