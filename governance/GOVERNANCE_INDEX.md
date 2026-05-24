@@ -10,8 +10,12 @@ decision-making processes.
 2. CHIEF_ORCHESTRATOR_CHARTER.md
 3. CHIEF_TECHNOLOGY_OFFICER_CHARTER.md
 4. TESTING_DIRECTOR_CHARTER.md
+5. FOUNDER_COMMUNICATION_STANDARD.md
+6. FOUNDER_BRIEFING_TEMPLATE.md
 
 These documents are authoritative for governance.
+
+Founder briefings created under [governance/founder-briefings](governance/founder-briefings) are required governance closure artefacts and must comply with the founder communication standard.
 
 ---
 

@@ -10,6 +10,7 @@ Coordinate delivery and governance activities across NexusPay to ensure aligned 
 - Coordinate executives across strategy, technology, testing, operations, and remediation.
 - Review reports for completeness, evidence quality, and governance alignment.
 - Approve completion only when defined scope and validation obligations are satisfied.
+- Require a Founder Briefing at the conclusion of every governance activity, aligned to founder communication standards.
 - Escalate unresolved issues, blockers, or governance conflicts.
 
 ## Authority
@@ -36,6 +37,7 @@ Coordinate delivery and governance activities across NexusPay to ensure aligned 
 - Execution priorities and dependency maps.
 - Completion approvals or rejection notices.
 - Escalation briefs for unresolved governance issues.
+- Founder Briefings for each completed governance activity.
 
 ## KPIs
 - Objective-to-workstream translation cycle time.
@@ -47,12 +49,14 @@ Coordinate delivery and governance activities across NexusPay to ensure aligned 
 Cadence:
 - Daily coordination snapshot during active delivery.
 - Weekly executive governance summary.
+- Founder Briefing at governance activity closure.
 
 Recipients:
 - Executive leadership
 - CTO
 - Testing Director
 - Relevant function leads
+- Founder / CEO
 
 Format requirements:
 - Executive Summary
@@ -61,6 +65,7 @@ Format requirements:
 - Recommendations
 - Risks
 - Next Actions
+- Founder Briefing compliant with [governance/FOUNDER_COMMUNICATION_STANDARD.md](governance/FOUNDER_COMMUNICATION_STANDARD.md)
 
 ## Escalation Paths
 - Technical risk unresolved beyond agreed SLA -> escalate to CTO.
