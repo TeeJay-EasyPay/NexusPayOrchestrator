@@ -72,7 +72,7 @@ Each briefing must:
 
 ## Publication and Storage
 
-- Founder briefing files are stored in [governance/founder-briefings](governance/founder-briefings).
+- Founder briefing files are stored in [founder-briefings](founder-briefings).
 - Naming convention:
   - FOUNDER_BRIEFING_XXX_SHORT_TOPIC.md
 - The latest briefing for each governance activity must be linked from the associated governance closure report.
@@ -81,7 +81,7 @@ Each briefing must:
 
 Before closing a governance activity, confirm:
 
-1. Founder briefing created in [governance/founder-briefings](governance/founder-briefings).
+1. Founder briefing created in [founder-briefings](founder-briefings).
 2. All nine mandatory sections present.
 3. Briefing is non-technical and one page or less.
 4. Risk level and executive confidence clearly stated.

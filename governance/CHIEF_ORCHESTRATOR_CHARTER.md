@@ -11,6 +11,8 @@ Coordinate delivery and governance activities across NexusPay to ensure aligned 
 - Review reports for completeness, evidence quality, and governance alignment.
 - Approve completion only when defined scope and validation obligations are satisfied.
 - Require a Founder Briefing at the conclusion of every governance activity, aligned to founder communication standards.
+- Require a Program Status update at the conclusion of every governance activity.
+- Require a Founder Next Actions update whenever a founder decision is required.
 - Escalate unresolved issues, blockers, or governance conflicts.
 
 ## Authority
@@ -38,6 +40,8 @@ Coordinate delivery and governance activities across NexusPay to ensure aligned 
 - Completion approvals or rejection notices.
 - Escalation briefs for unresolved governance issues.
 - Founder Briefings for each completed governance activity.
+- Program Status updates for each completed governance activity.
+- Founder Next Actions updates when founder decisions are pending.
 
 ## KPIs
 - Objective-to-workstream translation cycle time.
@@ -50,6 +54,8 @@ Cadence:
 - Daily coordination snapshot during active delivery.
 - Weekly executive governance summary.
 - Founder Briefing at governance activity closure.
+- Program Status update at governance activity closure.
+- Founder Next Actions update whenever founder direction is needed.
 
 Recipients:
 - Executive leadership
@@ -66,6 +72,8 @@ Format requirements:
 - Risks
 - Next Actions
 - Founder Briefing compliant with [governance/FOUNDER_COMMUNICATION_STANDARD.md](governance/FOUNDER_COMMUNICATION_STANDARD.md)
+- Program Status update in [founder-briefings/PROGRAM_STATUS_YYYY-MM-DD.md](founder-briefings/PROGRAM_STATUS_YYYY-MM-DD.md) format
+- Founder Next Actions update in [founder-briefings/FOUNDER_NEXT_ACTIONS.md](founder-briefings/FOUNDER_NEXT_ACTIONS.md) format
 
 ## Escalation Paths
 - Technical risk unresolved beyond agreed SLA -> escalate to CTO.

@@ -251,6 +251,63 @@ Approved for Planning
 
 ---
 
+## Decision ID
+D-005
+
+## Title
+Approval of Governance Completion Sprint
+
+## Date
+2026-05-24
+
+## Decision Owner
+Chief Orchestrator
+
+## Participating Roles
+- Chief Orchestrator
+- Chief Technology Officer
+- Testing Director
+- Engineering Quality & Assurance Officer
+
+## Background
+NexusPay required final governance, founder communication, and executive reporting structures before remediation and future delivery activities could proceed under complete governance controls.
+
+## Decision
+Approve and execute the Governance Completion Sprint to finalize framework structure, founder communication repositories, executive reporting discovery, and governance authority updates.
+
+## Rationale
+Framework completion reduces governance ambiguity, improves executive traceability, and ensures future remediation activities start with full governance readiness.
+
+## Alternatives Considered
+- Proceed to remediation planning without completing governance framework enhancements.
+- Defer founder and executive reporting structure completion to a later sprint.
+
+## Risks
+- Low: Additional documentation governance overhead.
+- Medium: Future governance drift risk if closure repositories are not maintained.
+
+## Expected Outcome
+Complete governance framework readiness with clear authority references, founder communication closure obligations, executive report discoverability, and updated decision history.
+
+## Status
+Completed
+
+## Follow-up Actions
+1. Maintain founder and executive reporting indexes as mandatory governance closure artifacts.
+2. Enforce program status and founder next actions updates on every governance activity closure.
+3. Include EQAO participation in remediation plan quality gates.
+
+## Reference Documents
+- [governance/GOVERNANCE_INDEX.md](governance/GOVERNANCE_INDEX.md)
+- [governance/EQAO_CHARTER.md](governance/EQAO_CHARTER.md)
+- [governance/FOUNDER_COMMUNICATION_STANDARD.md](governance/FOUNDER_COMMUNICATION_STANDARD.md)
+- [governance/FOUNDER_BRIEFING_TEMPLATE.md](governance/FOUNDER_BRIEFING_TEMPLATE.md)
+- [governance/CHIEF_ORCHESTRATOR_CHARTER.md](governance/CHIEF_ORCHESTRATOR_CHARTER.md)
+- [executive-reports/EXECUTIVE_REPORT_INDEX.md](executive-reports/EXECUTIVE_REPORT_INDEX.md)
+- [founder-briefings/FOUNDER_BRIEFING_INDEX.md](founder-briefings/FOUNDER_BRIEFING_INDEX.md)
+
+---
+
 ## Register Maintenance Guidance
 
 1. Add new decisions in ascending ID order.
