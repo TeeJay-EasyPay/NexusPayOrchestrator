@@ -7,7 +7,23 @@ function toNumber(value: unknown, fallback = 0) {
 }
 
 function toCurrency(value: unknown, fallback: Currency = "PHP"): Currency {
-  const allowedCurrencies: Currency[] = ["GBP", "PHP", "MYR", "AED", "XRP", "RLUSD"];
+  const allowedCurrencies: Currency[] = [
+    "GBP",
+    "PHP",
+    "MYR",
+    "AED",
+    "SAR",
+    "QAR",
+    "KWD",
+    "BHD",
+    "OMR",
+    "SGD",
+    "THB",
+    "IDR",
+    "VND",
+    "XRP",
+    "RLUSD",
+  ];
   return allowedCurrencies.includes(value as Currency) ? (value as Currency) : fallback;
 }
 

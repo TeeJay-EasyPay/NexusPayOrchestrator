@@ -65,13 +65,6 @@ function getPressurePenalty(pressure: LiquidityPressure) {
   return 0;
 }
 
-function getDepthScore(depth: LiquidityDepth) {
-  if (depth === "HIGH") return 96;
-  if (depth === "MEDIUM") return 82;
-  if (depth === "LOW") return 62;
-  return 38;
-}
-
 function getStatusFromScore(score: number): TreasurySignalStatus {
   if (score >= 90) return "STRONG";
   if (score >= 75) return "STABLE";
@@ -79,37 +72,204 @@ function getStatusFromScore(score: number): TreasurySignalStatus {
   return "DEGRADED";
 }
 
+type CorridorLiquidityProfile = {
+  corridor: string;
+  baseLiquidityDepth: LiquidityDepth;
+  highValueLiquidityDepth: LiquidityDepth;
+  basePressure: LiquidityPressure;
+  highValuePressure: LiquidityPressure;
+  normalCapacityScore: number;
+  highValueCapacityScore: number;
+  highValueThreshold: number;
+  preferredRail: RailType;
+  preferredBridgeAsset?: Currency;
+  normalInsight: string;
+  highValueInsight: string;
+};
+
+const CORRIDOR_LIQUIDITY_PROFILES: Partial<Record<Currency, CorridorLiquidityProfile>> = {
+  PHP: {
+    corridor: "GBP → PHP",
+    baseLiquidityDepth: "HIGH",
+    highValueLiquidityDepth: "MEDIUM",
+    basePressure: "LOW",
+    highValuePressure: "MEDIUM",
+    normalCapacityScore: 94,
+    highValueCapacityScore: 86,
+    highValueThreshold: 750,
+    preferredRail: "HYBRID",
+    preferredBridgeAsset: "RLUSD",
+    normalInsight:
+      "Philippines corridor has strong liquidity depth and is suitable for faster bridge-assisted routing.",
+    highValueInsight:
+      "Philippines liquidity remains healthy, but larger transfers are monitored for bridge and payout capacity.",
+  },
+  MYR: {
+    corridor: "GBP → MYR",
+    baseLiquidityDepth: "MEDIUM",
+    highValueLiquidityDepth: "LOW",
+    basePressure: "MEDIUM",
+    highValuePressure: "HIGH",
+    normalCapacityScore: 80,
+    highValueCapacityScore: 72,
+    highValueThreshold: 600,
+    preferredRail: "FIAT",
+    normalInsight: "Malaysia liquidity is stable with balanced treasury headroom.",
+    highValueInsight:
+      "Malaysia liquidity is available, but payout capacity is monitored more conservatively than Philippines routes.",
+  },
+  AED: {
+    corridor: "GBP → AED",
+    baseLiquidityDepth: "HIGH",
+    highValueLiquidityDepth: "MEDIUM",
+    basePressure: "LOW",
+    highValuePressure: "MEDIUM",
+    normalCapacityScore: 91,
+    highValueCapacityScore: 84,
+    highValueThreshold: 900,
+    preferredRail: "FIAT",
+    normalInsight: "UAE corridor shows strong treasury depth across partner rails.",
+    highValueInsight: "UAE corridor remains liquid with moderate treasury pressure at higher amounts.",
+  },
+  SAR: {
+    corridor: "GBP → SAR",
+    baseLiquidityDepth: "MEDIUM",
+    highValueLiquidityDepth: "LOW",
+    basePressure: "MEDIUM",
+    highValuePressure: "HIGH",
+    normalCapacityScore: 83,
+    highValueCapacityScore: 75,
+    highValueThreshold: 850,
+    preferredRail: "FIAT",
+    normalInsight: "Saudi corridor capacity is stable with normal treasury controls.",
+    highValueInsight: "Saudi corridor remains available with elevated treasury pressure for larger transfers.",
+  },
+  QAR: {
+    corridor: "GBP → QAR",
+    baseLiquidityDepth: "MEDIUM",
+    highValueLiquidityDepth: "LOW",
+    basePressure: "MEDIUM",
+    highValuePressure: "HIGH",
+    normalCapacityScore: 82,
+    highValueCapacityScore: 74,
+    highValueThreshold: 800,
+    preferredRail: "FIAT",
+    normalInsight: "Qatar corridor capacity is stable with measured payout concentration risk.",
+    highValueInsight: "Qatar corridor is operational with tighter liquidity controls on larger tickets.",
+  },
+  KWD: {
+    corridor: "GBP → KWD",
+    baseLiquidityDepth: "MEDIUM",
+    highValueLiquidityDepth: "LOW",
+    basePressure: "MEDIUM",
+    highValuePressure: "HIGH",
+    normalCapacityScore: 81,
+    highValueCapacityScore: 73,
+    highValueThreshold: 750,
+    preferredRail: "FIAT",
+    normalInsight: "Kuwait corridor liquidity is healthy with steady settlement throughput.",
+    highValueInsight: "Kuwait corridor remains usable with increased treasury pressure.",
+  },
+  BHD: {
+    corridor: "GBP → BHD",
+    baseLiquidityDepth: "MEDIUM",
+    highValueLiquidityDepth: "LOW",
+    basePressure: "MEDIUM",
+    highValuePressure: "HIGH",
+    normalCapacityScore: 80,
+    highValueCapacityScore: 72,
+    highValueThreshold: 700,
+    preferredRail: "FIAT",
+    normalInsight: "Bahrain corridor remains stable with predictable treasury utilisation.",
+    highValueInsight: "Bahrain corridor remains operational with tighter liquidity margins.",
+  },
+  OMR: {
+    corridor: "GBP → OMR",
+    baseLiquidityDepth: "MEDIUM",
+    highValueLiquidityDepth: "LOW",
+    basePressure: "MEDIUM",
+    highValuePressure: "HIGH",
+    normalCapacityScore: 79,
+    highValueCapacityScore: 71,
+    highValueThreshold: 700,
+    preferredRail: "FIAT",
+    normalInsight: "Oman corridor liquidity is serviceable with stable treasury posture.",
+    highValueInsight: "Oman corridor remains active with elevated pressure for larger payouts.",
+  },
+  SGD: {
+    corridor: "GBP → SGD",
+    baseLiquidityDepth: "HIGH",
+    highValueLiquidityDepth: "MEDIUM",
+    basePressure: "LOW",
+    highValuePressure: "MEDIUM",
+    normalCapacityScore: 93,
+    highValueCapacityScore: 87,
+    highValueThreshold: 950,
+    preferredRail: "FIAT",
+    normalInsight: "Singapore corridor has deep liquidity and strong settlement optionality.",
+    highValueInsight: "Singapore corridor remains strong with mild treasury pressure at scale.",
+  },
+  THB: {
+    corridor: "GBP → THB",
+    baseLiquidityDepth: "MEDIUM",
+    highValueLiquidityDepth: "LOW",
+    basePressure: "MEDIUM",
+    highValuePressure: "HIGH",
+    normalCapacityScore: 82,
+    highValueCapacityScore: 74,
+    highValueThreshold: 700,
+    preferredRail: "FIAT",
+    normalInsight: "Thailand corridor liquidity is stable across primary payout banks.",
+    highValueInsight: "Thailand corridor remains available with increased treasury pressure.",
+  },
+  IDR: {
+    corridor: "GBP → IDR",
+    baseLiquidityDepth: "MEDIUM",
+    highValueLiquidityDepth: "LOW",
+    basePressure: "MEDIUM",
+    highValuePressure: "HIGH",
+    normalCapacityScore: 81,
+    highValueCapacityScore: 73,
+    highValueThreshold: 650,
+    preferredRail: "FIAT",
+    normalInsight: "Indonesia corridor liquidity is stable with managed operational buffers.",
+    highValueInsight: "Indonesia corridor remains usable with stricter treasury controls.",
+  },
+  VND: {
+    corridor: "GBP → VND",
+    baseLiquidityDepth: "MEDIUM",
+    highValueLiquidityDepth: "LOW",
+    basePressure: "MEDIUM",
+    highValuePressure: "HIGH",
+    normalCapacityScore: 80,
+    highValueCapacityScore: 72,
+    highValueThreshold: 650,
+    preferredRail: "FIAT",
+    normalInsight: "Vietnam corridor liquidity remains stable across supported payout windows.",
+    highValueInsight: "Vietnam corridor remains operational with elevated treasury pressure.",
+  },
+};
+
 function buildCorridorLiquidity(currency: Currency, amount: number): CorridorLiquiditySignal {
-  if (currency === "PHP") {
-    const largerTransfer = amount >= 750;
-    const availableCapacityScore = largerTransfer ? 86 : 94;
+  const profile = CORRIDOR_LIQUIDITY_PROFILES[currency];
+
+  if (profile) {
+    const largerTransfer = amount >= profile.highValueThreshold;
+    const availableCapacityScore = largerTransfer
+      ? profile.highValueCapacityScore
+      : profile.normalCapacityScore;
 
     return {
-      corridor: "GBP → PHP",
+      corridor: profile.corridor,
       currency,
-      liquidityDepth: largerTransfer ? "MEDIUM" : "HIGH",
-      pressure: largerTransfer ? "MEDIUM" : "LOW",
+      liquidityDepth: largerTransfer
+        ? profile.highValueLiquidityDepth
+        : profile.baseLiquidityDepth,
+      pressure: largerTransfer ? profile.highValuePressure : profile.basePressure,
       availableCapacityScore,
-      preferredRail: "HYBRID",
-      preferredBridgeAsset: "RLUSD",
-      insight: largerTransfer
-        ? "Philippines liquidity remains healthy, but larger transfers are monitored for bridge and payout capacity."
-        : "Philippines corridor has strong liquidity depth and is suitable for faster bridge-assisted routing.",
-    };
-  }
-
-  if (currency === "MYR") {
-    const pressure = amount >= 600 ? "HIGH" : "MEDIUM";
-    const availableCapacityScore = amount >= 600 ? 72 : 80;
-
-    return {
-      corridor: "GBP → MYR",
-      currency,
-      liquidityDepth: amount >= 600 ? "LOW" : "MEDIUM",
-      pressure,
-      availableCapacityScore,
-      preferredRail: "FIAT",
-      insight: "Malaysia liquidity is available, but payout capacity is monitored more conservatively than Philippines routes.",
+      preferredRail: profile.preferredRail,
+      preferredBridgeAsset: profile.preferredBridgeAsset,
+      insight: largerTransfer ? profile.highValueInsight : profile.normalInsight,
     };
   }
 

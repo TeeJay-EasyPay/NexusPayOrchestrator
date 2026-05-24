@@ -1,14 +1,30 @@
 import { supabase } from "../lib/supabase";
-import { writeAuditLog } from "./auditLog";
 import { SavedRecipient } from "../types/recipient";
 import { Currency, PayoutMethod, Recipient, RouteQuote, Transfer } from "../types/transfer";
+import { writeAuditLog } from "./auditLog";
 
 function toCleanString(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
 function toCurrency(value: unknown, fallback: Currency = "PHP"): Currency {
-  const allowedCurrencies: Currency[] = ["GBP", "PHP", "MYR", "AED", "XRP", "RLUSD"];
+  const allowedCurrencies: Currency[] = [
+    "GBP",
+    "PHP",
+    "MYR",
+    "AED",
+    "SAR",
+    "QAR",
+    "KWD",
+    "BHD",
+    "OMR",
+    "SGD",
+    "THB",
+    "IDR",
+    "VND",
+    "XRP",
+    "RLUSD",
+  ];
   return allowedCurrencies.includes(value as Currency) ? (value as Currency) : fallback;
 }
 

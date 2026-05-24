@@ -92,30 +92,182 @@ export function getProviderIntelligence(provider: string) {
   );
 }
 
+type CorridorHealthProfile = {
+  corridor: string;
+  congestion: CorridorHealthSignal["congestion"];
+  baseLiquidityPressure: CorridorHealthSignal["liquidityPressure"];
+  highValueLiquidityPressure: CorridorHealthSignal["liquidityPressure"];
+  payoutRisk: CorridorHealthSignal["payoutRisk"];
+  normalHealthScore: number;
+  highValueHealthScore: number;
+  highValueThreshold: number;
+  normalInsight: string;
+  highValueInsight: string;
+};
+
+const CORRIDOR_HEALTH_PROFILES: Partial<Record<Currency, CorridorHealthProfile>> = {
+  PHP: {
+    corridor: "GBP → PHP",
+    congestion: "LOW",
+    baseLiquidityPressure: "LOW",
+    highValueLiquidityPressure: "MEDIUM",
+    payoutRisk: "LOW",
+    normalHealthScore: 93,
+    highValueHealthScore: 88,
+    highValueThreshold: 750,
+    normalInsight: "Philippines corridor operating strongly with low payout risk.",
+    highValueInsight:
+      "Philippines corridor healthy, with moderate liquidity sensitivity for larger transfers.",
+  },
+  MYR: {
+    corridor: "GBP → MYR",
+    congestion: "MEDIUM",
+    baseLiquidityPressure: "MEDIUM",
+    highValueLiquidityPressure: "HIGH",
+    payoutRisk: "MEDIUM",
+    normalHealthScore: 84,
+    highValueHealthScore: 79,
+    highValueThreshold: 600,
+    normalInsight: "Malaysia corridor stable with balanced payout reliability.",
+    highValueInsight:
+      "Malaysia corridor stable, but AI is applying additional liquidity and payout-risk weighting.",
+  },
+  AED: {
+    corridor: "GBP → AED",
+    congestion: "LOW",
+    baseLiquidityPressure: "LOW",
+    highValueLiquidityPressure: "MEDIUM",
+    payoutRisk: "LOW",
+    normalHealthScore: 91,
+    highValueHealthScore: 86,
+    highValueThreshold: 900,
+    normalInsight: "UAE corridor remains strong with consistent payout performance.",
+    highValueInsight: "UAE corridor remains stable with moderate pressure for larger transfers.",
+  },
+  SAR: {
+    corridor: "GBP → SAR",
+    congestion: "MEDIUM",
+    baseLiquidityPressure: "MEDIUM",
+    highValueLiquidityPressure: "HIGH",
+    payoutRisk: "MEDIUM",
+    normalHealthScore: 85,
+    highValueHealthScore: 80,
+    highValueThreshold: 850,
+    normalInsight: "Saudi corridor is healthy with strong weekday operating windows.",
+    highValueInsight: "Saudi corridor remains available with elevated treasury sensitivity.",
+  },
+  QAR: {
+    corridor: "GBP → QAR",
+    congestion: "MEDIUM",
+    baseLiquidityPressure: "MEDIUM",
+    highValueLiquidityPressure: "HIGH",
+    payoutRisk: "MEDIUM",
+    normalHealthScore: 84,
+    highValueHealthScore: 79,
+    highValueThreshold: 800,
+    normalInsight: "Qatar corridor stable with managed payout partner concentration.",
+    highValueInsight: "Qatar corridor is operational with tighter liquidity guardrails.",
+  },
+  KWD: {
+    corridor: "GBP → KWD",
+    congestion: "MEDIUM",
+    baseLiquidityPressure: "MEDIUM",
+    highValueLiquidityPressure: "HIGH",
+    payoutRisk: "MEDIUM",
+    normalHealthScore: 83,
+    highValueHealthScore: 78,
+    highValueThreshold: 750,
+    normalInsight: "Kuwait corridor is stable with monitored payout throughput.",
+    highValueInsight: "Kuwait corridor remains usable with increased liquidity pressure.",
+  },
+  BHD: {
+    corridor: "GBP → BHD",
+    congestion: "MEDIUM",
+    baseLiquidityPressure: "MEDIUM",
+    highValueLiquidityPressure: "HIGH",
+    payoutRisk: "MEDIUM",
+    normalHealthScore: 82,
+    highValueHealthScore: 77,
+    highValueThreshold: 700,
+    normalInsight: "Bahrain corridor is operating with normal treasury oversight.",
+    highValueInsight: "Bahrain corridor remains active with elevated liquidity monitoring.",
+  },
+  OMR: {
+    corridor: "GBP → OMR",
+    congestion: "MEDIUM",
+    baseLiquidityPressure: "MEDIUM",
+    highValueLiquidityPressure: "HIGH",
+    payoutRisk: "MEDIUM",
+    normalHealthScore: 82,
+    highValueHealthScore: 76,
+    highValueThreshold: 700,
+    normalInsight: "Oman corridor is healthy with stable operational controls.",
+    highValueInsight: "Oman corridor remains serviceable with tighter liquidity buffers.",
+  },
+  SGD: {
+    corridor: "GBP → SGD",
+    congestion: "LOW",
+    baseLiquidityPressure: "LOW",
+    highValueLiquidityPressure: "MEDIUM",
+    payoutRisk: "LOW",
+    normalHealthScore: 92,
+    highValueHealthScore: 88,
+    highValueThreshold: 950,
+    normalInsight: "Singapore corridor is high quality with very strong market depth.",
+    highValueInsight: "Singapore corridor remains strong with mild pressure at higher ticket sizes.",
+  },
+  THB: {
+    corridor: "GBP → THB",
+    congestion: "MEDIUM",
+    baseLiquidityPressure: "MEDIUM",
+    highValueLiquidityPressure: "HIGH",
+    payoutRisk: "MEDIUM",
+    normalHealthScore: 84,
+    highValueHealthScore: 79,
+    highValueThreshold: 700,
+    normalInsight: "Thailand corridor is stable with good payout rail availability.",
+    highValueInsight: "Thailand corridor remains available with rising liquidity pressure.",
+  },
+  IDR: {
+    corridor: "GBP → IDR",
+    congestion: "MEDIUM",
+    baseLiquidityPressure: "MEDIUM",
+    highValueLiquidityPressure: "HIGH",
+    payoutRisk: "MEDIUM",
+    normalHealthScore: 83,
+    highValueHealthScore: 78,
+    highValueThreshold: 650,
+    normalInsight: "Indonesia corridor is healthy with managed partner risk.",
+    highValueInsight: "Indonesia corridor remains usable with stricter liquidity controls.",
+  },
+  VND: {
+    corridor: "GBP → VND",
+    congestion: "MEDIUM",
+    baseLiquidityPressure: "MEDIUM",
+    highValueLiquidityPressure: "HIGH",
+    payoutRisk: "MEDIUM",
+    normalHealthScore: 82,
+    highValueHealthScore: 77,
+    highValueThreshold: 650,
+    normalInsight: "Vietnam corridor is operational with stable settlement coverage.",
+    highValueInsight: "Vietnam corridor remains active with heightened treasury sensitivity.",
+  },
+};
+
 export function getCorridorHealth(currency: Currency, amount: number): CorridorHealthSignal {
-  if (currency === "PHP") {
-    const highValue = amount >= 750;
+  const profile = CORRIDOR_HEALTH_PROFILES[currency];
 
+  if (profile) {
+    const highValue = amount >= profile.highValueThreshold;
     return {
-      corridor: "GBP → PHP",
-      congestion: highValue ? "MEDIUM" : "LOW",
-      liquidityPressure: highValue ? "MEDIUM" : "LOW",
-      payoutRisk: "LOW",
-      healthScore: highValue ? 88 : 93,
-      insight: highValue
-        ? "Philippines corridor healthy, with moderate liquidity sensitivity for larger transfers."
-        : "Philippines corridor operating strongly with low payout risk.",
-    };
-  }
-
-  if (currency === "MYR") {
-    return {
-      corridor: "GBP → MYR",
-      congestion: "MEDIUM",
-      liquidityPressure: amount >= 600 ? "HIGH" : "MEDIUM",
-      payoutRisk: "MEDIUM",
-      healthScore: amount >= 600 ? 79 : 84,
-      insight: "Malaysia corridor stable, but AI is applying additional liquidity and payout-risk weighting.",
+      corridor: profile.corridor,
+      congestion: profile.congestion,
+      liquidityPressure: highValue
+        ? profile.highValueLiquidityPressure
+        : profile.baseLiquidityPressure,
+      payoutRisk: profile.payoutRisk,
+      healthScore: highValue ? profile.highValueHealthScore : profile.normalHealthScore,
+      insight: highValue ? profile.highValueInsight : profile.normalInsight,
     };
   }
 

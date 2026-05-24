@@ -37,6 +37,15 @@ const BASE_FX_RATES: Partial<Record<Currency, number>> = {
   PHP: 70.25,
   MYR: 5.85,
   AED: 4.65,
+  SAR: 4.77,
+  QAR: 4.61,
+  KWD: 0.38,
+  BHD: 0.47,
+  OMR: 0.49,
+  SGD: 1.72,
+  THB: 45.21,
+  IDR: 20840,
+  VND: 31980,
 };
 
 const GBP_TO_RLUSD_RATE = 1.27;

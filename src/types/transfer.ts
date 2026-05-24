@@ -1,4 +1,19 @@
-export type Currency = "GBP" | "PHP" | "MYR" | "AED" | "XRP" | "RLUSD";
+export type Currency =
+  | "GBP"
+  | "PHP"
+  | "MYR"
+  | "AED"
+  | "SAR"
+  | "QAR"
+  | "KWD"
+  | "BHD"
+  | "OMR"
+  | "SGD"
+  | "THB"
+  | "IDR"
+  | "VND"
+  | "XRP"
+  | "RLUSD";
 
 export type RailType = "FIAT" | "CRYPTO" | "HYBRID";
 

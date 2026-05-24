@@ -39,6 +39,133 @@ function getStringParam(value: string | string[] | undefined) {
 }
 
 function getCorridorSignal(country: string) {
+  const corridorSignals: Record<
+    string,
+    {
+      confidence: number;
+      liquidity: string;
+      delivery: string;
+      rail: string;
+      receiveRate: number;
+      fee: string;
+      save: string;
+    }
+  > = {
+    Philippines: {
+      confidence: 92,
+      liquidity: "High",
+      delivery: "Minutes",
+      rail: "GBP → RLUSD → PHP",
+      receiveRate: 72.4,
+      fee: "£3.20",
+      save: "£12.40",
+    },
+    Malaysia: {
+      confidence: 86,
+      liquidity: "Healthy",
+      delivery: "Minutes",
+      rail: "GBP → RLUSD → MYR",
+      receiveRate: 5.92,
+      fee: "£2.85",
+      save: "£8.10",
+    },
+    UAE: {
+      confidence: 90,
+      liquidity: "High",
+      delivery: "Minutes",
+      rail: "GBP → RLUSD → AED",
+      receiveRate: 4.65,
+      fee: "£2.95",
+      save: "£9.30",
+    },
+    "Saudi Arabia": {
+      confidence: 85,
+      liquidity: "Stable",
+      delivery: "Minutes",
+      rail: "GBP → RLUSD → SAR",
+      receiveRate: 4.77,
+      fee: "£3.05",
+      save: "£7.40",
+    },
+    Qatar: {
+      confidence: 84,
+      liquidity: "Stable",
+      delivery: "Minutes",
+      rail: "GBP → RLUSD → QAR",
+      receiveRate: 4.61,
+      fee: "£3.10",
+      save: "£7.10",
+    },
+    Kuwait: {
+      confidence: 83,
+      liquidity: "Balanced",
+      delivery: "Minutes",
+      rail: "GBP → RLUSD → KWD",
+      receiveRate: 0.38,
+      fee: "£3.20",
+      save: "£6.80",
+    },
+    Bahrain: {
+      confidence: 82,
+      liquidity: "Balanced",
+      delivery: "Minutes",
+      rail: "GBP → RLUSD → BHD",
+      receiveRate: 0.47,
+      fee: "£3.15",
+      save: "£6.40",
+    },
+    Oman: {
+      confidence: 80,
+      liquidity: "Monitored",
+      delivery: "Minutes",
+      rail: "GBP → RLUSD → OMR",
+      receiveRate: 0.49,
+      fee: "£3.25",
+      save: "£5.90",
+    },
+    Singapore: {
+      confidence: 93,
+      liquidity: "Very High",
+      delivery: "Minutes",
+      rail: "GBP → RLUSD → SGD",
+      receiveRate: 1.72,
+      fee: "£2.70",
+      save: "£10.20",
+    },
+    Thailand: {
+      confidence: 84,
+      liquidity: "Stable",
+      delivery: "Minutes",
+      rail: "GBP → RLUSD → THB",
+      receiveRate: 45.21,
+      fee: "£3.05",
+      save: "£7.20",
+    },
+    Indonesia: {
+      confidence: 82,
+      liquidity: "Monitored",
+      delivery: "Minutes",
+      rail: "GBP → RLUSD → IDR",
+      receiveRate: 20840,
+      fee: "£3.30",
+      save: "£6.30",
+    },
+    Vietnam: {
+      confidence: 81,
+      liquidity: "Monitored",
+      delivery: "Minutes",
+      rail: "GBP → RLUSD → VND",
+      receiveRate: 31980,
+      fee: "£3.35",
+      save: "£6.10",
+    },
+  };
+
+  const signal = corridorSignals[country];
+  if (signal) {
+    return signal;
+  }
+
   if (country === "Philippines") {
     return {
       confidence: 92,

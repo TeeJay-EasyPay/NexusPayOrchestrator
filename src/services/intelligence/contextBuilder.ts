@@ -433,7 +433,20 @@ export async function buildOperationsCentreContext(
       utilizationPercent: dashboardContext.treasuryCapacity.utilizationPercent,
       pressureLevel: "MEDIUM",
       primaryCurrency: "GBP",
-      secondaryCurrencies: ["PHP", "MYR", "AED"],
+      secondaryCurrencies: [
+        "PHP",
+        "MYR",
+        "AED",
+        "SAR",
+        "QAR",
+        "KWD",
+        "BHD",
+        "OMR",
+        "SGD",
+        "THB",
+        "IDR",
+        "VND",
+      ],
     },
 
     corridorMetrics: dashboardContext.corridorRankings.map((ranking) => ({
