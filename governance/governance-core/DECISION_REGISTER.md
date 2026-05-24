@@ -476,6 +476,66 @@ Approved and Active
 
 ---
 
+## Decision ID
+D-009
+
+## Title
+Approval and Completion of Governance Enhancement Sprint for Executive Operating Model Standardization
+
+## Date
+2026-05-24
+
+## Decision Owner
+Chief Orchestrator
+
+## Participating Roles
+- Founder / CEO
+- Chief Orchestrator
+- Chief Technology Officer
+- Testing Director
+- Engineering Quality & Assurance Officer
+
+## Background
+Before Sprint 005 implementation transition, governance maturity required a standardized digital executive operating model, explicit charter inheritance requirements, and a reusable compliance-review framework to support high-level founder directives with full traceability.
+
+## Decision
+Execute and complete a governance-only enhancement sprint to establish a mandatory Digital Executive Operating Model, update executive charters for operating-model inheritance and compliance duties, create a compliance review framework, and strengthen founder communication enforcement.
+
+## Rationale
+Standardization reduces procedural ambiguity, increases executive autonomy under founder-level directives, improves governance startup reliability, and strengthens auditability and founder visibility before implementation work proceeds.
+
+## Alternatives Considered
+- Proceed to Sprint 005 implementation without operating-model standardization.
+- Apply role-level procedural updates without introducing a common operating model.
+
+## Risks
+- Low: Documentation overhead from additional compliance artefacts.
+- Medium: Adoption variance risk if startup and compliance sequences are not routinely enforced.
+
+## Expected Outcome
+All executive roles operate under one mandatory startup and governance lifecycle model, compliance reviews become repeatable, founder communication remains decision-ready, and future high-level founder directives can be executed without detailed procedural prompting.
+
+## Status
+Completed
+
+## Follow-up Actions
+1. Apply the Digital Executive Operating Model startup sequence at the beginning of all significant executive activities.
+2. Run compliance reviews before implementation transitions and record compliance scores.
+3. Keep founder communication artefacts synchronized at each governance closure.
+4. Track governance maturity trends through quarterly compliance review rollups.
+
+## Reference Documents
+- [GOVERNANCE_INDEX.md](GOVERNANCE_INDEX.md)
+- [DIGITAL_EXECUTIVE_OPERATING_MODEL.md](DIGITAL_EXECUTIVE_OPERATING_MODEL.md)
+- [CHIEF_ORCHESTRATOR_CHARTER.md](CHIEF_ORCHESTRATOR_CHARTER.md)
+- [CHIEF_TECHNOLOGY_OFFICER_CHARTER.md](CHIEF_TECHNOLOGY_OFFICER_CHARTER.md)
+- [TESTING_DIRECTOR_CHARTER.md](TESTING_DIRECTOR_CHARTER.md)
+- [EQAO_CHARTER.md](EQAO_CHARTER.md)
+- [../compliance-reviews/COMPLIANCE_REVIEW_TEMPLATE.md](../compliance-reviews/COMPLIANCE_REVIEW_TEMPLATE.md)
+- [../sprint-archives/SPRINT_006_GOVERNANCE_ENHANCEMENT_EXECUTIVE_OPERATING_MODEL.md](../sprint-archives/SPRINT_006_GOVERNANCE_ENHANCEMENT_EXECUTIVE_OPERATING_MODEL.md)
+
+---
+
 ## Register Maintenance Guidance
 
 1. Add new decisions in ascending ID order.

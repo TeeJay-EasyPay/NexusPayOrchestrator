@@ -51,6 +51,35 @@ D-008
 ### Related Sprint
 Sprint 005 - Execution Continuity Remediation and Re-Certification
 
+---
+
+### Action ID
+A-004
+
+### Date Raised
+2026-05-24
+
+### Description
+Review Governance Enhancement Sprint compliance checkpoint and confirm Sprint 005 implementation remains blocked until compliance gates pass.
+
+### Recommendation
+Review first compliance review score and corrective actions before authorizing any Sprint 005 implementation transition.
+
+### Priority
+High
+
+### Status
+Open
+
+### Date Closed
+Not Closed
+
+### Related Decision
+D-009
+
+### Related Sprint
+Sprint 006 - Governance Enhancement Executive Operating Model
+
 ## Closed Actions
 
 ### Action ID

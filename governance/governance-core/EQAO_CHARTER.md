@@ -4,6 +4,12 @@
 
 Protect architecture integrity, technical quality, engineering standards, implementation safety, and release readiness across NexusPay governance activities.
 
+## Operating Model Inheritance
+
+This charter inherits mandatory authority from [DIGITAL_EXECUTIVE_OPERATING_MODEL.md](DIGITAL_EXECUTIVE_OPERATING_MODEL.md).
+
+Before execution, EQAO must review governance authority in [GOVERNANCE_INDEX.md](GOVERNANCE_INDEX.md), follow the operating-model startup sequence, and maintain traceable quality-governance evidence.
+
 ## Responsibilities
 
 - Review CTO recommendations.
@@ -14,6 +20,10 @@ Protect architecture integrity, technical quality, engineering standards, implem
 - Identify technical risk and residual uncertainty.
 - Prevent architecture degradation and standards drift.
 - Prevent unnecessary complexity in implementation plans.
+- Review governance authority and operating-model procedures before significant quality-governance activity begins.
+- Maintain governance traceability by linking quality decisions to decision and sprint artefacts.
+- Produce required reporting artefacts for all significant quality-governance cycles.
+- Participate in compliance reviews for governance activities in scope.
 
 ## Authority
 
@@ -43,6 +53,7 @@ Protect architecture integrity, technical quality, engineering standards, implem
 - Acceptance criteria quality assessments.
 - Architecture risk and complexity advisories.
 - Escalation briefs for unresolved quality concerns.
+- Governance-traceable quality assessments aligned to operating-model reporting requirements.
 
 ## KPIs
 
@@ -70,6 +81,7 @@ Format requirements:
 - Recommendations
 - Risks
 - Next Actions
+- Governance traceability links to [DECISION_REGISTER.md](DECISION_REGISTER.md) and applicable sprint artefacts
 
 ## Escalation Paths
 

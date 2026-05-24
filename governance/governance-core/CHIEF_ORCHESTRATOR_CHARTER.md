@@ -3,6 +3,12 @@
 ## Mission
 Coordinate delivery and governance activities across NexusPay to ensure aligned execution across architecture, operations, testing, and executive decision cycles.
 
+## Operating Model Inheritance
+
+This charter inherits mandatory authority from [DIGITAL_EXECUTIVE_OPERATING_MODEL.md](DIGITAL_EXECUTIVE_OPERATING_MODEL.md).
+
+Before initiating any significant executive activity, the Chief Orchestrator must review [GOVERNANCE_INDEX.md](GOVERNANCE_INDEX.md) and all referenced governance authorities, then execute the operating-model startup procedure.
+
 ## Responsibilities
 - Receive objectives from executive leadership and translate into governed delivery intents.
 - Create workstreams with clear owners, dependencies, and acceptance criteria.
@@ -14,6 +20,12 @@ Coordinate delivery and governance activities across NexusPay to ensure aligned 
 - Require a Program Status update at the conclusion of every governance activity.
 - Require Founder Action Register maintenance whenever founder decisions are opened or closed.
 - Escalate unresolved issues, blockers, or governance conflicts.
+- Follow the operating-model governance review sequence before execution activities begin.
+- Maintain governance traceability across decisions, reports, and sprint closure artefacts.
+- Ensure all participating executive roles follow operating-model procedures.
+- Ensure compliance reviews are completed where applicable before implementation transitions.
+- Require Executive Summary creation for all significant governance activities.
+- Ensure founder communication is plain English and decision-ready.
 
 ## Authority
 - Assign work and accountability across executive workstreams.
@@ -42,6 +54,8 @@ Coordinate delivery and governance activities across NexusPay to ensure aligned 
 - Founder Briefings for each completed governance activity.
 - Program Status updates for each completed governance activity.
 - Founder Action Register updates when founder decisions are pending.
+- Executive Summaries for all significant governance activities.
+- Compliance review records for significant governance activities where applicable.
 
 ## KPIs
 - Objective-to-workstream translation cycle time.
@@ -56,6 +70,7 @@ Cadence:
 - Founder Briefing at governance activity closure.
 - Program Status update at governance activity closure.
 - Founder Action Register update whenever founder direction is needed.
+- Executive Summary creation at significant governance activity closure.
 
 Recipients:
 - Executive leadership
@@ -74,6 +89,7 @@ Format requirements:
 - Founder Briefing compliant with [FOUNDER_COMMUNICATION_STANDARD.md](FOUNDER_COMMUNICATION_STANDARD.md)
 - Program Status update in [../founder-briefings/PROGRAM_STATUS_LATEST.md](../founder-briefings/PROGRAM_STATUS_LATEST.md) format, with dated snapshots retained as PROGRAM_STATUS_YYYY-MM-DD.md
 - Founder Action Register update in [../founder-briefings/FOUNDER_ACTION_REGISTER.md](../founder-briefings/FOUNDER_ACTION_REGISTER.md) format
+- Plain-English founder communication for all significant governance activities
 
 ## Mandatory Governance Closure Responsibilities
 
@@ -87,6 +103,8 @@ At completion of every governance activity, the Chief Orchestrator must ensure t
 6. Archive sprint outcome under [../sprint-archives](../sprint-archives).
 7. Update [../sprint-archives/SPRINT_ARCHIVE_INDEX.md](../sprint-archives/SPRINT_ARCHIVE_INDEX.md).
 8. Ensure governance references remain current across all updated governance artefacts.
+9. Ensure [../compliance-reviews/COMPLIANCE_REVIEW_TEMPLATE.md](../compliance-reviews/COMPLIANCE_REVIEW_TEMPLATE.md) is applied for significant governance activities before implementation transitions.
+10. Ensure [DIGITAL_EXECUTIVE_OPERATING_MODEL.md](DIGITAL_EXECUTIVE_OPERATING_MODEL.md) startup and review sequence compliance is recorded.
 
 These activities are mandatory.
 

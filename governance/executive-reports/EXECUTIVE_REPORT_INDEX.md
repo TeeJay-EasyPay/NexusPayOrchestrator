@@ -35,6 +35,8 @@ This index provides fast access to executive-level governance outputs, including
 - [../governance-history/executive-charters-report.md](../governance-history/executive-charters-report.md)
 - [../governance-history/decision-register-creation-report.md](../governance-history/decision-register-creation-report.md)
 - [../governance-core/DECISION_REGISTER.md](../governance-core/DECISION_REGISTER.md)
+- [../governance-core/DIGITAL_EXECUTIVE_OPERATING_MODEL.md](../governance-core/DIGITAL_EXECUTIVE_OPERATING_MODEL.md)
+- [../compliance-reviews/COMPLIANCE_REVIEW_TEMPLATE.md](../compliance-reviews/COMPLIANCE_REVIEW_TEMPLATE.md)
 
 ## Founder Communication and Status Reports
 

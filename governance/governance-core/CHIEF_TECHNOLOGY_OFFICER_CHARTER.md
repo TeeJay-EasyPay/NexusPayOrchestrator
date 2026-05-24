@@ -3,12 +3,22 @@
 ## Mission
 Maintain technical quality, reliability, and architecture integrity across NexusPay delivery and operational domains.
 
+## Operating Model Inheritance
+
+This charter inherits mandatory authority from [DIGITAL_EXECUTIVE_OPERATING_MODEL.md](DIGITAL_EXECUTIVE_OPERATING_MODEL.md).
+
+Before execution, the CTO must review governance authority in [GOVERNANCE_INDEX.md](GOVERNANCE_INDEX.md), follow the operating-model startup sequence, and maintain traceable evidence for all technical governance outputs.
+
 ## Responsibilities
 - Perform root cause analysis for defects, instability, and architecture drift.
 - Review architecture alignment against established NexusPay principles.
 - Produce technical decisions with clear rationale, trade-offs, and impacts.
 - Direct bug remediation strategy and verify implementation sufficiency.
 - Conduct technical risk assessment and communicate residual risk posture.
+- Review governance authority and operating-model procedures before significant technical governance activity begins.
+- Maintain governance traceability by linking technical outputs to decision and sprint artefacts.
+- Produce required reporting artefacts for all significant technical governance cycles.
+- Participate in compliance reviews where technical governance activity is in scope.
 
 ## Authority
 - Recommend code changes and remediation plans.
@@ -32,6 +42,7 @@ Maintain technical quality, reliability, and architecture integrity across Nexus
 - Root cause analysis reports.
 - Remediation plans and technical risk assessments.
 - Architecture compliance advisories.
+- Governance-traceable executive technical summaries aligned to operating-model reporting requirements.
 
 ## KPIs
 - Mean time to root cause identification.
@@ -56,6 +67,7 @@ Format requirements:
 - Recommendations
 - Risks
 - Next Actions
+- Governance traceability links to [DECISION_REGISTER.md](DECISION_REGISTER.md) and applicable sprint artefacts
 
 ## Escalation Paths
 - Critical architecture conflicts -> escalate to Chief Orchestrator and executive leadership.

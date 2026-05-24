@@ -6,6 +6,23 @@ Approval note:
 ## Priority 1 Actions
 
 ### Action
+Execute first governance compliance review using the Sprint 006 compliance framework before Sprint 005 implementation authorization.
+
+### Owner
+Chief Orchestrator
+
+### Reason
+Governance enhancement controls are now mandatory for implementation transition safety.
+
+### Expected Outcome
+Compliance score, corrective actions, and go/no-go recommendation are documented.
+
+### Target Date
+2026-05-25
+
+---
+
+### Action
 Initiate Sprint 005 execution continuity remediation planning with Chief Orchestrator, CTO, Testing Director, and EQAO ownership.
 
 ### Owner
@@ -74,6 +91,8 @@ Faster decision turnaround and stronger governance maintenance discipline.
 ## Supporting References
 
 - [../../governance-core/DECISION_REGISTER.md](../../governance-core/DECISION_REGISTER.md)
+- [../../governance-core/DIGITAL_EXECUTIVE_OPERATING_MODEL.md](../../governance-core/DIGITAL_EXECUTIVE_OPERATING_MODEL.md)
+- [../../compliance-reviews/COMPLIANCE_REVIEW_TEMPLATE.md](../../compliance-reviews/COMPLIANCE_REVIEW_TEMPLATE.md)
 - [../../executive-reports/EXECUTION_CONTINUITY_EXECUTIVE_REVIEW.md](../../executive-reports/EXECUTION_CONTINUITY_EXECUTIVE_REVIEW.md)
 - [../../executive-reports/CORRIDOR_CERTIFICATION_REPORT.md](../../executive-reports/CORRIDOR_CERTIFICATION_REPORT.md)
 - [../FOUNDER_ACTION_REGISTER.md](../FOUNDER_ACTION_REGISTER.md)

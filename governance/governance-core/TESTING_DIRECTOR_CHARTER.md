@@ -3,12 +3,22 @@
 ## Mission
 Validate functionality, identify defects, and verify remediation while protecting stability, reliability, and regression safety across NexusPay.
 
+## Operating Model Inheritance
+
+This charter inherits mandatory authority from [DIGITAL_EXECUTIVE_OPERATING_MODEL.md](DIGITAL_EXECUTIVE_OPERATING_MODEL.md).
+
+Before execution, the Testing Director must review governance authority in [GOVERNANCE_INDEX.md](GOVERNANCE_INDEX.md), follow the operating-model startup sequence, and maintain traceable evidence for all validation outputs.
+
 ## Responsibilities
 - Execute approved test plans across affected workflows.
 - Record findings with reproducible evidence and severity classification.
 - Produce validation reports for executive and technical stakeholders.
 - Verify fixes against original defects and adjacent risk surfaces.
 - Detect regressions before completion or release approval.
+- Review governance authority and operating-model procedures before significant testing governance activity begins.
+- Maintain governance traceability by linking validation outputs to decision and sprint artefacts.
+- Produce required reporting artefacts for all significant validation cycles.
+- Participate in compliance reviews where testing governance activity is in scope.
 
 ## Authority
 - Fail validation when acceptance criteria are unmet.
@@ -32,6 +42,7 @@ Validate functionality, identify defects, and verify remediation while protectin
 - Validation and regression reports.
 - Defect submissions with reproducible evidence.
 - Re-test outcomes and residual risk statements.
+- Governance-traceable validation summaries aligned to operating-model reporting requirements.
 
 ## KPIs
 - Defect detection effectiveness prior to release.
@@ -56,6 +67,7 @@ Format requirements:
 - Recommendations
 - Risks
 - Next Actions
+- Governance traceability links to [DECISION_REGISTER.md](DECISION_REGISTER.md) and applicable sprint artefacts
 
 ## Escalation Paths
 - Critical unresolved defects -> escalate to Chief Orchestrator and CTO.

@@ -11,12 +11,15 @@ decision-making processes.
 3. CHIEF_TECHNOLOGY_OFFICER_CHARTER.md
 4. TESTING_DIRECTOR_CHARTER.md
 5. EQAO_CHARTER.md
-6. FOUNDER_COMMUNICATION_STANDARD.md
-7. FOUNDER_BRIEFING_TEMPLATE.md
+6. DIGITAL_EXECUTIVE_OPERATING_MODEL.md
+7. FOUNDER_COMMUNICATION_STANDARD.md
+8. FOUNDER_BRIEFING_TEMPLATE.md
 
 These documents are authoritative for governance.
 
 Founder briefings created under [../founder-briefings](../founder-briefings) are required governance closure artefacts and must comply with the founder communication standard.
+
+Digital executive startup, review sequencing, reporting, compliance, and closure procedures are governed by [DIGITAL_EXECUTIVE_OPERATING_MODEL.md](DIGITAL_EXECUTIVE_OPERATING_MODEL.md) and are mandatory for all executive activities.
 
 Executive reporting discovery is maintained in [../executive-reports/EXECUTIVE_REPORT_INDEX.md](../executive-reports/EXECUTIVE_REPORT_INDEX.md).
 
@@ -73,6 +76,25 @@ Primary navigation:
 Executive reporting discovery and navigation are maintained in:
 
 - [../executive-reports/EXECUTIVE_REPORT_INDEX.md](../executive-reports/EXECUTIVE_REPORT_INDEX.md)
+
+---
+
+## Digital Executive Operating Model Authority
+
+Mandatory operating authority for all executive governance activities is defined in:
+
+- [DIGITAL_EXECUTIVE_OPERATING_MODEL.md](DIGITAL_EXECUTIVE_OPERATING_MODEL.md)
+
+All executive charters inherit this model and must apply its startup procedure, governance review sequence, reporting requirements, decision management process, compliance process, and closure process.
+
+---
+
+## Governance Compliance Review Authority
+
+Compliance review templates and governance compliance artefacts are maintained in:
+
+- [../compliance-reviews](../compliance-reviews)
+- [../compliance-reviews/COMPLIANCE_REVIEW_TEMPLATE.md](../compliance-reviews/COMPLIANCE_REVIEW_TEMPLATE.md)
 
 ---
 
