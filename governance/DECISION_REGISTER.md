@@ -1,0 +1,259 @@
+# NexusPay Governance Decision Register
+
+## Purpose
+
+This register is the permanent governance decision memory for NexusPay.
+
+Objectives:
+- Preserve executive decisions
+- Support auditability
+- Improve traceability
+- Reduce repeated investigations
+- Provide historical context for future executives and AI agents
+
+Governance authority precedence:
+1. Governance documents under [governance/GOVERNANCE_INDEX.md](governance/GOVERNANCE_INDEX.md)
+2. Architecture authority documents referenced by the governance index
+3. Historical reports as informational context
+
+## Standard Decision Record Template
+
+Each decision entry must include:
+
+- Decision ID
+- Title
+- Date
+- Decision Owner
+- Participating Roles
+- Background
+- Decision
+- Rationale
+- Alternatives Considered
+- Risks
+- Expected Outcome
+- Status
+- Follow-up Actions
+- Reference Documents
+
+## Decision Records
+
+---
+
+## Decision ID
+D-001
+
+## Title
+Creation of NexusPay Digital Governance Framework
+
+## Date
+2026-05-24
+
+## Decision Owner
+Chief Orchestrator
+
+## Participating Roles
+- Chief Orchestrator
+- Chief Technology Officer
+- Testing Director
+
+## Background
+NexusPay required a formal governance operating model with explicit role authority, decision rights, constraints, escalation paths, and standardized communication/reporting expectations.
+
+## Decision
+Establish the Digital Governance Framework as the authoritative governance model and adopt role charters plus a reusable executive charter template.
+
+## Rationale
+A formal governance framework is required to ensure evidence-based decisions, clear accountability, and non-overlapping authority across orchestration, technology, and testing functions.
+
+## Alternatives Considered
+- Continue with informal role coordination without formal charters.
+- Use a single consolidated governance memo instead of role-specific charters.
+
+## Risks
+- Medium: Governance overhead if reporting cadence is not operationally integrated.
+- Low: Role boundary ambiguity if charters are not kept current.
+
+## Expected Outcome
+Governance decisions become repeatable, auditable, and role-aligned, with standardized reporting and escalation mechanisms.
+
+## Status
+Approved and Active
+
+## Follow-up Actions
+1. Use the charter template for future executive role expansion.
+2. Maintain a centralized decision register for governance traceability.
+3. Include governance-compliance checks in future governance reports.
+
+## Reference Documents
+- [governance/GOVERNANCE_INDEX.md](governance/GOVERNANCE_INDEX.md)
+- [governance/EXECUTIVE_CHARTER_TEMPLATE.md](governance/EXECUTIVE_CHARTER_TEMPLATE.md)
+- [governance/CHIEF_ORCHESTRATOR_CHARTER.md](governance/CHIEF_ORCHESTRATOR_CHARTER.md)
+- [governance/CHIEF_TECHNOLOGY_OFFICER_CHARTER.md](governance/CHIEF_TECHNOLOGY_OFFICER_CHARTER.md)
+- [governance/TESTING_DIRECTOR_CHARTER.md](governance/TESTING_DIRECTOR_CHARTER.md)
+- [governance/executive-charters-report.md](governance/executive-charters-report.md)
+
+---
+
+## Decision ID
+D-002
+
+## Title
+Execution of Governance Pilot
+
+## Date
+2026-05-24
+
+## Decision Owner
+Chief Orchestrator
+
+## Participating Roles
+- Testing Director
+- Chief Technology Officer
+- Chief Orchestrator
+
+## Background
+A reported corridor reliability concern required a controlled governance pilot to validate current execution behavior and produce role-separated evidence before any remediation decisions.
+
+## Decision
+Execute a three-phase governance pilot: Testing Director validation, CTO root-cause analysis, and Chief Orchestrator executive recommendation.
+
+## Rationale
+A phased pilot produces structured, role-specific evidence and prevents premature technical changes without governance review.
+
+## Alternatives Considered
+- Proceed directly to remediation without governance pilot.
+- Run a single combined analysis report without role-phase separation.
+
+## Risks
+- Medium: Delayed remediation if pilot evidence collection is incomplete.
+- Medium: Confidence gaps if pilot outputs are not consolidated into clear next actions.
+
+## Expected Outcome
+A clear governance-approved problem statement, risk posture, and recommended direction for next sprint planning.
+
+## Status
+Completed
+
+## Follow-up Actions
+1. Preserve pilot outcomes as reference baseline for subsequent investigations.
+2. Track unresolved risks in subsequent governance reviews.
+
+## Reference Documents
+- [governance/governance-pilot-report.md](governance/governance-pilot-report.md)
+- [governance/CORRIDOR_VALIDATION_REPORT.md](governance/CORRIDOR_VALIDATION_REPORT.md)
+- [governance/ROOT_CAUSE_ANALYSIS.md](governance/ROOT_CAUSE_ANALYSIS.md)
+- [governance/EXECUTIVE_RECOMMENDATION.md](governance/EXECUTIVE_RECOMMENDATION.md)
+
+---
+
+## Decision ID
+D-003
+
+## Title
+Execution Continuity Investigation Sprint
+
+## Date
+2026-05-24
+
+## Decision Owner
+Chief Orchestrator
+
+## Participating Roles
+- Testing Director
+- Chief Technology Officer
+- Chief Orchestrator
+
+## Background
+Following the governance pilot, continuity behavior required deeper evidence gathering and corridor-by-corridor certification without remediation implementation.
+
+## Decision
+Run an evidence-only Execution Continuity Investigation and Corridor Certification Sprint.
+
+## Rationale
+A dedicated investigation sprint was needed to classify all supported corridors, test the continuity hypothesis rigorously, and define affected components and risk posture before remediation planning.
+
+## Alternatives Considered
+- Merge investigation and remediation into one sprint.
+- Limit scope to only GBP -> KWD without full corridor certification matrix.
+
+## Risks
+- Medium: Residual UNKNOWN corridor statuses until runtime evidence is expanded.
+- Medium: Stakeholder pressure to remediate before full causal confidence is established.
+
+## Expected Outcome
+Formal corridor certification, hypothesis verdict (PROVEN, DISPROVEN, or PARTIALLY PROVEN), and governance-backed remediation scope definition.
+
+## Status
+Completed
+
+## Follow-up Actions
+1. Maintain certification statuses as governance gates.
+2. Reclassify UNKNOWN corridors only when new runtime evidence is available.
+3. Use identified affected components as the baseline for next sprint scope.
+
+## Reference Documents
+- [governance/execution-continuity-investigation-report.md](governance/execution-continuity-investigation-report.md)
+- [governance/CORRIDOR_CERTIFICATION_REPORT.md](governance/CORRIDOR_CERTIFICATION_REPORT.md)
+- [governance/EXECUTION_CONTINUITY_ANALYSIS.md](governance/EXECUTION_CONTINUITY_ANALYSIS.md)
+- [governance/EXECUTION_CONTINUITY_EXECUTIVE_REVIEW.md](governance/EXECUTION_CONTINUITY_EXECUTIVE_REVIEW.md)
+
+---
+
+## Decision ID
+D-004
+
+## Title
+Approval to Proceed to Execution Continuity Remediation Planning
+
+## Date
+2026-05-24
+
+## Decision Owner
+Chief Orchestrator
+
+## Participating Roles
+- Chief Orchestrator
+- Chief Technology Officer
+- Testing Director
+
+## Background
+The investigation sprint concluded with a PARTIALLY PROVEN continuity hypothesis, one FAIL corridor (GBP -> KWD), and nine UNKNOWN expanded corridors requiring further runtime evidence.
+
+## Decision
+Approve progression to remediation planning for execution continuity, with implementation deferred to a dedicated remediation sprint and governed by certification gates.
+
+## Rationale
+Evidence supports justified remediation planning while preserving governance control over release-risk decisions and corridor status upgrades.
+
+## Alternatives Considered
+- Defer all remediation planning until hypothesis reaches fully PROVEN.
+- Proceed immediately to implementation without a scoped remediation-planning decision.
+
+## Risks
+- High: Continued non-terminal behavior risk if planning does not transition into validated remediation execution.
+- Medium: Extended UNKNOWN corridor status may reduce rollout confidence.
+
+## Expected Outcome
+A defined remediation plan targeting resume determinism and terminal-state certainty, with measurable acceptance criteria and re-certification obligations.
+
+## Status
+Approved for Planning
+
+## Follow-up Actions
+1. Produce remediation sprint plan with explicit acceptance criteria.
+2. Prioritize GBP -> KWD as sentinel corridor for re-certification.
+3. Require PASS/FAIL reclassification for all currently UNKNOWN corridors in the next evidence cycle.
+
+## Reference Documents
+- [governance/execution-continuity-investigation-report.md](governance/execution-continuity-investigation-report.md)
+- [governance/EXECUTION_CONTINUITY_EXECUTIVE_REVIEW.md](governance/EXECUTION_CONTINUITY_EXECUTIVE_REVIEW.md)
+- [governance/governance-pilot-report.md](governance/governance-pilot-report.md)
+
+---
+
+## Register Maintenance Guidance
+
+1. Add new decisions in ascending ID order.
+2. Never overwrite historical decisions; append updates through status and follow-up actions.
+3. Link every decision to authoritative governance and supporting evidence artifacts.
+4. Update this register as part of governance closure for every future governance workstream.
