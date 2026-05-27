@@ -1,0 +1,45 @@
+{
+  "metadata": {
+    "runId": "20260527145658",
+    "scenarioId": "pilot-gbp-kwd-100",
+    "testId": "QA-CORRIDOR-GBP-KWD-0100",
+    "corridor": "GBP->KWD",
+    "amount": 100,
+    "timestampStart": "2026-05-27T14:57:04.221Z",
+    "timestampEnd": "2026-05-27T14:57:06.350Z"
+  },
+  "outcome": {
+    "status": "FAIL",
+    "reason": "Pilot flow failed or mandatory validation checks did not complete.",
+    "severitySuggestion": "HIGH"
+  },
+  "validation": {
+    "routeGenerated": false,
+    "transferInitiated": false,
+    "executionProgressed": false,
+    "settlementCompleted": false,
+    "payoutCompleted": false,
+    "historyUpdated": false,
+    "trackCompleted": false,
+    "crossScreenConsistent": false
+  },
+  "metrics": {
+    "totalDurationMs": 2129
+  },
+  "assets": {
+    "screenshots": [],
+    "logs": [
+      "logs\\adb-logcat.log",
+      "logs\\maestro-stderr.log",
+      "logs\\maestro-stdout.log"
+    ],
+    "junitPath": "maestro-junit.xml"
+  },
+  "defects": [
+    {
+      "defectId": "DEF-002",
+      "severity": "HIGH",
+      "reason": "History/track mismatch detected: Pilot flow failed or mandatory validation checks did not complete. Maestro stderr: 'maestro' is not recognized as an internal or external command,\r\noperable program or batch file.\r\n. Missing checks: routeGenerated, transferInitiated, executionProgressed, settlementCompleted, payoutCompleted, historyUpdated, trackCompleted, crossScreenConsistent"
+    }
+  ]
+}

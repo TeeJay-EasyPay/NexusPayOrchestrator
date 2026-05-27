@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-05-27T12:35:01.191Z",
-  "runId": "20260527123449",
+  "generatedAt": "2026-05-27T14:57:08.221Z",
+  "runId": "20260527145658",
   "total": 4,
   "pass": 0,
   "warning": 0,
@@ -16,12 +16,12 @@
         "testId": "QA-CORRIDOR-GBP-SAR-0100",
         "maestroFlowPath": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\maestro\\flows\\corridor\\gbp-sar\\amount-100.yaml"
       },
-      "runId": "20260527123449",
+      "runId": "20260527145658",
       "status": "FAIL",
       "reason": "Pilot flow failed or mandatory validation checks did not complete.",
-      "startedAt": "2026-05-27T12:34:50.229Z",
-      "finishedAt": "2026-05-27T12:34:52.780Z",
-      "durationMs": 2551,
+      "startedAt": "2026-05-27T14:56:59.734Z",
+      "finishedAt": "2026-05-27T14:57:01.984Z",
+      "durationMs": 2250,
       "validation": {
         "routeGenerated": false,
         "transferInitiated": false,
@@ -33,11 +33,11 @@
         "crossScreenConsistent": false
       },
       "artifacts": {
-        "runDirectory": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527123449\\pilot-gbp-sar-100",
-        "junitPath": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527123449\\pilot-gbp-sar-100\\maestro-junit.xml",
-        "screenshotsDirectory": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527123449\\pilot-gbp-sar-100\\screenshots",
-        "logsDirectory": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527123449\\pilot-gbp-sar-100\\logs",
-        "evidencePackPath": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527123449\\pilot-gbp-sar-100\\evidence-pack.json"
+        "runDirectory": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527145658\\pilot-gbp-sar-100",
+        "junitPath": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527145658\\pilot-gbp-sar-100\\maestro-junit.xml",
+        "screenshotsDirectory": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527145658\\pilot-gbp-sar-100\\screenshots",
+        "logsDirectory": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527145658\\pilot-gbp-sar-100\\logs",
+        "evidencePackPath": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527145658\\pilot-gbp-sar-100\\evidence-pack.json"
       },
       "defects": [
         {
@@ -55,12 +55,12 @@
         "testId": "QA-CORRIDOR-GBP-SAR-0500",
         "maestroFlowPath": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\maestro\\flows\\corridor\\gbp-sar\\amount-500.yaml"
       },
-      "runId": "20260527123449",
+      "runId": "20260527145658",
       "status": "FAIL",
       "reason": "Pilot flow failed or mandatory validation checks did not complete.",
-      "startedAt": "2026-05-27T12:34:52.784Z",
-      "finishedAt": "2026-05-27T12:34:55.516Z",
-      "durationMs": 2732,
+      "startedAt": "2026-05-27T14:57:01.988Z",
+      "finishedAt": "2026-05-27T14:57:04.220Z",
+      "durationMs": 2232,
       "validation": {
         "routeGenerated": false,
         "transferInitiated": false,
@@ -72,11 +72,11 @@
         "crossScreenConsistent": false
       },
       "artifacts": {
-        "runDirectory": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527123449\\pilot-gbp-sar-500",
-        "junitPath": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527123449\\pilot-gbp-sar-500\\maestro-junit.xml",
-        "screenshotsDirectory": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527123449\\pilot-gbp-sar-500\\screenshots",
-        "logsDirectory": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527123449\\pilot-gbp-sar-500\\logs",
-        "evidencePackPath": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527123449\\pilot-gbp-sar-500\\evidence-pack.json"
+        "runDirectory": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527145658\\pilot-gbp-sar-500",
+        "junitPath": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527145658\\pilot-gbp-sar-500\\maestro-junit.xml",
+        "screenshotsDirectory": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527145658\\pilot-gbp-sar-500\\screenshots",
+        "logsDirectory": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527145658\\pilot-gbp-sar-500\\logs",
+        "evidencePackPath": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527145658\\pilot-gbp-sar-500\\evidence-pack.json"
       },
       "defects": [
         {
@@ -94,12 +94,12 @@
         "testId": "QA-CORRIDOR-GBP-KWD-0100",
         "maestroFlowPath": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\maestro\\flows\\corridor\\gbp-kwd\\amount-100.yaml"
       },
-      "runId": "20260527123449",
+      "runId": "20260527145658",
       "status": "FAIL",
       "reason": "Pilot flow failed or mandatory validation checks did not complete.",
-      "startedAt": "2026-05-27T12:34:55.519Z",
-      "finishedAt": "2026-05-27T12:34:58.056Z",
-      "durationMs": 2537,
+      "startedAt": "2026-05-27T14:57:04.221Z",
+      "finishedAt": "2026-05-27T14:57:06.350Z",
+      "durationMs": 2129,
       "validation": {
         "routeGenerated": false,
         "transferInitiated": false,
@@ -111,11 +111,11 @@
         "crossScreenConsistent": false
       },
       "artifacts": {
-        "runDirectory": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527123449\\pilot-gbp-kwd-100",
-        "junitPath": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527123449\\pilot-gbp-kwd-100\\maestro-junit.xml",
-        "screenshotsDirectory": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527123449\\pilot-gbp-kwd-100\\screenshots",
-        "logsDirectory": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527123449\\pilot-gbp-kwd-100\\logs",
-        "evidencePackPath": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527123449\\pilot-gbp-kwd-100\\evidence-pack.json"
+        "runDirectory": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527145658\\pilot-gbp-kwd-100",
+        "junitPath": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527145658\\pilot-gbp-kwd-100\\maestro-junit.xml",
+        "screenshotsDirectory": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527145658\\pilot-gbp-kwd-100\\screenshots",
+        "logsDirectory": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527145658\\pilot-gbp-kwd-100\\logs",
+        "evidencePackPath": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527145658\\pilot-gbp-kwd-100\\evidence-pack.json"
       },
       "defects": [
         {
@@ -133,12 +133,12 @@
         "testId": "QA-CORRIDOR-GBP-KWD-0500",
         "maestroFlowPath": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\maestro\\flows\\corridor\\gbp-kwd\\amount-500.yaml"
       },
-      "runId": "20260527123449",
+      "runId": "20260527145658",
       "status": "FAIL",
       "reason": "Pilot flow failed or mandatory validation checks did not complete.",
-      "startedAt": "2026-05-27T12:34:58.059Z",
-      "finishedAt": "2026-05-27T12:35:01.189Z",
-      "durationMs": 3130,
+      "startedAt": "2026-05-27T14:57:06.352Z",
+      "finishedAt": "2026-05-27T14:57:08.220Z",
+      "durationMs": 1868,
       "validation": {
         "routeGenerated": false,
         "transferInitiated": false,
@@ -150,11 +150,11 @@
         "crossScreenConsistent": false
       },
       "artifacts": {
-        "runDirectory": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527123449\\pilot-gbp-kwd-500",
-        "junitPath": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527123449\\pilot-gbp-kwd-500\\maestro-junit.xml",
-        "screenshotsDirectory": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527123449\\pilot-gbp-kwd-500\\screenshots",
-        "logsDirectory": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527123449\\pilot-gbp-kwd-500\\logs",
-        "evidencePackPath": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527123449\\pilot-gbp-kwd-500\\evidence-pack.json"
+        "runDirectory": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527145658\\pilot-gbp-kwd-500",
+        "junitPath": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527145658\\pilot-gbp-kwd-500\\maestro-junit.xml",
+        "screenshotsDirectory": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527145658\\pilot-gbp-kwd-500\\screenshots",
+        "logsDirectory": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527145658\\pilot-gbp-kwd-500\\logs",
+        "evidencePackPath": "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527145658\\pilot-gbp-kwd-500\\evidence-pack.json"
       },
       "defects": [
         {
@@ -166,9 +166,9 @@
     }
   ],
   "evidenceReferences": [
-    "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527123449\\pilot-gbp-sar-100\\evidence-pack.json",
-    "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527123449\\pilot-gbp-sar-500\\evidence-pack.json",
-    "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527123449\\pilot-gbp-kwd-100\\evidence-pack.json",
-    "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527123449\\pilot-gbp-kwd-500\\evidence-pack.json"
+    "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527145658\\pilot-gbp-sar-100\\evidence-pack.json",
+    "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527145658\\pilot-gbp-sar-500\\evidence-pack.json",
+    "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527145658\\pilot-gbp-kwd-100\\evidence-pack.json",
+    "C:\\Users\\t_jeh\\NexusPayOrchestrator\\governance\\automation\\outputs\\2026-05-27\\pilot-20260527145658\\pilot-gbp-kwd-500\\evidence-pack.json"
   ]
 }
