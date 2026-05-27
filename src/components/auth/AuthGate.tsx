@@ -1,7 +1,11 @@
 import { usePathname, useRouter } from "expo-router";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 
+import {
+    logStartupInfo,
+    logStartupWarn,
+} from "../../services/startupLogger";
 import { useAuth } from "../../state/AuthContext";
 import { useDeviceUnlock } from "../../state/DeviceUnlockContext";
 import { colors } from "../../theme/colors";
@@ -20,6 +24,8 @@ function LoadingOverlay() {
   );
 }
 
+const ROUTING_BOOTSTRAP_TIMEOUT_MS = 6000;
+
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { session, loading, demoAccessEnabled } = useAuth();
@@ -28,9 +34,25 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const lastRedirectRef = useRef<string | null>(null);
   const unlockPromptInFlightRef = useRef(false);
   const lastProtectedRouteRef = useRef<string>("/");
+  const routingWatchdogTriggeredRef = useRef(false);
+  const [allowRenderOnWatchdog, setAllowRenderOnWatchdog] = useState(false);
 
   const isPublicRoute = PUBLIC_ROUTES.has(pathname);
   const hasAccess = Boolean(session) || demoAccessEnabled;
+
+  useEffect(() => {
+    logStartupInfo({
+      event: "routing-state",
+      stage: "routing-init",
+      status: "start",
+      details: {
+        pathname,
+        loading,
+        hasAccess,
+        locked,
+      },
+    });
+  }, [hasAccess, loading, locked, pathname]);
 
   useEffect(() => {
     if (!isPublicRoute) {
@@ -52,6 +74,15 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     }
 
     lastRedirectRef.current = target;
+    logStartupInfo({
+      event: "routing-redirect",
+      stage: "routing-init",
+      status: "success",
+      details: {
+        from: pathname,
+        to: target,
+      },
+    });
     router.replace(target);
   }, [hasAccess, isPublicRoute, loading, locked, pathname, router]);
 
@@ -71,7 +102,41 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     });
   }, [loading, hasAccess, isPublicRoute, locked, biometricAvailable, unlock]);
 
-  if (loading) {
+  useEffect(() => {
+    if (!loading) {
+      routingWatchdogTriggeredRef.current = false;
+      setAllowRenderOnWatchdog(false);
+      return;
+    }
+
+    const watchdog = setTimeout(() => {
+      if (routingWatchdogTriggeredRef.current) {
+        return;
+      }
+
+      routingWatchdogTriggeredRef.current = true;
+
+      logStartupWarn({
+        event: "routing-watchdog-timeout",
+        stage: "routing-init",
+        status: "fallback",
+        details: {
+          pathname,
+          timeoutMs: ROUTING_BOOTSTRAP_TIMEOUT_MS,
+        },
+      });
+
+      if (pathname !== "/auth") {
+        router.replace("/auth");
+      }
+
+      setAllowRenderOnWatchdog(true);
+    }, ROUTING_BOOTSTRAP_TIMEOUT_MS);
+
+    return () => clearTimeout(watchdog);
+  }, [loading, pathname, router]);
+
+  if (loading && !allowRenderOnWatchdog) {
     return (
       <View style={styles.root}>
         {children}
@@ -80,7 +145,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!hasAccess && !isPublicRoute) {
+  if (!hasAccess && !isPublicRoute && !allowRenderOnWatchdog) {
     return (
       <View style={styles.root}>
         {children}
@@ -89,7 +154,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (hasAccess && locked && !isPublicRoute) {
+  if (hasAccess && locked && !isPublicRoute && !allowRenderOnWatchdog) {
     return (
       <View style={styles.root}>
         {children}

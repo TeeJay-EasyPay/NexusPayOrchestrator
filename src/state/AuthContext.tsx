@@ -1,24 +1,29 @@
 import { Session } from "@supabase/supabase-js";
 import * as Linking from "expo-linking";
 import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
+    createContext,
+    useContext,
+    useEffect,
+    useState,
 } from "react";
 
 import {
-  getSupabaseConfigError,
-  isSupabaseConfigured,
-  supabase,
+    getSupabaseConfigError,
+    isSupabaseConfigured,
+    supabase,
 } from "../lib/supabase";
 import { writeAuditLog } from "../services/auditLog";
+import {
+    logStartupError,
+    logStartupInfo,
+    logStartupWarn,
+} from "../services/startupLogger";
 
 const DEMO_EMAIL = process.env.EXPO_PUBLIC_DEMO_EMAIL;
 const DEMO_PASSWORD = process.env.EXPO_PUBLIC_DEMO_PASSWORD;
 
 const FORCE_LOGIN_ON_DEV_RELOAD = __DEV__;
+const AUTH_BOOTSTRAP_TIMEOUT_MS = 8000;
 
 interface AuthContextType {
   session: Session | null;
@@ -36,11 +41,32 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 async function upsertProfile(session: Session | null) {
   if (!session?.user) return;
 
-  await supabase.from("profiles").upsert({
-    id: session.user.id,
-    email: session.user.email,
-    updated_at: new Date().toISOString(),
-  });
+  try {
+    await supabase.from("profiles").upsert({
+      id: session.user.id,
+      email: session.user.email,
+      updated_at: new Date().toISOString(),
+    });
+  } catch (error) {
+    logStartupWarn({
+      event: "profile-upsert-skipped",
+      stage: "supabase-init",
+      status: "fallback",
+      details: {
+        reason:
+          error instanceof Error ? error.message : "Unable to persist profile during bootstrap",
+      },
+    });
+  }
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_resolve, reject) => {
+      setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs}ms`)), timeoutMs);
+    }),
+  ]);
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -53,9 +79,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let ignoreAuthEventsUntil = FORCE_LOGIN_ON_DEV_RELOAD ? Date.now() + 1200 : 0;
 
     async function initialiseSecureEntry() {
+      logStartupInfo({
+        event: "auth-bootstrap-start",
+        stage: "app-bootstrap",
+        status: "start",
+      });
+
       try {
         if (!isSupabaseConfigured) {
           console.error(getSupabaseConfigError());
+          logStartupWarn({
+            event: "supabase-config-missing",
+            stage: "supabase-init",
+            status: "fallback",
+            details: {
+              message: getSupabaseConfigError(),
+            },
+          });
 
           if (isMounted) {
             setSession(null);
@@ -67,6 +107,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (FORCE_LOGIN_ON_DEV_RELOAD) {
+          logStartupInfo({
+            event: "dev-reload-auth-reset",
+            stage: "supabase-init",
+            status: "success",
+          });
+
           if (isMounted) {
             setSession(null);
             setDemoAccessEnabled(false);
@@ -83,10 +129,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const {
           data: { session: existingSession },
           error,
-        } = await supabase.auth.getSession();
+        } = await withTimeout(
+          supabase.auth.getSession(),
+          AUTH_BOOTSTRAP_TIMEOUT_MS,
+          "Supabase session bootstrap"
+        );
 
         if (error) {
           console.warn("Unable to load existing Supabase session", error.message);
+          logStartupWarn({
+            event: "supabase-session-warning",
+            stage: "supabase-init",
+            status: "fallback",
+            details: {
+              message: error.message,
+            },
+          });
         }
 
         if (isMounted) {
@@ -96,8 +154,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         await upsertProfile(existingSession ?? null);
+
+        logStartupInfo({
+          event: "auth-bootstrap-complete",
+          stage: "app-bootstrap",
+          status: "success",
+          details: {
+            hasSession: Boolean(existingSession),
+          },
+        });
       } catch (error) {
         console.warn("Auth initialisation failed", error);
+        logStartupError({
+          event: "auth-bootstrap-failed",
+          stage: "app-bootstrap",
+          status: "failure",
+          details: {
+            reason: error instanceof Error ? error.message : "Unknown auth bootstrap failure",
+          },
+        });
 
         if (isMounted) {
           setSession(null);
@@ -116,6 +191,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
         return;
       }
+
+      logStartupInfo({
+        event: "auth-state-changed",
+        stage: "supabase-init",
+        status: "success",
+        details: {
+          hasSession: Boolean(nextSession),
+        },
+      });
 
       setSession(nextSession);
       setDemoAccessEnabled(nextSession?.user?.email === DEMO_EMAIL);
@@ -243,19 +327,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
   }
 
-  const value = useMemo(
-    () => ({
-      session,
-      loading,
-      demoAccessEnabled,
-      enableDemoAccess,
-      disableDemoAccess,
-      signIn,
-      signUp,
-      signOut,
-    }),
-    [session, loading, demoAccessEnabled]
-  );
+  const value = {
+    session,
+    loading,
+    demoAccessEnabled,
+    enableDemoAccess,
+    disableDemoAccess,
+    signIn,
+    signUp,
+    signOut,
+  };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

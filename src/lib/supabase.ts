@@ -3,6 +3,8 @@ import "react-native-url-polyfill/auto";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createClient } from "@supabase/supabase-js";
 
+import { logStartupInfo, logStartupWarn } from "../services/startupLogger";
+
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -12,6 +14,23 @@ export const isSupabaseConfigured = Boolean(
     supabaseUrl.startsWith("https://") &&
     supabaseUrl.includes(".supabase.co")
 );
+
+if (isSupabaseConfigured) {
+  logStartupInfo({
+    event: "supabase-client-configured",
+    stage: "supabase-init",
+    status: "success",
+  });
+} else {
+  logStartupWarn({
+    event: "supabase-client-fallback-config",
+    stage: "supabase-init",
+    status: "fallback",
+    details: {
+      reason: getSupabaseConfigError(),
+    },
+  });
+}
 
 export function getSupabaseConfigError() {
   if (!supabaseUrl) {

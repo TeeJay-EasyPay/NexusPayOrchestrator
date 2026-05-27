@@ -1,3 +1,5 @@
+import { logStartupInfo, logStartupWarn } from "../services/startupLogger";
+
 export type FxProviderName =
   | "Frankfurter"
   | "ExchangeRate API"
@@ -347,25 +349,80 @@ async function fetchFromCurrencyLayer(
 export async function fetchFxRate(from: string, to: string): Promise<FxRate> {
   const key = `${from}-${to}`;
 
-  const providers = [
-    fetchFromFrankfurter,
-    fetchFromExchangeRateApi,
-    fetchFromCurrencyApiCdn,
-    fetchFromFloatRates,
-    fetchFromOpenExchangeRates,
-    fetchFromFixer,
-    fetchFromCurrencyLayer,
+  logStartupInfo({
+    event: "fx-rate-fetch-start",
+    stage: "fx-provider-init",
+    status: "start",
+    details: {
+      from,
+      to,
+    },
+  });
+
+  const providers: {
+    name: FxProviderName;
+    fetcher: (fromCurrency: string, toCurrency: string) => Promise<FxRate>;
+  }[] = [
+    { name: "Frankfurter", fetcher: fetchFromFrankfurter },
+    { name: "ExchangeRate API", fetcher: fetchFromExchangeRateApi },
+    { name: "Currency API CDN", fetcher: fetchFromCurrencyApiCdn },
+    { name: "FloatRates", fetcher: fetchFromFloatRates },
+    { name: "Open Exchange Rates", fetcher: fetchFromOpenExchangeRates },
+    { name: "Fixer", fetcher: fetchFromFixer },
+    { name: "CurrencyLayer", fetcher: fetchFromCurrencyLayer },
   ];
 
   for (const provider of providers) {
     try {
-      return await provider(from, to);
-    } catch {
-      console.log("FX provider failed, trying next provider");
+      const result = await provider.fetcher(from, to);
+      logStartupInfo({
+        event: "fx-rate-fetch-success",
+        stage: "fx-provider-init",
+        status: "success",
+        details: {
+          from,
+          to,
+          provider: provider.name,
+        },
+      });
+      return result;
+    } catch (error) {
+      logStartupWarn({
+        event: "fx-provider-failed",
+        stage: "fx-provider-init",
+        status: "fallback",
+        details: {
+          from,
+          to,
+          provider: provider.name,
+          reason: error instanceof Error ? error.message : "Unknown FX provider error",
+        },
+      });
     }
   }
 
-  return MOCK_RATES[key];
+  logStartupWarn({
+    event: "fx-all-providers-failed",
+    stage: "fx-provider-init",
+    status: "fallback",
+    details: {
+      from,
+      to,
+      fallbackKey: key,
+    },
+  });
+
+  return (
+    MOCK_RATES[key] ?? {
+      from,
+      to,
+      rate: 1,
+      date: new Date().toISOString().slice(0, 10),
+      source: "MOCK_FALLBACK",
+      provider: "Mock Fallback",
+      providerStatus: "No configured fallback pair found; using neutral synthetic rate",
+    }
+  );
 }
 
 export async function fetchCorridorFxRates(): Promise<FxRate[]> {

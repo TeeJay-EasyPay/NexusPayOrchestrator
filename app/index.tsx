@@ -23,6 +23,7 @@ import {
     DashboardSummaryResult,
     generateDashboardSummary,
 } from "../src/services/nexusAIService";
+import { logStartupWarn } from "../src/services/startupLogger";
 import { usePaymentMethods } from "../src/state/PaymentMethodsContext";
 import { useTransfer } from "../src/state/TransferContext";
 import { colors, spacing } from "../src/theme";
@@ -298,12 +299,26 @@ export default function HomeScreen() {
     let mounted = true;
 
     async function loadSignedInUser() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-      if (!mounted) return;
-      setDisplayName(getDisplayNameFromEmail(user?.email));
+        if (!mounted) return;
+        setDisplayName(getDisplayNameFromEmail(user?.email));
+      } catch (error) {
+        logStartupWarn({
+          event: "home-user-load-failed",
+          stage: "app-bootstrap",
+          status: "fallback",
+          details: {
+            reason: error instanceof Error ? error.message : "Unknown user load error",
+          },
+        });
+
+        if (!mounted) return;
+        setDisplayName("User");
+      }
     }
 
     loadSignedInUser();
@@ -447,10 +462,26 @@ export default function HomeScreen() {
         maxRetries: 1,
         onLoadingChange: setDashboardAILoading,
       }
-    ).then((result) => {
-      if (!active) return;
-      setDashboardSummary(result.data);
-    });
+    )
+      .then((result) => {
+        if (!active) return;
+        setDashboardSummary(result.data);
+      })
+      .catch((error) => {
+        if (!active) return;
+
+        logStartupWarn({
+          event: "dashboard-ai-summary-failed",
+          stage: "nexus-ai-init",
+          status: "fallback",
+          details: {
+            reason: error instanceof Error ? error.message : "Unknown dashboard AI summary error",
+          },
+        });
+
+        setDashboardSummary(null);
+        setDashboardAILoading(false);
+      });
 
     return () => {
       active = false;

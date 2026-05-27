@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabase";
+import { logStartupWarn } from "./startupLogger";
 
 export type NexusAISensitivity = "conservative" | "balanced" | "aggressive";
 
@@ -27,6 +28,21 @@ export const defaultNexusAISettings = (userId: string): NexusAISettings => ({
   sensitivity: "balanced",
 });
 
+function isRlsError(error: unknown) {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const candidate = error as { message?: string; code?: string };
+  const message = (candidate.message ?? "").toLowerCase();
+
+  return (
+    candidate.code === "42501" ||
+    message.includes("row-level security") ||
+    message.includes("policy")
+  );
+}
+
 export async function getNexusAISettings(userId: string) {
   const { data, error } = await supabase
     .from("nexus_ai_settings")
@@ -34,7 +50,22 @@ export async function getNexusAISettings(userId: string) {
     .eq("user_id", userId)
     .maybeSingle();
 
-  if (error) throw error;
+  if (error) {
+    if (isRlsError(error)) {
+      logStartupWarn({
+        event: "nexus-ai-settings-select-rls",
+        stage: "nexus-ai-init",
+        status: "fallback",
+        details: {
+          userId,
+          reason: error.message,
+        },
+      });
+      return defaultNexusAISettings(userId);
+    }
+
+    throw error;
+  }
 
   if (!data) {
     const defaults = defaultNexusAISettings(userId);
@@ -45,7 +76,24 @@ export async function getNexusAISettings(userId: string) {
       .select("*")
       .single();
 
-    if (insertError) throw insertError;
+    if (insertError) {
+      if (isRlsError(insertError)) {
+        logStartupWarn({
+          event: "nexus-ai-settings-insert-rls",
+          stage: "nexus-ai-init",
+          status: "fallback",
+          details: {
+            userId,
+            reason: insertError.message,
+          },
+        });
+
+        return defaults;
+      }
+
+      throw insertError;
+    }
+
     return inserted as NexusAISettings;
   }
 
@@ -66,7 +114,26 @@ export async function updateNexusAISettings(
     .select("*")
     .single();
 
-  if (error) throw error;
+  if (error) {
+    if (isRlsError(error)) {
+      logStartupWarn({
+        event: "nexus-ai-settings-update-rls",
+        stage: "nexus-ai-init",
+        status: "fallback",
+        details: {
+          userId,
+          reason: error.message,
+        },
+      });
+
+      return {
+        ...defaultNexusAISettings(userId),
+        ...updates,
+      } as NexusAISettings;
+    }
+
+    throw error;
+  }
 
   return data as NexusAISettings;
 }
