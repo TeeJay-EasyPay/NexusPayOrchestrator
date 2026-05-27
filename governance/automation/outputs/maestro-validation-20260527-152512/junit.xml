@@ -1,0 +1,6 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<testsuites>
+  <testsuite name="Test Suite" device="Pixel_9" tests="1" failures="0" time="16.0">
+    <testcase id="maestro-nexuspay-validation" name="maestro-nexuspay-validation" classname="maestro-nexuspay-validation" file="C:\Users\t_jeh\AppData\Local\Temp\maestro-nexuspay-validation.yaml" time="16.0" status="SUCCESS"/>
+  </testsuite>
+</testsuites>
