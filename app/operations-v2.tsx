@@ -15,6 +15,7 @@ import { MissionControlCard } from "../src/components/operations-v2/MissionContr
 import { NexusAISummaryCard } from "../src/components/operations-v2/NexusAISummaryCard";
 import { OperationalHealthCard } from "../src/components/operations-v2/OperationalHealthCard";
 import { OperationsHeader } from "../src/components/operations-v2/OperationsHeader";
+import { QATestCentreCard } from "../src/components/operations-v2/QATestCentreCard";
 import { TreasuryLiquidityCard } from "../src/components/operations-v2/TreasuryLiquidityCard";
 import { AppText } from "../src/components/ui/AppText";
 import { Screen } from "../src/components/ui/Screen";
@@ -73,6 +74,10 @@ export default function OperationsV2Screen() {
         <View style={styles.sectionGap} />
 
         <KpiGrid kpis={state.kpis ?? []} />
+
+        <View style={styles.sectionGap} />
+
+        <QATestCentreCard />
 
         <View style={styles.sectionGap} />
 
