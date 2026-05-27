@@ -136,34 +136,22 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     return () => clearTimeout(watchdog);
   }, [loading, pathname, router]);
 
-  if (loading && !allowRenderOnWatchdog) {
-    return (
-      <View style={styles.root}>
-        {children}
-        <LoadingOverlay />
-      </View>
-    );
-  }
+  // Always render children at the same tree position so the expo-router Stack
+  // is never unmounted/remounted during auth transitions. Previously the three
+  // conditional branches each wrapped children in a View while the fallthrough
+  // used a Fragment, causing the Stack to remount when pathname changed to a
+  // public route — which left expo-router in a blank, unrecoverable state.
+  const shouldShowOverlay =
+    (!allowRenderOnWatchdog && loading) ||
+    (!allowRenderOnWatchdog && !hasAccess && !isPublicRoute) ||
+    (!allowRenderOnWatchdog && hasAccess && locked && !isPublicRoute);
 
-  if (!hasAccess && !isPublicRoute && !allowRenderOnWatchdog) {
-    return (
-      <View style={styles.root}>
-        {children}
-        <LoadingOverlay />
-      </View>
-    );
-  }
-
-  if (hasAccess && locked && !isPublicRoute && !allowRenderOnWatchdog) {
-    return (
-      <View style={styles.root}>
-        {children}
-        <LoadingOverlay />
-      </View>
-    );
-  }
-
-  return <>{children}</>;
+  return (
+    <View style={styles.root}>
+      {children}
+      {shouldShowOverlay && <LoadingOverlay />}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
