@@ -1,0 +1,47 @@
+{
+  "metadata": {
+    "runId": "20260527202739",
+    "scenarioId": "pilot-gbp-sar-500",
+    "testId": "QA-CORRIDOR-GBP-SAR-0500",
+    "corridor": "GBP->SAR",
+    "amount": 500,
+    "timestampStart": "2026-05-27T20:28:34.670Z",
+    "timestampEnd": "2026-05-27T20:29:21.073Z"
+  },
+  "outcome": {
+    "status": "FAIL",
+    "reason": "Pilot flow failed or mandatory validation checks did not complete.",
+    "severitySuggestion": "HIGH"
+  },
+  "validation": {
+    "routeGenerated": false,
+    "transferInitiated": false,
+    "executionProgressed": false,
+    "settlementCompleted": false,
+    "payoutCompleted": false,
+    "historyUpdated": false,
+    "trackCompleted": false,
+    "crossScreenConsistent": false
+  },
+  "metrics": {
+    "totalDurationMs": 46403
+  },
+  "assets": {
+    "screenshots": [
+      "screenshots\\pilot-gbp-sar-500-launch-app.png"
+    ],
+    "logs": [
+      "logs\\adb-logcat.log",
+      "logs\\maestro-stderr.log",
+      "logs\\maestro-stdout.log"
+    ],
+    "junitPath": "maestro-junit.xml"
+  },
+  "defects": [
+    {
+      "defectId": "DEF-001",
+      "severity": "CRITICAL",
+      "reason": "Saudi corridor pilot failed: Pilot flow failed or mandatory validation checks did not complete. Maestro stderr: none. Missing checks: routeGenerated, transferInitiated, executionProgressed, settlementCompleted, payoutCompleted, historyUpdated, trackCompleted, crossScreenConsistent"
+    }
+  ]
+}
