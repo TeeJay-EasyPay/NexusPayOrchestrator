@@ -23,6 +23,15 @@ function formatLastResult(summary: QATestCentreSummary): string {
   return `${summary.lastTestResult.testId} • ${summary.lastTestResult.result} • ${ts}`;
 }
 
+function formatLastPilotResult(summary: QATestCentreSummary): string {
+  if (!summary.lastPilotResult) {
+    return "No pilot certification runs yet";
+  }
+
+  const ts = new Date(summary.lastPilotResult.timestamp).toLocaleString();
+  return `${summary.lastPilotResult.testId} • ${summary.lastPilotResult.result} • ${ts}`;
+}
+
 function MetricTile({
   label,
   value,
@@ -73,7 +82,11 @@ export function QATestCentreCard() {
   const passed = summary?.passed ?? 0;
   const failed = summary?.failed ?? 0;
   const openDefects = summary?.openDefects ?? 0;
+  const pilotRuns = summary?.pilotRuns ?? 0;
+  const pilotPassed = summary?.pilotPassed ?? 0;
+  const pilotFailed = summary?.pilotFailed ?? 0;
   const lastResultColor = resultColor(summary?.lastTestResult?.result ?? null);
+  const lastPilotResultColor = resultColor(summary?.lastPilotResult?.result ?? null);
 
   return (
     <AppCard style={styles.card}>
@@ -98,6 +111,9 @@ export function QATestCentreCard() {
             <MetricTile label="Passed" value={passed} valueColor="#16A34A" />
             <MetricTile label="Failed" value={failed} valueColor="#DC2626" />
             <MetricTile label="Open Defects" value={openDefects} valueColor="#D97706" />
+            <MetricTile label="Pilot Runs" value={pilotRuns} valueColor="#2563EB" />
+            <MetricTile label="Pilot Passed" value={pilotPassed} valueColor="#16A34A" />
+            <MetricTile label="Pilot Failed" value={pilotFailed} valueColor="#DC2626" />
           </View>
 
           <View style={styles.lastResultBlock}>
@@ -112,6 +128,31 @@ export function QATestCentreCard() {
                   failed: 0,
                   openDefects: 0,
                   lastTestResult: null,
+                  pilotRuns: 0,
+                  pilotPassed: 0,
+                  pilotFailed: 0,
+                  lastPilotResult: null,
+                }
+              )}
+            </AppText>
+          </View>
+
+          <View style={styles.lastResultBlock}>
+            <AppText variant="caption" color={colors.textDarkMuted} style={styles.lastResultLabel}>
+              Last pilot certification result
+            </AppText>
+            <AppText variant="caption" style={[styles.lastResultValue, { color: lastPilotResultColor }]}> 
+              {formatLastPilotResult(
+                summary ?? {
+                  totalExecuted: 0,
+                  passed: 0,
+                  failed: 0,
+                  openDefects: 0,
+                  lastTestResult: null,
+                  pilotRuns: 0,
+                  pilotPassed: 0,
+                  pilotFailed: 0,
+                  lastPilotResult: null,
                 }
               )}
             </AppText>

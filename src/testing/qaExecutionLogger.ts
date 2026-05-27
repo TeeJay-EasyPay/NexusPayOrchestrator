@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
 import { isSupabaseConfigured, supabase } from "../lib/supabase";
+import { isPilotCertificationTestId } from "./automation/pilotScenarios";
 import {
     getOpenDefectCount,
     registerDefectObservation,
@@ -41,6 +42,10 @@ export type QATestCentreSummary = {
   failed: number;
   openDefects: number;
   lastTestResult: QAExecutionLogEntry | null;
+  pilotRuns: number;
+  pilotPassed: number;
+  pilotFailed: number;
+  lastPilotResult: QAExecutionLogEntry | null;
 };
 
 export type BackgroundResumeValidationInput = {
@@ -197,6 +202,9 @@ export async function getQATestCentreSummary(): Promise<QATestCentreSummary> {
   const logs = await loadQAExecutionLogs();
   const passed = logs.filter((log) => log.result === "PASS").length;
   const failed = logs.filter((log) => log.result === "FAIL").length;
+  const pilotLogs = logs.filter((log) => isPilotCertificationTestId(log.testId));
+  const pilotPassed = pilotLogs.filter((log) => log.result === "PASS").length;
+  const pilotFailed = pilotLogs.filter((log) => log.result === "FAIL").length;
   const openDefects = await getOpenDefectCount();
 
   return {
@@ -205,6 +213,10 @@ export async function getQATestCentreSummary(): Promise<QATestCentreSummary> {
     failed,
     openDefects,
     lastTestResult: logs[0] ?? null,
+    pilotRuns: pilotLogs.length,
+    pilotPassed,
+    pilotFailed,
+    lastPilotResult: pilotLogs[0] ?? null,
   };
 }
 

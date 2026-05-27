@@ -1,0 +1,11 @@
+appId: com.nexuspay.orchestrator
+---
+- runFlow:
+    file: ../../common/pilot-transfer-template.yaml
+    env:
+      CORRIDOR_CHIP: "Kuwait • KWD"
+      AMOUNT_VALUE: "500"
+      FIRST_NAME: "Sprint"
+      SURNAME: "PilotKWD500"
+      BANK_CODE: "KW-KWT-005"
+      ACCOUNT_NUMBER: "22005001"

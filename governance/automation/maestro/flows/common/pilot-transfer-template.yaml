@@ -1,0 +1,57 @@
+appId: com.nexuspay.orchestrator
+---
+- launchApp:
+    clearState: false
+- takeScreenshot: ${RUN_OUTPUT_DIR}/${RUN_LABEL}-launch-app
+- tapOn: "Enter Demo Workspace"
+- extendedWaitUntil:
+    visible: "New Transfer"
+    timeout: 30000
+- takeScreenshot: ${RUN_OUTPUT_DIR}/${RUN_LABEL}-workspace-entered
+- tapOn: ${CORRIDOR_CHIP}
+- tapOn: "0.00"
+- eraseText
+- inputText: ${AMOUNT_VALUE}
+- takeScreenshot: ${RUN_OUTPUT_DIR}/${RUN_LABEL}-amount-entered
+- tapOn: "First name *"
+- inputText: ${FIRST_NAME}
+- tapOn: "Surname *"
+- inputText: ${SURNAME}
+- tapOn: "Bank / branch / sort code *"
+- inputText: ${BANK_CODE}
+- tapOn: "Recipient bank account number *"
+- inputText: ${ACCOUNT_NUMBER}
+- tapOn: "Find best routes →"
+- extendedWaitUntil:
+    visible: "Recommended"
+    timeout: 45000
+- takeScreenshot: ${RUN_OUTPUT_DIR}/${RUN_LABEL}-route-generated
+- tapOn: "Recommended"
+- tapOn: "Choose funding source"
+- extendedWaitUntil:
+    visible: "Funding authorisation"
+    timeout: 20000
+- takeScreenshot: ${RUN_OUTPUT_DIR}/${RUN_LABEL}-transfer-initiated
+- tapOn: "Authorise funding and continue"
+- extendedWaitUntil:
+    visible: "Settlement proof"
+    timeout: 90000
+- takeScreenshot: ${RUN_OUTPUT_DIR}/${RUN_LABEL}-execution-progress
+- extendedWaitUntil:
+    visible: "Paid into destination account"
+    timeout: 120000
+- takeScreenshot: ${RUN_OUTPUT_DIR}/${RUN_LABEL}-payout-completed
+- takeScreenshot: ${RUN_OUTPUT_DIR}/${RUN_LABEL}-settlement-proof
+- tapOn: "Account"
+- extendedWaitUntil:
+    visible: "Recent transaction history"
+    timeout: 30000
+- takeScreenshot: ${RUN_OUTPUT_DIR}/${RUN_LABEL}-history-updated
+- tapOn: "Track"
+- extendedWaitUntil:
+    visible: "Settlement proof"
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "Paid into destination account"
+    timeout: 30000
+- takeScreenshot: ${RUN_OUTPUT_DIR}/${RUN_LABEL}-track-completed

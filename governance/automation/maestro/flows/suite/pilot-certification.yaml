@@ -1,0 +1,10 @@
+appId: com.nexuspay.orchestrator
+---
+- runFlow:
+    file: ../corridor/gbp-sar/amount-100.yaml
+- runFlow:
+    file: ../corridor/gbp-sar/amount-500.yaml
+- runFlow:
+    file: ../corridor/gbp-kwd/amount-100.yaml
+- runFlow:
+    file: ../corridor/gbp-kwd/amount-500.yaml
