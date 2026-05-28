@@ -2,6 +2,8 @@ import "react-native-get-random-values";
 
 import { Stack } from "expo-router";
 import { useEffect } from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AuthGate } from "../src/components/auth/AuthGate";
 import { logStartupInfo } from "../src/services/startupLogger";
@@ -21,18 +23,22 @@ export default function Layout() {
   }, []);
 
   return (
-    <AuthProvider>
-      <DeviceUnlockProvider>
-        <WalletProvider>
-          <PaymentMethodsProvider>
-            <TransferProvider>
-              <AuthGate>
-                <Stack screenOptions={{ headerShown: false }} />
-              </AuthGate>
-            </TransferProvider>
-          </PaymentMethodsProvider>
-        </WalletProvider>
-      </DeviceUnlockProvider>
-    </AuthProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <AuthProvider>
+          <DeviceUnlockProvider>
+            <WalletProvider>
+              <PaymentMethodsProvider>
+                <TransferProvider>
+                  <AuthGate>
+                    <Stack screenOptions={{ headerShown: false }} />
+                  </AuthGate>
+                </TransferProvider>
+              </PaymentMethodsProvider>
+            </WalletProvider>
+          </DeviceUnlockProvider>
+        </AuthProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

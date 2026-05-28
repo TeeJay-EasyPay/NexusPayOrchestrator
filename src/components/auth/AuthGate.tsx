@@ -146,6 +146,21 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     (!allowRenderOnWatchdog && !hasAccess && !isPublicRoute) ||
     (!allowRenderOnWatchdog && hasAccess && locked && !isPublicRoute);
 
+  logStartupInfo({
+    event: "authgate-render",
+    stage: "routing-init",
+    status: "start",
+    details: {
+      pathname,
+      loading,
+      hasAccess,
+      locked,
+      isPublicRoute,
+      allowRenderOnWatchdog,
+      shouldShowOverlay,
+    },
+  });
+
   return (
     <View style={styles.root}>
       {children}
