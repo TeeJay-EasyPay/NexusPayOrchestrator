@@ -1,3 +1,4 @@
+import * as SplashScreen from "expo-splash-screen";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -15,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AppButton } from "../src/components/ui/AppButton";
 import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
+import { logStartupInfo, logStartupWarn } from "../src/services/startupLogger";
 import { useAuth } from "../src/state/AuthContext";
 import { useDeviceUnlock } from "../src/state/DeviceUnlockContext";
 import { colors, spacing } from "../src/theme";
@@ -87,7 +89,55 @@ export default function AuthScreen() {
   // ─── Mount / unmount lifecycle ─────────────────────────────────────────────
   useEffect(() => {
     console.log("[AUTH-MOUNT] auth view mounted ts=" + new Date().toISOString());
+
+    let cancelled = false;
+
+    const hideSplashAfterRender = async () => {
+      logStartupInfo({
+        event: "splash-hide-start",
+        stage: "app-bootstrap",
+        status: "start",
+        details: {
+          source: "auth-mounted",
+        },
+      });
+
+      try {
+        await new Promise<void>((resolve) => {
+          requestAnimationFrame(() => resolve());
+        });
+
+        if (cancelled) {
+          return;
+        }
+
+        await SplashScreen.hideAsync();
+
+        logStartupInfo({
+          event: "splash-hide-complete",
+          stage: "app-bootstrap",
+          status: "success",
+          details: {
+            source: "auth-mounted",
+          },
+        });
+      } catch (error) {
+        logStartupWarn({
+          event: "splash-hide-complete",
+          stage: "app-bootstrap",
+          status: "fallback",
+          details: {
+            source: "auth-mounted",
+            reason: error instanceof Error ? error.message : "Unknown splash hide failure",
+          },
+        });
+      }
+    };
+
+    void hideSplashAfterRender();
+
     return () => {
+      cancelled = true;
       console.log("[AUTH-UNMOUNT] auth view unmounted ts=" + new Date().toISOString());
     };
   }, []);
