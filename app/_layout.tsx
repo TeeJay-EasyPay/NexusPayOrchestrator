@@ -1,11 +1,11 @@
 import "react-native-get-random-values";
 
-import * as SplashScreen from "expo-splash-screen";
 import { Stack } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
+import { Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { Text, View } from "react-native";
 
 import { AuthGate } from "../src/components/auth/AuthGate";
 import { logStartupInfo } from "../src/services/startupLogger";

@@ -1,5 +1,5 @@
-import * as SplashScreen from "expo-splash-screen";
 import { useRouter } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useState } from "react";
 import {
     ActivityIndicator,
