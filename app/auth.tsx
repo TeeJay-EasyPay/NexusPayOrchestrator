@@ -19,7 +19,7 @@ import { useAuth } from "../src/state/AuthContext";
 import { useDeviceUnlock } from "../src/state/DeviceUnlockContext";
 import { colors, spacing } from "../src/theme";
 
-// ─── Auth screen render diagnostics ──────────────────────────────────────────
+// ─── Auth view render diagnostics ───────────────────────────────────────────
 let _authGlobalRenderCount = 0;
 
 type AuthMode = "sign-in" | "sign-up";
@@ -82,12 +82,13 @@ export default function AuthScreen() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const DEBUG_VISUAL = true;
 
   // ─── Mount / unmount lifecycle ─────────────────────────────────────────────
   useEffect(() => {
-    console.log("[AUTH-MOUNT] auth screen mounted ts=" + new Date().toISOString());
+    console.log("[AUTH-MOUNT] auth view mounted ts=" + new Date().toISOString());
     return () => {
-      console.log("[AUTH-UNMOUNT] auth screen unmounted ts=" + new Date().toISOString());
+      console.log("[AUTH-UNMOUNT] auth view unmounted ts=" + new Date().toISOString());
     };
   }, []);
 
@@ -210,33 +211,94 @@ export default function AuthScreen() {
   console.log("[AUTH-RENDER-COMPLETE] JSX about to be returned pass=" + renderPass);
 
   return (
-    // ── Bypass Screen component: render directly into SafeAreaView ──────────
-    // Screen uses SafeAreaView from react-native-safe-area-context internally.
-    // Rendering here directly isolates whether Screen is the failure point.
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* RENDER-PROOF BANNER — remove once screen is visible */}
+    // ── Bypass legacy wrapper: render directly into SafeAreaView ─────────────
+    // SafeAreaView is used directly here to isolate wrapper-level failures.
+    // This keeps route rendering deterministic during startup diagnostics.
+    <SafeAreaView
+      style={{
+        flex: 1,
+        backgroundColor: DEBUG_VISUAL ? "#0B1020" : colors.background,
+        borderWidth: DEBUG_VISUAL ? 4 : 0,
+        borderColor: DEBUG_VISUAL ? "#FF2D55" : "transparent",
+      }}
+      onLayout={(event) => {
+        const { width, height } = event.nativeEvent.layout;
+        console.log("[AUTH-LAYOUT] root", { width, height });
+      }}
+    >
+      {/* RENDER-PROOF BANNER — remove once the auth view is visible */}
       <View
         style={{
-          backgroundColor: "#1A3A5C",
+          backgroundColor: DEBUG_VISUAL ? "#FFD60A" : "#1A3A5C",
           paddingVertical: 6,
           paddingHorizontal: 12,
           alignItems: "center",
+          borderBottomWidth: DEBUG_VISUAL ? 3 : 0,
+          borderBottomColor: DEBUG_VISUAL ? "#FF2D55" : "transparent",
+          zIndex: 50,
+          elevation: 50,
         }}
       >
-        <Text style={{ color: "#D6A84F", fontSize: 11, fontFamily: "monospace" }}>
+        <Text
+          style={{
+            color: DEBUG_VISUAL ? "#0A1A2F" : "#D6A84F",
+            fontSize: DEBUG_VISUAL ? 16 : 11,
+            fontWeight: DEBUG_VISUAL ? "900" : "500",
+            fontFamily: "monospace",
+          }}
+        >
+          AUTH SCREEN LOADED
+        </Text>
+        <Text style={{ color: DEBUG_VISUAL ? "#0A1A2F" : "#D6A84F", fontSize: 11, fontFamily: "monospace" }}>
           {"[AUTH-RENDER-PROOF] pass=" + renderPass + " ts=" + new Date().toISOString()}
         </Text>
       </View>
 
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        style={{
+          flex: 1,
+          backgroundColor: DEBUG_VISUAL ? "#12213E" : "transparent",
+          borderWidth: DEBUG_VISUAL ? 2 : 0,
+          borderColor: DEBUG_VISUAL ? "#00E5FF" : "transparent",
+        }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
+        onLayout={(event) => {
+          const { width, height } = event.nativeEvent.layout;
+          console.log("[AUTH-LAYOUT] keyboard-container", { width, height });
+        }}
       >
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
+          style={{
+            backgroundColor: DEBUG_VISUAL ? "#1B2A4A" : "transparent",
+            borderWidth: DEBUG_VISUAL ? 2 : 0,
+            borderColor: DEBUG_VISUAL ? "#7CFF00" : "transparent",
+          }}
+          contentContainerStyle={{
+            flexGrow: 1,
+            justifyContent: "center",
+            paddingHorizontal: 16,
+            backgroundColor: DEBUG_VISUAL ? "#22345C" : "transparent",
+          }}
+          onLayout={(event) => {
+            const { width, height } = event.nativeEvent.layout;
+            console.log("[AUTH-LAYOUT] scroll", { width, height });
+          }}
         >
-          <View style={{ gap: spacing.lg, paddingBottom: 32 }}>
+          <View
+            style={{
+              gap: spacing.lg,
+              paddingBottom: 32,
+              borderWidth: DEBUG_VISUAL ? 2 : 0,
+              borderColor: DEBUG_VISUAL ? "#FF9F0A" : "transparent",
+              backgroundColor: DEBUG_VISUAL ? "rgba(255,255,255,0.04)" : "transparent",
+              padding: DEBUG_VISUAL ? 10 : 0,
+            }}
+            onLayout={(event) => {
+              const { width, height } = event.nativeEvent.layout;
+              console.log("[AUTH-LAYOUT] content", { width, height });
+            }}
+          >
             <View style={{ gap: 8 }}>
               <AppText variant="caption" color={colors.gold}>
                 NexusPay secure access
