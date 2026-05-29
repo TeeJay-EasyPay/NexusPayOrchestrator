@@ -1,5 +1,4 @@
 import { useRouter } from "expo-router";
-import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useState } from "react";
 import {
     ActivityIndicator,
@@ -90,54 +89,7 @@ export default function AuthScreen() {
   useEffect(() => {
     console.log("[AUTH-MOUNT] auth view mounted ts=" + new Date().toISOString());
 
-    let cancelled = false;
-
-    const hideSplashAfterRender = async () => {
-      logStartupInfo({
-        event: "splash-hide-start",
-        stage: "app-bootstrap",
-        status: "start",
-        details: {
-          source: "auth-mounted",
-        },
-      });
-
-      try {
-        await new Promise<void>((resolve) => {
-          requestAnimationFrame(() => resolve());
-        });
-
-        if (cancelled) {
-          return;
-        }
-
-        await SplashScreen.hideAsync();
-
-        logStartupInfo({
-          event: "splash-hide-complete",
-          stage: "app-bootstrap",
-          status: "success",
-          details: {
-            source: "auth-mounted",
-          },
-        });
-      } catch (error) {
-        logStartupWarn({
-          event: "splash-hide-complete",
-          stage: "app-bootstrap",
-          status: "fallback",
-          details: {
-            source: "auth-mounted",
-            reason: error instanceof Error ? error.message : "Unknown splash hide failure",
-          },
-        });
-      }
-    };
-
-    void hideSplashAfterRender();
-
     return () => {
-      cancelled = true;
       console.log("[AUTH-UNMOUNT] auth view unmounted ts=" + new Date().toISOString());
     };
   }, []);

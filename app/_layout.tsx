@@ -1,7 +1,6 @@
 import "react-native-get-random-values";
 
 import { Stack } from "expo-router";
-import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -14,14 +13,6 @@ import { DeviceUnlockProvider } from "../src/state/DeviceUnlockContext";
 import { PaymentMethodsProvider } from "../src/state/PaymentMethodsContext";
 import { TransferProvider } from "../src/state/TransferContext";
 import { WalletProvider } from "../src/state/WalletContext";
-
-void SplashScreen.preventAutoHideAsync().then(() => {
-  logStartupInfo({
-    event: "splash-prevent-auto-hide",
-    stage: "app-bootstrap",
-    status: "start",
-  });
-});
 
 const ROOT_DEBUG_VISUAL = true;
 
