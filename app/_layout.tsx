@@ -7,6 +7,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AuthGate } from "../src/components/auth/AuthGate";
+import { beginStartupEvidenceLaunch } from "../src/services/startupEvidence";
 import { logStartupInfo } from "../src/services/startupLogger";
 import { AuthProvider } from "../src/state/AuthContext";
 import { DeviceUnlockProvider } from "../src/state/DeviceUnlockContext";
@@ -14,10 +15,12 @@ import { PaymentMethodsProvider } from "../src/state/PaymentMethodsContext";
 import { TransferProvider } from "../src/state/TransferContext";
 import { WalletProvider } from "../src/state/WalletContext";
 
-const ROOT_DEBUG_VISUAL = true;
+const ROOT_DEBUG_VISUAL = false;
 
 export default function Layout() {
   useEffect(() => {
+    void beginStartupEvidenceLaunch();
+
     logStartupInfo({
       event: "layout-mounted",
       stage: "app-bootstrap",

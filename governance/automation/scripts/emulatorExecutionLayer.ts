@@ -49,7 +49,10 @@ async function tryStartEmulator(notes: string[]): Promise<void> {
 
 async function waitForDevice(maxAttempts: number, delayMs: number): Promise<string | null> {
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    const devices = await runCommand("adb", ["devices"], { allowFailure: true });
+    const devices = await runCommand("adb", ["devices"], {
+      allowFailure: true,
+      timeoutMs: 15000,
+    });
     const deviceId = parseDeviceId(devices.stdout);
 
     if (deviceId) {
@@ -69,12 +72,18 @@ export async function runEmulatorBaseline(
   const notes: string[] = [];
   mkdirSync(runDirectory, { recursive: true });
 
-  const adbVersion = await runCommand("adb", ["version"], { allowFailure: true });
+  const adbVersion = await runCommand("adb", ["version"], {
+    allowFailure: true,
+    timeoutMs: 15000,
+  });
   if (adbVersion.code !== 0) {
     notes.push("ADB is not available. Install Android platform tools before running pilot certification.");
   }
 
-  const initialDevices = await runCommand("adb", ["devices"], { allowFailure: true });
+  const initialDevices = await runCommand("adb", ["devices"], {
+    allowFailure: true,
+    timeoutMs: 15000,
+  });
   let deviceId = parseDeviceId(initialDevices.stdout);
 
   if (!deviceId) {
@@ -85,13 +94,57 @@ export async function runEmulatorBaseline(
 
   let packageLaunched = false;
   if (deviceId) {
+    const reverse = await runCommand("adb", ["-s", deviceId, "reverse", "tcp:8081", "tcp:8081"], {
+      allowFailure: true,
+      timeoutMs: 15000,
+    });
+
+    if (reverse.code === 0) {
+      notes.push("ADB reverse tcp:8081->tcp:8081 configured.");
+    } else {
+      notes.push(`ADB reverse warning: ${reverse.stderr || reverse.stdout}`);
+    }
+
+    const devClientUrl =
+      process.env.EXPO_DEV_CLIENT_URL ??
+      "exp+nexuspayorchestrator://expo-development-client/?url=http%3A%2F%2F10.0.2.2%3A8081";
+
+    const deepLinkLaunch = await runCommand(
+      "adb",
+      [
+        "-s",
+        deviceId,
+        "shell",
+        "am",
+        "start",
+        "-W",
+        "-a",
+        "android.intent.action.VIEW",
+        "-d",
+        devClientUrl,
+        "com.nexuspay.orchestrator",
+      ],
+      {
+        allowFailure: true,
+        timeoutMs: 45000,
+      }
+    );
+
+    if (deepLinkLaunch.code === 0) {
+      packageLaunched = true;
+      notes.push("Dev-client deep link launch command succeeded for com.nexuspay.orchestrator.");
+    }
+
     const launch = await runCommand(
       "adb",
       ["-s", deviceId, "shell", "monkey", "-p", "com.nexuspay.orchestrator", "-c", "android.intent.category.LAUNCHER", "1"],
-      { allowFailure: true }
+      {
+        allowFailure: true,
+        timeoutMs: 45000,
+      }
     );
 
-    packageLaunched = launch.code === 0;
+    packageLaunched = packageLaunched || launch.code === 0;
     notes.push(
       packageLaunched
         ? "Application launch command succeeded for com.nexuspay.orchestrator."

@@ -5,6 +5,7 @@ import { runCommand } from "./commandUtils";
 import { discoverDefectsForRun } from "./defectDiscovery";
 import { runEmulatorBaseline } from "./emulatorExecutionLayer";
 import { generateEvidencePack } from "./evidencePackGenerator";
+import { ensureMetroRunning } from "./metroOrchestrator";
 import {
     getPilotScenarios,
     PilotAggregateSummary,
@@ -198,7 +199,8 @@ async function runScenario(
   repoRoot: string,
   runId: string,
   outputRoot: string,
-  scenario: ReturnType<typeof getPilotScenarios>[number]
+  scenario: ReturnType<typeof getPilotScenarios>[number],
+  deviceId: string | null
 ): Promise<PilotRunResult> {
   const startedAt = new Date().toISOString();
   const started = Date.now();
@@ -211,26 +213,28 @@ async function runScenario(
   ensureDir(screenshotsDirectory);
   ensureDir(logsDirectory);
 
-  const maestro = await runCommand(
-    "maestro",
-    [
-      "test",
-      scenario.maestroFlowPath,
-      "--format",
-      "junit",
-      "--output",
-      junitPath,
-      "--env",
-      `RUN_OUTPUT_DIR=${screenshotsDirectory}`,
-      "--env",
-      `RUN_LABEL=${scenario.scenarioId}`,
-    ],
-    {
-      cwd: repoRoot,
-      allowFailure: true,
-      timeoutMs: 300000,
-    }
-  );
+  const maestroArgs = [
+    "test",
+    scenario.maestroFlowPath,
+    "--format",
+    "junit",
+    "--output",
+    junitPath,
+    "--env",
+    `RUN_OUTPUT_DIR=${screenshotsDirectory}`,
+    "--env",
+    `RUN_LABEL=${scenario.scenarioId}`,
+  ];
+
+  if (deviceId) {
+    maestroArgs.push("--device", deviceId);
+  }
+
+  const maestro = await runCommand("maestro", maestroArgs, {
+    cwd: repoRoot,
+    allowFailure: true,
+    timeoutMs: 300000,
+  });
 
   writeFileSync(path.join(logsDirectory, "maestro-stdout.log"), maestro.stdout || "");
   writeFileSync(path.join(logsDirectory, "maestro-stderr.log"), maestro.stderr || "");
@@ -321,22 +325,29 @@ async function main(): Promise<void> {
 
   ensureDir(outputRoot);
 
-  const baseline = await runEmulatorBaseline(repoRoot, outputRoot);
-  if (!baseline.ready) {
-    console.warn("Pilot runner warning: emulator baseline is not ready. Scenario runs may fail.");
-  }
+  const metro = await ensureMetroRunning(repoRoot, outputRoot);
 
-  const scenarios = getPilotScenarios(repoRoot);
-  const results: PilotRunResult[] = [];
+  try {
+    const baseline = await runEmulatorBaseline(repoRoot, outputRoot);
+    baseline.notes.push(`metro_url=${metro.url}`);
+    baseline.notes.push(`metro_was_already_running=${metro.wasAlreadyRunning}`);
+    baseline.notes.push(`metro_log_path=${metro.logPath}`);
 
-  for (const scenario of scenarios) {
-    const result = await runScenario(repoRoot, runId, outputRoot, scenario);
-    await recordPilotRunInQaStore(repoRoot, result);
-    results.push(result);
-    console.log(`${scenario.scenarioId} => ${result.status}`);
-  }
+    if (!baseline.ready) {
+      console.warn("Pilot runner warning: emulator baseline is not ready. Scenario runs may fail.");
+    }
 
-  const summary = aggregate(runId, results);
+    const scenarios = getPilotScenarios(repoRoot);
+    const results: PilotRunResult[] = [];
+
+    for (const scenario of scenarios) {
+      const result = await runScenario(repoRoot, runId, outputRoot, scenario, baseline.deviceId);
+      await recordPilotRunInQaStore(repoRoot, result);
+      results.push(result);
+      console.log(`${scenario.scenarioId} => ${result.status}`);
+    }
+
+    const summary = aggregate(runId, results);
   const summaryPath = path.join(outputRoot, "pilot-certification-summary.json");
   writeFileSync(summaryPath, JSON.stringify(summary, null, 2));
   writeFileSync(
@@ -385,6 +396,9 @@ async function main(): Promise<void> {
   console.log(`- ${certificationSummaryPath}`);
   console.log(`- ${founderBriefingPath}`);
   console.log(`- ${executiveSummaryPath}`);
+  } finally {
+    await metro.stop();
+  }
 }
 
 main().catch((error) => {

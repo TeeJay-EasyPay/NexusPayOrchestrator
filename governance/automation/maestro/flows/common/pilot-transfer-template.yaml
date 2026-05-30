@@ -1,9 +1,17 @@
 appId: com.nexuspay.orchestrator
 ---
 - launchApp:
-    clearState: false
+    clearState: true
 - takeScreenshot: ${RUN_OUTPUT_DIR}/${RUN_LABEL}-launch-app
+- extendedWaitUntil:
+    visible: "Enter Demo Workspace"
+    timeout: 120000
+- takeScreenshot: ${RUN_OUTPUT_DIR}/${RUN_LABEL}-startup-ready
 - tapOn: "Enter Demo Workspace"
+- extendedWaitUntil:
+    visible: "Route Intelligence"
+    timeout: 30000
+- tapOn: "Send"
 - extendedWaitUntil:
     visible: "New Transfer"
     timeout: 30000

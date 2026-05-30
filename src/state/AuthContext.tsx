@@ -4,6 +4,7 @@ import React, {
     createContext,
     useContext,
     useEffect,
+    useRef,
     useState,
 } from "react";
 
@@ -22,12 +23,17 @@ import {
 const DEMO_EMAIL = process.env.EXPO_PUBLIC_DEMO_EMAIL;
 const DEMO_PASSWORD = process.env.EXPO_PUBLIC_DEMO_PASSWORD;
 
-const FORCE_LOGIN_ON_DEV_RELOAD = __DEV__;
+const FORCE_LOGIN_ON_DEV_RELOAD = process.env.EXPO_PUBLIC_FORCE_LOGIN_ON_DEV_RELOAD === "true";
 const AUTH_BOOTSTRAP_TIMEOUT_MS = 8000;
+
+export type StartupAuthPhase = "bootstrapping" | "unauthenticated" | "authenticated" | "locked";
 
 interface AuthContextType {
   session: Session | null;
   loading: boolean;
+  startupPhase: StartupAuthPhase;
+  resetInProgress: boolean;
+  sessionValidated: boolean;
   demoAccessEnabled: boolean;
   enableDemoAccess: () => Promise<string | null>;
   disableDemoAccess: () => void;
@@ -72,11 +78,25 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [startupPhase, setStartupPhase] = useState<StartupAuthPhase>("bootstrapping");
+  const [resetInProgress, setResetInProgress] = useState(false);
+  const [sessionValidated, setSessionValidated] = useState(false);
   const [demoAccessEnabled, setDemoAccessEnabled] = useState(false);
+  const resetInProgressRef = useRef(false);
+  const sessionValidatedRef = useRef(false);
+  const staleSessionGuardUntilRef = useRef(0);
+
+  function updateResetInProgress(next: boolean) {
+    resetInProgressRef.current = next;
+    setResetInProgress(next);
+  }
+
+  useEffect(() => {
+    sessionValidatedRef.current = sessionValidated;
+  }, [sessionValidated]);
 
   useEffect(() => {
     let isMounted = true;
-    let ignoreAuthEventsUntil = FORCE_LOGIN_ON_DEV_RELOAD ? Date.now() + 1200 : 0;
 
     async function initialiseSecureEntry() {
       logStartupInfo({
@@ -100,6 +120,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (isMounted) {
             setSession(null);
             setDemoAccessEnabled(false);
+            setSessionValidated(true);
+            setStartupPhase("unauthenticated");
             setLoading(false);
           }
 
@@ -107,20 +129,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (FORCE_LOGIN_ON_DEV_RELOAD) {
+          updateResetInProgress(true);
+
           logStartupInfo({
             event: "dev-reload-auth-reset",
             stage: "supabase-init",
             status: "success",
+            details: {
+              resetInProgress: true,
+            },
           });
+
+          try {
+            await withTimeout(
+              supabase.auth.signOut(),
+              AUTH_BOOTSTRAP_TIMEOUT_MS,
+              "Dev auth reset sign-out"
+            );
+          } catch (signOutError) {
+            console.warn(
+              "Dev reload sign-out failed",
+              signOutError instanceof Error ? signOutError.message : signOutError
+            );
+            logStartupWarn({
+              event: "dev-reload-auth-reset-warning",
+              stage: "supabase-init",
+              status: "fallback",
+              details: {
+                reason: signOutError instanceof Error ? signOutError.message : "Unknown sign-out issue",
+              },
+            });
+          }
+
+          staleSessionGuardUntilRef.current = Date.now() + 1200;
 
           if (isMounted) {
             setSession(null);
             setDemoAccessEnabled(false);
+            setSessionValidated(true);
+            setStartupPhase("unauthenticated");
             setLoading(false);
           }
 
-          supabase.auth.signOut().catch((signOutError) => {
-            console.warn("Dev reload sign-out failed", signOutError.message);
+          updateResetInProgress(false);
+
+          logStartupInfo({
+            event: "auth-bootstrap-complete",
+            stage: "app-bootstrap",
+            status: "success",
+            details: {
+              resetInProgress: false,
+              sessionValidated: true,
+              finalAuthPhase: "unauthenticated",
+            },
           });
 
           return;
@@ -150,6 +211,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (isMounted) {
           setSession(existingSession ?? null);
           setDemoAccessEnabled(existingSession?.user?.email === DEMO_EMAIL);
+          setSessionValidated(true);
+          setStartupPhase(existingSession ? "authenticated" : "unauthenticated");
           setLoading(false);
         }
 
@@ -161,6 +224,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           status: "success",
           details: {
             hasSession: Boolean(existingSession),
+            sessionValidated: true,
+            finalAuthPhase: existingSession ? "authenticated" : "unauthenticated",
           },
         });
       } catch (error) {
@@ -177,8 +242,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (isMounted) {
           setSession(null);
           setDemoAccessEnabled(false);
+          setSessionValidated(true);
+          setStartupPhase("unauthenticated");
           setLoading(false);
         }
+
+        updateResetInProgress(false);
       }
     }
 
@@ -187,10 +256,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
-      if (FORCE_LOGIN_ON_DEV_RELOAD && Date.now() < ignoreAuthEventsUntil) {
-        setLoading(false);
+      if (resetInProgressRef.current && nextSession) {
+        logStartupWarn({
+          event: "auth-state-suppressed-during-reset",
+          stage: "supabase-init",
+          status: "fallback",
+          details: {
+            resetInProgress: true,
+            hasSession: true,
+            sessionValidated: sessionValidatedRef.current,
+          },
+        });
+
         return;
       }
+
+      if (Date.now() < staleSessionGuardUntilRef.current && nextSession) {
+        logStartupWarn({
+          event: "auth-state-suppressed-stale-session",
+          stage: "supabase-init",
+          status: "fallback",
+          details: {
+            resetInProgress: resetInProgressRef.current,
+            hasSession: true,
+            sessionValidated: sessionValidatedRef.current,
+          },
+        });
+
+        return;
+      }
+
+      const nextPhase: StartupAuthPhase = nextSession ? "authenticated" : "unauthenticated";
 
       logStartupInfo({
         event: "auth-state-changed",
@@ -198,17 +294,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         status: "success",
         details: {
           hasSession: Boolean(nextSession),
+          resetInProgress: resetInProgressRef.current,
+          sessionValidated: true,
+          finalAuthPhase: nextPhase,
         },
       });
 
       setSession(nextSession);
       setDemoAccessEnabled(nextSession?.user?.email === DEMO_EMAIL);
+      setSessionValidated(true);
+      setStartupPhase(nextPhase);
       setLoading(false);
-      await upsertProfile(nextSession);
+
+      if (nextSession) {
+        await upsertProfile(nextSession);
+      }
     });
 
     return () => {
       isMounted = false;
+      resetInProgressRef.current = false;
       subscription.unsubscribe();
     };
   }, []);
@@ -261,6 +366,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setSession(data.session);
       setDemoAccessEnabled(normalizedEmail === DEMO_EMAIL);
+      setSessionValidated(true);
+      setStartupPhase("authenticated");
+      setLoading(false);
 
       await upsertProfile(data.session);
 
@@ -302,6 +410,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (data.session) {
         setSession(data.session);
         setDemoAccessEnabled(normalizedEmail === DEMO_EMAIL);
+        setSessionValidated(true);
+        setStartupPhase("authenticated");
+        setLoading(false);
         await upsertProfile(data.session);
       }
 
@@ -322,14 +433,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function signOut() {
+    updateResetInProgress(false);
+    staleSessionGuardUntilRef.current = 0;
     setDemoAccessEnabled(false);
     setSession(null);
+    setSessionValidated(true);
+    setStartupPhase("unauthenticated");
+    setLoading(false);
     await supabase.auth.signOut();
   }
 
   const value = {
     session,
     loading,
+    startupPhase,
+    resetInProgress,
+    sessionValidated,
     demoAccessEnabled,
     enableDemoAccess,
     disableDemoAccess,

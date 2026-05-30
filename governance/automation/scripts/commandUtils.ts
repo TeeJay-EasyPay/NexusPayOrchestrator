@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { execSync } from "node:child_process";
 
 export type CommandResult = {
   command: string;
@@ -34,10 +35,25 @@ export async function runCommand(
     let stdout = "";
     let stderr = "";
     let timer: NodeJS.Timeout | null = null;
+    let timedOut = false;
+
+    const terminateProcessTree = (): void => {
+      if (process.platform === "win32") {
+        try {
+          execSync(`taskkill /PID ${child.pid} /T /F`, { stdio: "ignore" });
+          return;
+        } catch {
+          // Fall through to regular kill if taskkill fails.
+        }
+      }
+
+      child.kill("SIGKILL");
+    };
 
     if (options?.timeoutMs && options.timeoutMs > 0) {
       timer = setTimeout(() => {
-        child.kill("SIGTERM");
+        timedOut = true;
+        terminateProcessTree();
       }, options.timeoutMs);
     }
 
@@ -73,9 +89,11 @@ export async function runCommand(
       const result: CommandResult = {
         command,
         args,
-        code: code ?? 1,
+        code: timedOut ? 124 : (code ?? 1),
         stdout,
-        stderr,
+        stderr: timedOut
+          ? `${stderr}\nCommand timed out after ${options?.timeoutMs}ms.`.trim()
+          : stderr,
         durationMs: Date.now() - started,
       };
 

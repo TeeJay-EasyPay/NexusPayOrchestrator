@@ -45,3 +45,15 @@ app-example
 /android
 
 supabase/.temp/
+
+# Governance automation runtime artifacts (generated)
+governance/automation/outputs/
+**/evidence-pack.json
+**/adb-logcat.log
+**/maestro-stdout.log
+**/maestro-stderr.log
+**/maestro-junit.xml
+**/*-certification-summary.json
+**/certification-summary.md
+**/executive-certification-summary.md
+**/founder-briefing-draft.md

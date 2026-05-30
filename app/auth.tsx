@@ -15,7 +15,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AppButton } from "../src/components/ui/AppButton";
 import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
-import { logStartupInfo, logStartupWarn } from "../src/services/startupLogger";
 import { useAuth } from "../src/state/AuthContext";
 import { useDeviceUnlock } from "../src/state/DeviceUnlockContext";
 import { colors, spacing } from "../src/theme";
@@ -83,7 +82,7 @@ export default function AuthScreen() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const DEBUG_VISUAL = true;
+  const DEBUG_VISUAL = false;
 
   // ─── Mount / unmount lifecycle ─────────────────────────────────────────────
   useEffect(() => {

@@ -1,7 +1,8 @@
 import { usePathname, useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 
+import { upsertStartupEvidence } from "../../services/startupEvidence";
 import {
     logStartupInfo,
     logStartupWarn,
@@ -28,17 +29,32 @@ const ROUTING_BOOTSTRAP_TIMEOUT_MS = 6000;
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { session, loading, demoAccessEnabled } = useAuth();
+  const {
+    session,
+    loading,
+    demoAccessEnabled,
+    startupPhase,
+    resetInProgress,
+    sessionValidated,
+  } = useAuth();
   const { locked, unlock, biometricAvailable } = useDeviceUnlock();
   const pathname = usePathname();
   const lastRedirectRef = useRef<string | null>(null);
+  const lastRedirectReasonRef = useRef<string | null>(null);
   const unlockPromptInFlightRef = useRef(false);
   const lastProtectedRouteRef = useRef<string>("/");
   const routingWatchdogTriggeredRef = useRef(false);
-  const [allowRenderOnWatchdog, setAllowRenderOnWatchdog] = useState(false);
 
   const isPublicRoute = PUBLIC_ROUTES.has(pathname);
-  const hasAccess = Boolean(session) || demoAccessEnabled;
+  const hasAccess = sessionValidated && (Boolean(session) || demoAccessEnabled);
+  const finalAuthPhase =
+    loading || !sessionValidated
+      ? "bootstrapping"
+      : hasAccess && locked
+        ? "locked"
+        : hasAccess
+          ? "authenticated"
+          : "unauthenticated";
 
   useEffect(() => {
     logStartupInfo({
@@ -50,9 +66,22 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
         loading,
         hasAccess,
         locked,
+        startupPhase,
+        resetInProgress,
+        sessionValidated,
+        finalAuthPhase,
       },
     });
-  }, [hasAccess, loading, locked, pathname]);
+  }, [
+    finalAuthPhase,
+    hasAccess,
+    loading,
+    locked,
+    pathname,
+    resetInProgress,
+    sessionValidated,
+    startupPhase,
+  ]);
 
   useEffect(() => {
     if (!isPublicRoute) {
@@ -61,11 +90,19 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   }, [isPublicRoute, pathname]);
 
   useEffect(() => {
-    if (loading) return;
+    if (finalAuthPhase === "bootstrapping") return;
 
-    const target = !hasAccess && !isPublicRoute
+    const canRedirectToProtected = finalAuthPhase === "authenticated";
+    const redirectReason =
+      finalAuthPhase === "unauthenticated" && !isPublicRoute
+        ? "unauthenticated-protected-route"
+        : canRedirectToProtected && isPublicRoute
+          ? "authenticated-on-public-route"
+          : null;
+
+    const target = finalAuthPhase === "unauthenticated" && !isPublicRoute
       ? "/auth"
-      : hasAccess && isPublicRoute && !locked
+      : canRedirectToProtected && isPublicRoute
         ? lastProtectedRouteRef.current || "/"
         : null;
 
@@ -74,6 +111,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     }
 
     lastRedirectRef.current = target;
+    lastRedirectReasonRef.current = redirectReason;
     logStartupInfo({
       event: "routing-redirect",
       stage: "routing-init",
@@ -81,17 +119,38 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       details: {
         from: pathname,
         to: target,
+        redirectReason,
+        finalAuthPhase,
       },
     });
     router.replace(target);
-  }, [hasAccess, isPublicRoute, loading, locked, pathname, router]);
+  }, [finalAuthPhase, isPublicRoute, pathname, router]);
 
   useEffect(() => {
     lastRedirectRef.current = null;
   }, [pathname]);
 
   useEffect(() => {
-    if (loading) return;
+    const startupDestination =
+      finalAuthPhase === "unauthenticated"
+        ? "/auth"
+        : finalAuthPhase === "authenticated"
+          ? isPublicRoute
+            ? lastProtectedRouteRef.current || "/"
+            : pathname
+          : pathname;
+
+    void upsertStartupEvidence({
+      finalAuthPhase,
+      sessionValidated,
+      redirectReason: lastRedirectReasonRef.current,
+      startupDestination,
+      routeReached: pathname,
+    });
+  }, [finalAuthPhase, isPublicRoute, pathname, sessionValidated]);
+
+  useEffect(() => {
+    if (finalAuthPhase === "bootstrapping") return;
     if (!hasAccess || isPublicRoute || !locked || !biometricAvailable) return;
     if (unlockPromptInFlightRef.current) return;
 
@@ -100,12 +159,13 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     unlock().finally(() => {
       unlockPromptInFlightRef.current = false;
     });
-  }, [loading, hasAccess, isPublicRoute, locked, biometricAvailable, unlock]);
+  }, [finalAuthPhase, hasAccess, isPublicRoute, locked, biometricAvailable, unlock]);
 
   useEffect(() => {
-    if (!loading) {
+    const bootstrapping = finalAuthPhase === "bootstrapping";
+
+    if (!bootstrapping) {
       routingWatchdogTriggeredRef.current = false;
-      setAllowRenderOnWatchdog(false);
       return;
     }
 
@@ -123,18 +183,19 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
         details: {
           pathname,
           timeoutMs: ROUTING_BOOTSTRAP_TIMEOUT_MS,
+          resetInProgress,
+          sessionValidated,
+          finalAuthPhase,
         },
       });
 
       if (pathname !== "/auth") {
         router.replace("/auth");
       }
-
-      setAllowRenderOnWatchdog(true);
     }, ROUTING_BOOTSTRAP_TIMEOUT_MS);
 
     return () => clearTimeout(watchdog);
-  }, [loading, pathname, router]);
+  }, [finalAuthPhase, pathname, resetInProgress, router, sessionValidated]);
 
   // Always render children at the same tree position so the expo-router Stack
   // is never unmounted/remounted during auth transitions. Previously the three
@@ -142,9 +203,10 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   // used a Fragment, causing the Stack to remount when pathname changed to a
   // public route — which left expo-router in a blank, unrecoverable state.
   const shouldShowOverlay =
-    (!allowRenderOnWatchdog && loading) ||
-    (!allowRenderOnWatchdog && !hasAccess && !isPublicRoute) ||
-    (!allowRenderOnWatchdog && hasAccess && locked && !isPublicRoute);
+    (finalAuthPhase === "bootstrapping" && !isPublicRoute) ||
+    (finalAuthPhase === "unauthenticated" && !isPublicRoute) ||
+    (finalAuthPhase === "locked" && !isPublicRoute);
+  const shouldConcealChildren = shouldShowOverlay && !isPublicRoute;
 
   logStartupInfo({
     event: "authgate-render",
@@ -155,15 +217,21 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       loading,
       hasAccess,
       locked,
+      startupPhase,
+      resetInProgress,
+      sessionValidated,
+      finalAuthPhase,
       isPublicRoute,
-      allowRenderOnWatchdog,
       shouldShowOverlay,
+      shouldConcealChildren,
     },
   });
 
   return (
     <View style={styles.root}>
-      {children}
+      <View pointerEvents={shouldConcealChildren ? "none" : "auto"} style={shouldConcealChildren ? styles.concealed : styles.content}>
+        {children}
+      </View>
       {shouldShowOverlay && <LoadingOverlay />}
     </View>
   );
@@ -172,6 +240,13 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+  },
+  content: {
+    flex: 1,
+  },
+  concealed: {
+    flex: 1,
+    opacity: 0,
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
