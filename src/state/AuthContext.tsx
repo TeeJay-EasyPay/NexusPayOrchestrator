@@ -75,6 +75,129 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): 
   ]);
 }
 
+async function clearStaleRestoredSession(reason: string) {
+  try {
+    await withTimeout(
+      supabase.auth.signOut({ scope: "local" }),
+      AUTH_BOOTSTRAP_TIMEOUT_MS,
+      "Stale Supabase session cleanup"
+    );
+
+    logStartupInfo({
+      event: "supabase-stale-session-cleared",
+      stage: "supabase-init",
+      status: "success",
+      details: {
+        reason,
+      },
+    });
+  } catch (signOutError) {
+    logStartupWarn({
+      event: "supabase-stale-session-clear-warning",
+      stage: "supabase-init",
+      status: "fallback",
+      details: {
+        reason,
+        cleanupError:
+          signOutError instanceof Error ? signOutError.message : "Unknown stale session cleanup issue",
+      },
+    });
+  }
+}
+
+async function validateRestoredSession(existingSession: Session | null): Promise<Session | null> {
+  if (!existingSession) {
+    return null;
+  }
+
+  logStartupInfo({
+    event: "supabase-user-validation-start",
+    stage: "supabase-init",
+    status: "start",
+    details: {
+      restoredSessionPresent: true,
+    },
+  });
+
+  try {
+    const {
+      data: { user },
+      error,
+    } = await withTimeout(
+      supabase.auth.getUser(),
+      AUTH_BOOTSTRAP_TIMEOUT_MS,
+      "Supabase user bootstrap validation"
+    );
+
+    if (error || !user?.id) {
+      const reason = error?.message ?? "No authenticated Supabase user returned";
+
+      logStartupWarn({
+        event: "supabase-user-validation-failed",
+        stage: "supabase-init",
+        status: "fallback",
+        details: {
+          reason,
+          restoredSessionPresent: true,
+          userValidated: false,
+        },
+      });
+
+      await clearStaleRestoredSession(reason);
+      return null;
+    }
+
+    if (existingSession.user?.id && user.id !== existingSession.user.id) {
+      const reason = "Restored Supabase session user does not match validated user";
+
+      logStartupWarn({
+        event: "supabase-user-validation-mismatch",
+        stage: "supabase-init",
+        status: "fallback",
+        details: {
+          reason,
+          restoredSessionPresent: true,
+          userValidated: false,
+        },
+      });
+
+      await clearStaleRestoredSession(reason);
+      return null;
+    }
+
+    logStartupInfo({
+      event: "supabase-user-validation-success",
+      stage: "supabase-init",
+      status: "success",
+      details: {
+        restoredSessionPresent: true,
+        userValidated: true,
+      },
+    });
+
+    return existingSession;
+  } catch (validationError) {
+    const reason =
+      validationError instanceof Error
+        ? validationError.message
+        : "Unknown Supabase user validation failure";
+
+    logStartupWarn({
+      event: "supabase-user-validation-failed",
+      stage: "supabase-init",
+      status: "fallback",
+      details: {
+        reason,
+        restoredSessionPresent: true,
+        userValidated: false,
+      },
+    });
+
+    await clearStaleRestoredSession(reason);
+    return null;
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -85,6 +208,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const resetInProgressRef = useRef(false);
   const sessionValidatedRef = useRef(false);
   const staleSessionGuardUntilRef = useRef(0);
+  const authBootstrapInProgressRef = useRef(true);
 
   function updateResetInProgress(next: boolean) {
     resetInProgressRef.current = next;
@@ -99,6 +223,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let isMounted = true;
 
     async function initialiseSecureEntry() {
+      authBootstrapInProgressRef.current = true;
+
       logStartupInfo({
         event: "auth-bootstrap-start",
         stage: "app-bootstrap",
@@ -209,25 +335,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (isMounted) {
-          setSession(existingSession ?? null);
-          setDemoAccessEnabled(existingSession?.user?.email === DEMO_EMAIL);
+          const validatedSession = await validateRestoredSession(existingSession ?? null);
+          const finalAuthPhase: StartupAuthPhase = validatedSession
+            ? "authenticated"
+            : "unauthenticated";
+
+          setSession(validatedSession);
+          setDemoAccessEnabled(validatedSession?.user?.email === DEMO_EMAIL);
           setSessionValidated(true);
-          setStartupPhase(existingSession ? "authenticated" : "unauthenticated");
+          setStartupPhase(finalAuthPhase);
           setLoading(false);
+
+          await upsertProfile(validatedSession);
+
+          logStartupInfo({
+            event: "auth-bootstrap-complete",
+            stage: "app-bootstrap",
+            status: "success",
+            details: {
+              restoredSessionPresent: Boolean(existingSession),
+              hasSession: Boolean(validatedSession),
+              sessionValidated: true,
+              userValidated: Boolean(validatedSession),
+              finalAuthPhase,
+            },
+          });
         }
-
-        await upsertProfile(existingSession ?? null);
-
-        logStartupInfo({
-          event: "auth-bootstrap-complete",
-          stage: "app-bootstrap",
-          status: "success",
-          details: {
-            hasSession: Boolean(existingSession),
-            sessionValidated: true,
-            finalAuthPhase: existingSession ? "authenticated" : "unauthenticated",
-          },
-        });
       } catch (error) {
         console.warn("Auth initialisation failed", error);
         logStartupError({
@@ -248,6 +381,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         updateResetInProgress(false);
+      } finally {
+        authBootstrapInProgressRef.current = false;
       }
     }
 
@@ -256,6 +391,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+      if (authBootstrapInProgressRef.current) {
+        logStartupInfo({
+          event: "auth-state-suppressed-during-bootstrap",
+          stage: "supabase-init",
+          status: "start",
+          details: {
+            hasSession: Boolean(nextSession),
+            sessionValidated: sessionValidatedRef.current,
+          },
+        });
+
+        return;
+      }
+
       if (resetInProgressRef.current && nextSession) {
         logStartupWarn({
           event: "auth-state-suppressed-during-reset",
