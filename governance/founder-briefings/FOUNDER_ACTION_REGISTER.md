@@ -80,6 +80,35 @@ D-009
 ### Related Sprint
 Sprint 006 - Governance Enhancement Executive Operating Model
 
+---
+
+### Action ID
+A-005
+
+### Date Raised
+2026-05-31
+
+### Description
+Approve a native Android validation remediation pass for Startup Architecture V2 before production certification.
+
+### Recommendation
+Authorize focused remediation of the Android native splash/dev-client launch blocker, followed by screenshot validation and a fresh 20-cycle startup determinism run.
+
+### Priority
+High
+
+### Status
+Open
+
+### Date Closed
+Not Closed
+
+### Related Decision
+D-011
+
+### Related Sprint
+Startup Architecture V2 Programme
+
 ## Closed Actions
 
 ### Action ID

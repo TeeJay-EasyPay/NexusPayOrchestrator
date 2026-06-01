@@ -1,0 +1,197 @@
+﻿[
+    {
+        "path":  "android/app/src/main/AndroidManifest.xml",
+        "sha256":  "e8a7e06678ca539c545217506646ede769a01ede529f690fecb33b490c4ab26e",
+        "bytes":  2635
+    },
+    {
+        "path":  "android/app/src/main/java/com/nexuspay/orchestrator/MainActivity.kt",
+        "sha256":  "1781b7d50b98a6821f82a4a09ea90a6d3a37b052c47b09b96951d48f37de957f",
+        "bytes":  2460
+    },
+    {
+        "path":  "android/app/src/main/res/drawable-hdpi/splashscreen_logo.png",
+        "sha256":  "721c895579cb08ec4c9a0fe7dadafe9a97c33ef758d3578ad5e8b540de59f974",
+        "bytes":  20754
+    },
+    {
+        "path":  "android/app/src/main/res/drawable-mdpi/splashscreen_logo.png",
+        "sha256":  "f84b9b17a4a1c7d7dd840cd272c07a6c3fd66d5a9826b64bb53facb6f176bc24",
+        "bytes":  12863
+    },
+    {
+        "path":  "android/app/src/main/res/drawable-xhdpi/splashscreen_logo.png",
+        "sha256":  "e1c5250e339add5ed7849cb0859d052edb9781abb91db049e68ae3a4059247d7",
+        "bytes":  29081
+    },
+    {
+        "path":  "android/app/src/main/res/drawable-xxhdpi/splashscreen_logo.png",
+        "sha256":  "23d97ccb41a821ee345b2c5bb0c9bdab730a751a9227925acbf0af021dc38a9b",
+        "bytes":  47123
+    },
+    {
+        "path":  "android/app/src/main/res/drawable-xxxhdpi/splashscreen_logo.png",
+        "sha256":  "be9fac5c4cda48c41dce592288c486524bba3e4ca7fa00c0a04a46928154b5bf",
+        "bytes":  66529
+    },
+    {
+        "path":  "android/app/src/main/res/values/colors.xml",
+        "sha256":  "06c229244312c169d2211478badf06f61e36bd4550b02b16b2229f85eb3e58cd",
+        "bytes":  221
+    },
+    {
+        "path":  "android/app/src/main/res/values/styles.xml",
+        "sha256":  "271027fcb06ff63addc4aad98aa57a3f8babe84821bd5a5fdd75b79df52b556d",
+        "bytes":  818
+    },
+    {
+        "path":  "android/app/src/main/res/values-night/colors.xml",
+        "sha256":  "418ff70006d85d104c81e2c53a7ef31a64c9d84b805c29829032a4a077ac9a3e",
+        "bytes":  80
+    },
+    {
+        "path":  "app.json",
+        "sha256":  "a6fd767caebe8b8d72929bbc407e2e792276e0f5863afdbb5c6b8efa12ed6a5c",
+        "bytes":  1762
+    },
+    {
+        "path":  "app/_layout.tsx",
+        "sha256":  "bfe27b57e5661b87faa4043ea1cbb6bb46a5664c2edb094c2b94f213084a187d",
+        "bytes":  2802
+    },
+    {
+        "path":  "app/account.tsx",
+        "sha256":  "552ca35b73ff8fa6b19e34ca7026f1ce64ad35807c92e6361bf22056c5729d66",
+        "bytes":  15830
+    },
+    {
+        "path":  "app/account-created.tsx",
+        "sha256":  "7f663b21de91dfcdae0d6bdc9ca328dbe7353418801c1841140d80480ad2f228",
+        "bytes":  1954
+    },
+    {
+        "path":  "app/auth.tsx",
+        "sha256":  "59898ff6c1e588c184e0bd367cea88c62342e80029547a3762d0fe6ebbb3db26",
+        "bytes":  15324
+    },
+    {
+        "path":  "app/check-email.tsx",
+        "sha256":  "575c11cceee6f8dca47a36b7844438bdd498467fa2377cb58b0ba14c0d50d97b",
+        "bytes":  2267
+    },
+    {
+        "path":  "app/index.tsx",
+        "sha256":  "ab6fbfd0bcfbb085a69d87b3cbc883b20260cd8535932dda8699b561429af650",
+        "bytes":  38081
+    },
+    {
+        "path":  "assets/images/splash-icon.png",
+        "sha256":  "5f4c0a732b6325bf4071d9124d2ae67e037cb24fcc9c482ef82bea742109a3b8",
+        "bytes":  17547
+    },
+    {
+        "path":  "governance/automation/scripts/commandUtils.ts",
+        "sha256":  "e4ba9485af900aee39752cf35051cdf9d17c50e8c35504fdbbc48d9baaafd4ac",
+        "bytes":  2686
+    },
+    {
+        "path":  "governance/automation/scripts/emulatorExecutionLayer.ts",
+        "sha256":  "6fce826da188e5f05616999384940a37a6ca1f1489eb12fe236de83de7cc61f0",
+        "bytes":  4868
+    },
+    {
+        "path":  "governance/automation/scripts/metroOrchestrator.ts",
+        "sha256":  "1681b1c861466c9069b9b0f726d66373f83f804c0642392787b3f6407b6516ea",
+        "bytes":  3200
+    },
+    {
+        "path":  "governance/automation/scripts/runStartupDeterminismValidation.ts",
+        "sha256":  "47d6d40c3b5eca5f52d0b9842fda4748baeef99c604846dedfa3f7ad796ce947",
+        "bytes":  19312
+    },
+    {
+        "path":  "package.json",
+        "sha256":  "b7c9ce880d3314cda9c9ed4257032c9fa5dd8f2789a3aa03eb15bc48daf5376b",
+        "bytes":  2137
+    },
+    {
+        "path":  "src/components/auth/AuthGate.tsx",
+        "sha256":  "771520848d7d569c6c35fa360b80cfaa098d467513bbabb2adfa012764edef5b",
+        "bytes":  7232
+    },
+    {
+        "path":  "src/components/auth/UnlockPanel.tsx",
+        "sha256":  "b3835ab6b61d5a6f10ca00e4472d0473f7a6680147e536409b013ec1277d0b78",
+        "bytes":  3277
+    },
+    {
+        "path":  "src/components/auth/UserAccountBadge.tsx",
+        "sha256":  "b81dc0fbfa8457d42882ddae9e8ef078541b1bb5b23a53a90c13737a7b2a9937",
+        "bytes":  3755
+    },
+    {
+        "path":  "src/components/navigation/AppDropdownMenu.tsx",
+        "sha256":  "5437211d4638821dbfc8763dcaa3715faa19c0b482f4ce1739d82ab5aa48a313",
+        "bytes":  6485
+    },
+    {
+        "path":  "src/components/navigation/AppMenu.tsx",
+        "sha256":  "6c8c940981fd131ad58b578d34a99f40c4336822d5d6d6502d96f54411b78a9a",
+        "bytes":  2030
+    },
+    {
+        "path":  "src/components/ui/Screen.tsx",
+        "sha256":  "7e03591b985baee6940f3012134ea07b1ae7d89275088479b78a9cbc00efc3b7",
+        "bytes":  1043
+    },
+    {
+        "path":  "src/hooks/useNexusAISettings.ts",
+        "sha256":  "b976390918af7d45df8945f7b428d05ea0f04f3f7eb2666691d1cb7c883a6f21",
+        "bytes":  3487
+    },
+    {
+        "path":  "src/lib/supabase.ts",
+        "sha256":  "da40d7ce8c09b388fb1e0d79f435356f4305f5d2f9549ab71bf0d50dcf4112a3",
+        "bytes":  1772
+    },
+    {
+        "path":  "src/services/nexusAISettingsService.ts",
+        "sha256":  "6f5c9bd59852044110474a21b737859a231ec65e958db58a1f98862f491b5a49",
+        "bytes":  3270
+    },
+    {
+        "path":  "src/services/startupEvidence.ts",
+        "sha256":  "8ef3bbe97aeb1b92c06b8fb5893829f09633190acbcae92d9f933b716af435a6",
+        "bytes":  2582
+    },
+    {
+        "path":  "src/services/startupLogger.ts",
+        "sha256":  "222ca077c2d269c21d28063cc7960ab048a402fb3729b34359107c82583f3e58",
+        "bytes":  1077
+    },
+    {
+        "path":  "src/state/AuthContext.tsx",
+        "sha256":  "74a7a05c1eabf178f0af16289b0644fec11bca4640672323666928ae92f46f7b",
+        "bytes":  13309
+    },
+    {
+        "path":  "src/state/DeviceUnlockContext.tsx",
+        "sha256":  "522c58f5b07d0470057416622196f6879bbd243eb74deb14af6e9bb0d9206f8b",
+        "bytes":  2127
+    },
+    {
+        "path":  "src/state/PaymentMethodsContext.tsx",
+        "sha256":  "735fb47fc676b191f764074e66ad08a8c8e77cdfb28bd072986daf3a2c562e8c",
+        "bytes":  1492
+    },
+    {
+        "path":  "src/state/TransferContext.tsx",
+        "sha256":  "fc78615884ce9441858f602ea4f37ad349061f0673004ecf4f05c81d59a7904d",
+        "bytes":  8930
+    },
+    {
+        "path":  "src/state/WalletContext.tsx",
+        "sha256":  "bbf2057e8250e46523c15f57c5058d04f452fe7502ba082db500fd12c432408a",
+        "bytes":  4779
+    }
+]

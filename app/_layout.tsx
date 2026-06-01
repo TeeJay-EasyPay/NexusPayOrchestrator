@@ -6,9 +6,9 @@ import { Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import { AuthGate } from "../src/components/auth/AuthGate";
 import { beginStartupEvidenceLaunch } from "../src/services/startupEvidence";
 import { logStartupInfo } from "../src/services/startupLogger";
+import { StartupCoordinator } from "../src/startup/StartupCoordinator";
 import { AuthProvider } from "../src/state/AuthContext";
 import { DeviceUnlockProvider } from "../src/state/DeviceUnlockContext";
 import { PaymentMethodsProvider } from "../src/state/PaymentMethodsContext";
@@ -37,7 +37,7 @@ export default function Layout() {
               <WalletProvider>
                 <PaymentMethodsProvider>
                   <TransferProvider>
-                    <AuthGate>
+                    <StartupCoordinator>
                       <Stack
                         screenOptions={{
                           headerShown: false,
@@ -45,7 +45,7 @@ export default function Layout() {
                           animation: "none",
                         }}
                       />
-                    </AuthGate>
+                    </StartupCoordinator>
                   </TransferProvider>
                 </PaymentMethodsProvider>
               </WalletProvider>

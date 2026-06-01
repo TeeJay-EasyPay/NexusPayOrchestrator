@@ -1,5 +1,4 @@
-import { spawn } from "node:child_process";
-import { execSync } from "node:child_process";
+import { execSync, spawn } from "node:child_process";
 
 export type CommandResult = {
   command: string;
@@ -34,7 +33,7 @@ export async function runCommand(
 
     let stdout = "";
     let stderr = "";
-    let timer: NodeJS.Timeout | null = null;
+    let timer: ReturnType<typeof setTimeout> | null = null;
     let timedOut = false;
 
     const terminateProcessTree = (): void => {

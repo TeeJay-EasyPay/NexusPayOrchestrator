@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import { runCommand } from "./commandUtils";
-import { runEmulatorBaseline } from "./emulatorExecutionLayer";
+import { prepareDeviceForStartupLaunch, runEmulatorBaseline } from "./emulatorExecutionLayer";
 import { ensureMetroRunning } from "./metroOrchestrator";
 
 type StartupCycleEvidence = {
@@ -12,8 +12,10 @@ type StartupCycleEvidence = {
   startupDestination: string;
   authenticationState: "bootstrapping" | "unauthenticated" | "authenticated" | "locked" | "unknown";
   sessionState: "present" | "missing" | "unknown";
+  startupComplete: boolean;
   routingDecision: string;
   redirects: string[];
+  unexpectedTransitions: string[];
   result: "PASS" | "FAIL";
   rawStartupLines: string[];
   notes: string[];
@@ -45,9 +47,9 @@ type StartupValidationReport = {
 
 const APP_PACKAGE = "com.nexuspay.orchestrator";
 const DEFAULT_CYCLE_COUNT = 20;
-const DEFAULT_WAIT_AFTER_LAUNCH_MS = 8000;
+const DEFAULT_WAIT_AFTER_LAUNCH_MS = 25000;
 const DEFAULT_DEV_CLIENT_URL =
-  "exp+nexuspayorchestrator://expo-development-client/?url=http%3A%2F%2F10.0.2.2%3A8081";
+  "exp+nexuspayorchestrator://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081";
 
 function nowRunId(): string {
   return new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
@@ -59,6 +61,43 @@ function ensureDir(target: string): void {
 
 function waitFor(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function shouldCaptureUiDumps(): boolean {
+  return process.env.STARTUP_USE_UIAUTOMATOR === "true";
+}
+
+async function captureLogcat(deviceId: string) {
+  return runCommand(
+    "adb",
+    ["-s", deviceId, "logcat", "-d", "-v", "time"],
+    {
+      allowFailure: true,
+      timeoutMs: 60000,
+    }
+  );
+}
+
+async function waitForStartupTelemetry(
+  deviceId: string,
+  waitMs: number
+): Promise<{ logcat: string; timedOut: boolean }> {
+  const deadline = Date.now() + waitMs;
+  let latestLogcat = "";
+
+  while (Date.now() < deadline) {
+    await waitFor(2000);
+
+    const logcat = await captureLogcat(deviceId);
+    latestLogcat = logcat.stdout || logcat.stderr || "";
+
+    const evidence = parseStartupEvidence(latestLogcat);
+    if (evidence.startupComplete === true) {
+      return { logcat: latestLogcat, timedOut: false };
+    }
+  }
+
+  return { logcat: latestLogcat, timedOut: true };
 }
 
 function parseBooleanField(line: string, field: string): boolean | null {
@@ -133,7 +172,7 @@ function parseStartupLog(logcat: string): {
     }
 
     const event = parseStringField(line, "event");
-    if (event === "routing-redirect") {
+    if (event === "routing-redirect" || event === "startup-v2-route-replace") {
       const from = parseStringField(line, "from") ?? "unknown";
       const to = parseStringField(line, "to") ?? "unknown";
       redirects.push(`${from}->${to}`);
@@ -180,9 +219,14 @@ function parseStartupLog(logcat: string): {
 function parseStartupEvidence(logcat: string): {
   finalAuthPhase: StartupCycleEvidence["authenticationState"];
   sessionValidated: boolean | null;
+  hasSession: boolean | null;
+  demoAccessEnabled: boolean | null;
   redirectReason: string | null;
   startupDestination: string;
   routeReached: string;
+  routingDecision: string;
+  routeAction: string;
+  startupComplete: boolean | null;
   notes: string[];
 } {
   const lines = logcat
@@ -193,9 +237,14 @@ function parseStartupEvidence(logcat: string): {
   let latest: {
     finalAuthPhase?: StartupCycleEvidence["authenticationState"];
     sessionValidated?: boolean;
+    hasSession?: boolean;
+    demoAccessEnabled?: boolean;
     redirectReason?: string | null;
     startupDestination?: string;
     routeReached?: string;
+    routingDecision?: string;
+    routeAction?: string;
+    startupComplete?: boolean;
   } | null = null;
 
   for (const line of lines) {
@@ -206,9 +255,14 @@ function parseStartupEvidence(logcat: string): {
       const parsed = JSON.parse(line.slice(jsonStart)) as {
         finalAuthPhase?: StartupCycleEvidence["authenticationState"];
         sessionValidated?: boolean;
+        hasSession?: boolean;
+        demoAccessEnabled?: boolean;
         redirectReason?: string | null;
         startupDestination?: string;
         routeReached?: string;
+        routingDecision?: string;
+        routeAction?: string;
+        startupComplete?: boolean;
       };
 
       latest = parsed;
@@ -224,9 +278,14 @@ function parseStartupEvidence(logcat: string): {
     return {
       finalAuthPhase: "unknown",
       sessionValidated: null,
+      hasSession: null,
+      demoAccessEnabled: null,
       redirectReason: null,
       startupDestination: "unknown",
       routeReached: "unknown",
+      routingDecision: "unknown",
+      routeAction: "unknown",
+      startupComplete: null,
       notes,
     };
   }
@@ -234,9 +293,14 @@ function parseStartupEvidence(logcat: string): {
   return {
     finalAuthPhase: latest.finalAuthPhase ?? "unknown",
     sessionValidated: typeof latest.sessionValidated === "boolean" ? latest.sessionValidated : null,
+    hasSession: typeof latest.hasSession === "boolean" ? latest.hasSession : null,
+    demoAccessEnabled: typeof latest.demoAccessEnabled === "boolean" ? latest.demoAccessEnabled : null,
     redirectReason: latest.redirectReason ?? null,
     startupDestination: latest.startupDestination ?? "unknown",
     routeReached: latest.routeReached ?? "unknown",
+    routingDecision: latest.routingDecision ?? "unknown",
+    routeAction: latest.routeAction ?? "unknown",
+    startupComplete: typeof latest.startupComplete === "boolean" ? latest.startupComplete : null,
     notes,
   };
 }
@@ -315,7 +379,11 @@ function classifyDeterminism(cycles: StartupCycleEvidence[]): {
     unstableCycles += 1;
   }
 
-  const deterministic = unstableCycles === 0 && unknownCycles === 0 && cycles.length > 0;
+  const deterministic =
+    unstableCycles === 0 &&
+    unknownCycles === 0 &&
+    cycles.length > 0 &&
+    cycles.every((cycle) => cycle.result === "PASS" && cycle.unexpectedTransitions.length === 0);
 
   const expectedFlow: StartupValidationReport["expectedFlow"] =
     authenticatedHomeCycles > 0 && unauthenticatedLoginCycles === 0
@@ -364,11 +432,11 @@ function toMarkdown(report: StartupValidationReport): string {
   lines.push("");
   lines.push("## Cycle Evidence");
   lines.push("");
-  lines.push("| Cycle | Result | Destination | Auth State | Session State | Routing Decision | Redirects | Notes |\n|---:|---|---|---|---|---|---|---|");
+  lines.push("| Cycle | Result | Destination | Auth State | Session State | Startup Complete | Routing Decision | Redirects | Unexpected Transitions | Notes |\n|---:|---|---|---|---|---|---|---|---|---|");
 
   for (const cycle of report.cycles) {
     lines.push(
-      `| ${cycle.cycle} | ${cycle.result} | ${cycle.startupDestination} | ${cycle.authenticationState} | ${cycle.sessionState} | ${cycle.routingDecision} | ${cycle.redirects.join(", ") || "none"} | ${cycle.notes.join("; ") || "none"} |`
+      `| ${cycle.cycle} | ${cycle.result} | ${cycle.startupDestination} | ${cycle.authenticationState} | ${cycle.sessionState} | ${cycle.startupComplete ? "true" : "false"} | ${cycle.routingDecision} | ${cycle.redirects.join(", ") || "none"} | ${cycle.unexpectedTransitions.join(", ") || "none"} | ${cycle.notes.join("; ") || "none"} |`
     );
   }
 
@@ -398,6 +466,8 @@ async function runCycle(deviceId: string, cycle: number, waitMs: number): Promis
     timeoutMs: 20000,
   });
 
+  await prepareDeviceForStartupLaunch(deviceId, notes);
+
   const launch = await runCommand(
     "adb",
     [
@@ -423,83 +493,102 @@ async function runCycle(deviceId: string, cycle: number, waitMs: number): Promis
     notes.push(`Launch command warning: ${launch.stderr || launch.stdout}`);
   }
 
-  const earlyWaitMs = Math.max(2000, Math.min(4000, Math.floor(waitMs / 2)));
-  const finalWaitMs = Math.max(2000, waitMs - earlyWaitMs);
+  let earlyUiDump = "";
+  let finalUiDump = "";
+  let logcatText = "";
 
-  await waitFor(earlyWaitMs);
+  if (shouldCaptureUiDumps()) {
+    const earlyWaitMs = Math.max(2000, Math.min(4000, Math.floor(waitMs / 2)));
+    const finalWaitMs = Math.max(2000, waitMs - earlyWaitMs);
 
-  const earlyDumpPath = `/sdcard/nexuspay-startup-cycle-${cycle}-early.xml`;
-  const finalDumpPath = `/sdcard/nexuspay-startup-cycle-${cycle}-final.xml`;
+    await waitFor(earlyWaitMs);
 
-  await runCommand(
-    "adb",
-    ["-s", deviceId, "shell", "uiautomator", "dump", earlyDumpPath],
-    {
-      allowFailure: true,
-      timeoutMs: 20000,
+    const earlyDumpPath = `/sdcard/nexuspay-startup-cycle-${cycle}-early.xml`;
+
+    await runCommand(
+      "adb",
+      ["-s", deviceId, "shell", "uiautomator", "dump", earlyDumpPath],
+      {
+        allowFailure: true,
+        timeoutMs: 20000,
+      }
+    );
+
+    const earlyUi = await runCommand(
+      "adb",
+      ["-s", deviceId, "shell", "cat", earlyDumpPath],
+      {
+        allowFailure: true,
+        timeoutMs: 15000,
+      }
+    );
+    earlyUiDump = earlyUi.stdout || "";
+
+    await waitFor(finalWaitMs);
+
+    const finalDumpPath = `/sdcard/nexuspay-startup-cycle-${cycle}-final.xml`;
+
+    await runCommand(
+      "adb",
+      ["-s", deviceId, "shell", "uiautomator", "dump", finalDumpPath],
+      {
+        allowFailure: true,
+        timeoutMs: 20000,
+      }
+    );
+
+    const finalUi = await runCommand(
+      "adb",
+      ["-s", deviceId, "shell", "cat", finalDumpPath],
+      {
+        allowFailure: true,
+        timeoutMs: 15000,
+      }
+    );
+    finalUiDump = finalUi.stdout || "";
+  } else {
+    notes.push("UIAutomator fallback disabled; Startup V2 telemetry is the validation source of truth.");
+    const telemetry = await waitForStartupTelemetry(deviceId, waitMs);
+    logcatText = telemetry.logcat;
+
+    if (telemetry.timedOut) {
+      notes.push(`Startup V2 telemetry wait exhausted after ${waitMs}ms.`);
     }
-  );
+  }
 
-  const earlyUiDump = await runCommand(
-    "adb",
-    ["-s", deviceId, "shell", "cat", earlyDumpPath],
-    {
-      allowFailure: true,
-      timeoutMs: 15000,
-    }
-  );
+  const logcat = logcatText ? null : await captureLogcat(deviceId);
 
-  await waitFor(finalWaitMs);
-
-  await runCommand(
-    "adb",
-    ["-s", deviceId, "shell", "uiautomator", "dump", finalDumpPath],
-    {
-      allowFailure: true,
-      timeoutMs: 20000,
-    }
-  );
-
-  const finalUiDump = await runCommand(
-    "adb",
-    ["-s", deviceId, "shell", "cat", finalDumpPath],
-    {
-      allowFailure: true,
-      timeoutMs: 15000,
-    }
-  );
-
-  const logcat = await runCommand(
-    "adb",
-    ["-s", deviceId, "logcat", "-d", "-v", "time"],
-    {
-      allowFailure: true,
-      timeoutMs: 60000,
-    }
-  );
-
-  if (logcat.code !== 0) {
+  if (logcat && logcat.code !== 0) {
     notes.push(`Logcat capture warning: ${logcat.stderr || logcat.stdout}`);
   }
 
-  const parsed = parseStartupLog(logcat.stdout || logcat.stderr || "");
-  const parsedEvidence = parseStartupEvidence(logcat.stdout || logcat.stderr || "");
-  const earlyUi = inferDestinationFromUiDump(earlyUiDump.stdout || "");
-  const finalUi = inferDestinationFromUiDump(finalUiDump.stdout || "");
+  const capturedLogcat = logcatText || logcat?.stdout || logcat?.stderr || "";
+  const parsed = parseStartupLog(capturedLogcat);
+  const parsedEvidence = parseStartupEvidence(capturedLogcat);
+  const earlyUi = inferDestinationFromUiDump(earlyUiDump);
+  const finalUi = inferDestinationFromUiDump(finalUiDump);
 
   let startupDestination = parsedEvidence.startupDestination;
   let authenticationState = parsedEvidence.finalAuthPhase;
   let sessionState: StartupCycleEvidence["sessionState"] =
-    parsedEvidence.sessionValidated === null
+    parsedEvidence.hasSession !== null
+      ? parsedEvidence.hasSession || parsedEvidence.demoAccessEnabled
+        ? "present"
+        : "missing"
+      : parsedEvidence.sessionValidated === null
       ? "unknown"
       : parsedEvidence.sessionValidated
         ? parsed.sessionState
         : "missing";
   let routingDecision =
-    parsedEvidence.routeReached !== "unknown"
-      ? `settled:${parsedEvidence.routeReached}`
-      : parsed.routingDecision;
+    parsedEvidence.routingDecision !== "unknown"
+      ? parsedEvidence.routingDecision
+      : parsedEvidence.routeReached !== "unknown"
+        ? `settled:${parsedEvidence.routeReached}`
+        : parsed.routingDecision;
   const redirects = [...parsed.redirects];
+  const unexpectedTransitions: string[] = [];
+  const startupComplete = parsedEvidence.startupComplete === true;
 
   if (parsedEvidence.redirectReason) {
     routingDecision = `redirect-reason:${parsedEvidence.redirectReason}`;
@@ -515,12 +604,19 @@ async function runCycle(deviceId: string, cycle: number, waitMs: number): Promis
 
   if (earlyUi.destination !== "unknown" && finalUi.destination !== "unknown" && earlyUi.destination !== finalUi.destination) {
     redirects.push(`${earlyUi.destination}->${finalUi.destination}`);
+    unexpectedTransitions.push(`${earlyUi.destination}->${finalUi.destination}`);
     routingDecision = `redirect:${earlyUi.destination}->${finalUi.destination}`;
   }
 
+  if (parsedEvidence.startupComplete === false) {
+    notes.push("Latest StartupEvidence record did not mark startupComplete=true.");
+  }
+
   const result: StartupCycleEvidence["result"] =
-    (authenticationState === "unauthenticated" && startupDestination === "/auth") ||
-    (authenticationState === "authenticated" && startupDestination === "/")
+    unexpectedTransitions.length === 0 &&
+    startupComplete &&
+    ((authenticationState === "unauthenticated" && startupDestination === "/auth") ||
+    (authenticationState === "authenticated" && startupDestination === "/"))
       ? "PASS"
       : "FAIL";
 
@@ -533,8 +629,10 @@ async function runCycle(deviceId: string, cycle: number, waitMs: number): Promis
     startupDestination,
     authenticationState,
     sessionState,
+    startupComplete,
     routingDecision,
     redirects,
+    unexpectedTransitions,
     result,
     rawStartupLines: parsed.rawStartupLines,
     notes: [...notes, ...parsed.notes, ...parsedEvidence.notes],

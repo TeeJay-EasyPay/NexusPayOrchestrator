@@ -1,7 +1,11 @@
 import { mkdirSync, writeFileSync } from "node:fs";
+import { spawn } from "node:child_process";
 import path from "node:path";
 
 import { runCommand } from "./commandUtils";
+
+const DEFAULT_DEV_CLIENT_URL =
+  "exp+nexuspayorchestrator://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081";
 
 export type EmulatorBaselineResult = {
   ready: boolean;
@@ -33,18 +37,25 @@ async function tryStartEmulator(notes: string[]): Promise<void> {
     return;
   }
 
-  const result = await runCommand(
-    "emulator",
-    ["-avd", avdName, "-netdelay", "none", "-netspeed", "full"],
-    { allowFailure: true }
-  );
+  try {
+    const child = spawn(
+      "emulator",
+      ["-avd", avdName, "-netdelay", "none", "-netspeed", "full"],
+      {
+        detached: true,
+        shell: process.platform === "win32",
+        stdio: "ignore",
+        windowsHide: true,
+      }
+    );
 
-  if (result.code === 0) {
+    child.unref();
     notes.push(`Emulator startup command issued for AVD ${avdName}.`);
-    return;
+  } catch (error) {
+    notes.push(
+      `Emulator startup failed: ${error instanceof Error ? error.message : String(error)}`
+    );
   }
-
-  notes.push(`Emulator startup failed: ${result.stderr || result.stdout}`);
 }
 
 async function waitForDevice(maxAttempts: number, delayMs: number): Promise<string | null> {
@@ -63,6 +74,44 @@ async function waitForDevice(maxAttempts: number, delayMs: number): Promise<stri
   }
 
   return null;
+}
+
+export async function prepareDeviceForStartupLaunch(
+  deviceId: string,
+  notes?: string[]
+): Promise<void> {
+  const commands: { args: string[]; successNote: string; failureNote: string }[] = [
+    {
+      args: ["-s", deviceId, "shell", "input", "keyevent", "KEYCODE_WAKEUP"],
+      successNote: "Device wake command issued.",
+      failureNote: "Device wake command warning",
+    },
+    {
+      args: ["-s", deviceId, "shell", "wm", "dismiss-keyguard"],
+      successNote: "Device keyguard dismiss command issued.",
+      failureNote: "Device keyguard dismiss warning",
+    },
+    {
+      args: ["-s", deviceId, "shell", "settings", "put", "global", "stay_on_while_plugged_in", "3"],
+      successNote: "Device stay-awake setting applied for validation.",
+      failureNote: "Device stay-awake setting warning",
+    },
+  ];
+
+  for (const command of commands) {
+    const result = await runCommand("adb", command.args, {
+      allowFailure: true,
+      timeoutMs: 15000,
+    });
+
+    if (!notes) continue;
+
+    notes.push(
+      result.code === 0
+        ? command.successNote
+        : `${command.failureNote}: ${result.stderr || result.stdout}`
+    );
+  }
 }
 
 export async function runEmulatorBaseline(
@@ -94,6 +143,8 @@ export async function runEmulatorBaseline(
 
   let packageLaunched = false;
   if (deviceId) {
+    await prepareDeviceForStartupLaunch(deviceId, notes);
+
     const reverse = await runCommand("adb", ["-s", deviceId, "reverse", "tcp:8081", "tcp:8081"], {
       allowFailure: true,
       timeoutMs: 15000,
@@ -107,7 +158,7 @@ export async function runEmulatorBaseline(
 
     const devClientUrl =
       process.env.EXPO_DEV_CLIENT_URL ??
-      "exp+nexuspayorchestrator://expo-development-client/?url=http%3A%2F%2F10.0.2.2%3A8081";
+      DEFAULT_DEV_CLIENT_URL;
 
     const deepLinkLaunch = await runCommand(
       "adb",

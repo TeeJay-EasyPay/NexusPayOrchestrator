@@ -536,6 +536,121 @@ Completed
 
 ---
 
+## Decision ID
+D-010
+
+## Title
+Authorization to Resume Startup Architecture V2 Under Codex Highest Available Reasoning
+
+## Date
+2026-05-30
+
+## Decision Owner
+Founder / CEO
+
+## Participating Roles
+- Founder / CEO
+- Chief Orchestrator
+- Chief Technology Officer
+- Testing Director
+- Engineering Quality & Assurance Officer
+
+## Background
+The Startup Architecture V2 Programme required ChatGPT 5.5 reasoning capability and instructed the team to stop if that capability was unavailable. Founder Briefing 011 documented this model-capability blocker. The Founder then accepted the briefing, waived the blocker, and authorized execution using the highest reasoning capability available within the Codex environment.
+
+## Decision
+Resume Startup Architecture V2 under Codex operating at its highest available reasoning level, with the Founder considering that capability to satisfy the intent of the programme's reasoning and engineering standards requirements.
+
+## Rationale
+The Founder has explicit authority to waive the model-capability blocker and has confirmed that the programme should continue from the current state without restarting. This preserves governance traceability while allowing the startup architecture redesign to proceed.
+
+## Alternatives Considered
+- Pause until a ChatGPT 5.5-labelled execution environment is available.
+- Terminate the programme due to model mismatch.
+- Proceed without recording the waiver as a formal governance decision.
+
+## Risks
+- Medium: The original model label requirement is no longer literal, so traceability depends on the explicit Founder waiver.
+- Medium: Startup V2 certification still depends on validation evidence, including device coverage that may require external hardware availability.
+
+## Expected Outcome
+Startup Architecture V2 proceeds through rollback protection, architecture review, design, implementation, validation, certification recommendation, and Founder Briefing under the waived model-capability constraint.
+
+## Status
+Approved and Active
+
+## Follow-up Actions
+1. Preserve Founder Briefing 011 as the accepted blocker record.
+2. Publish Startup V2 rollback, architecture, dependency, design, implementation, validation, certification, and founder briefing artefacts.
+3. Record any remaining validation gaps or external blockers in the final certification recommendation.
+
+## Reference Documents
+- [../founder-briefings/briefings/FOUNDER_BRIEFING_011_STARTUP_ARCHITECTURE_V2_MODEL_CAPABILITY_BLOCKER_2026-05-30.md](../founder-briefings/briefings/FOUNDER_BRIEFING_011_STARTUP_ARCHITECTURE_V2_MODEL_CAPABILITY_BLOCKER_2026-05-30.md)
+- [../startup-architecture-v2/STARTUP_V1_ROLLBACK_INVENTORY_2026-05-30.md](../startup-architecture-v2/STARTUP_V1_ROLLBACK_INVENTORY_2026-05-30.md)
+- [../startup-architecture-v2/STARTUP_ARCHITECTURE_REVIEW_2026-05-30.md](../startup-architecture-v2/STARTUP_ARCHITECTURE_REVIEW_2026-05-30.md)
+- [../startup-architecture-v2/STARTUP_DEPENDENCY_MAP_2026-05-30.md](../startup-architecture-v2/STARTUP_DEPENDENCY_MAP_2026-05-30.md)
+- [../startup-architecture-v2/STARTUP_V2_DESIGN_DOCUMENT_2026-05-30.md](../startup-architecture-v2/STARTUP_V2_DESIGN_DOCUMENT_2026-05-30.md)
+
+---
+
+## Decision ID
+D-011
+
+## Title
+Startup Architecture V2 Implementation Accepted With Native Android Certification Blocker
+
+## Date
+2026-05-31
+
+## Decision Owner
+Chief Orchestrator
+
+## Participating Roles
+- Founder / CEO
+- Chief Orchestrator
+- Chief Technology Officer
+- Testing Director
+- Engineering Quality & Assurance Officer
+
+## Background
+Startup Architecture V2 was implemented after rollback protection, architecture review, dependency mapping, design, and pre-implementation compliance review. Application-level startup telemetry passed a 20-cycle determinism run. Native Android visual validation then exposed a blocker: the emulator either retained the native splash surface after `startupComplete=true` or, after rebuild and clean reinstall, entered `DevLauncherErrorActivity` before JavaScript loaded.
+
+## Decision
+Accept Startup V2 implementation as complete in the working tree, but classify production certification as NO-GO until native Android visual validation is remediated and re-tested.
+
+## Rationale
+Telemetry evidence proves deterministic application routing, but certification requires user-visible proof that the app shows the expected first screen. The native splash/dev-client blocker prevents that proof.
+
+## Alternatives Considered
+- Certify based on telemetry alone.
+- Revert Startup V2 despite application-level determinism.
+- Pause without recording the implementation outcome and blocker.
+
+## Risks
+- High: User-visible launch remains uncertified.
+- Medium: Native remediation may require emulator reset, dev-client rebuild, or physical device validation.
+- Low: Startup V2 application logic can be rolled back using the preserved V1 package if required.
+
+## Expected Outcome
+Founder visibility is preserved, Startup V2 implementation remains available for remediation, and certification resumes only after native visual validation passes.
+
+## Status
+Approved Implementation / Certification NO-GO
+
+## Follow-up Actions
+1. Resolve Android native splash/dev-client launch blocker.
+2. Re-run screenshot validation after `startupComplete=true`.
+3. Re-run 20-cycle startup determinism validation after native remediation.
+4. Update certification recommendation and Founder Briefing when native validation passes.
+
+## Reference Documents
+- [../startup-architecture-v2/STARTUP_V2_IMPLEMENTATION_SUMMARY_2026-05-31.md](../startup-architecture-v2/STARTUP_V2_IMPLEMENTATION_SUMMARY_2026-05-31.md)
+- [../startup-architecture-v2/STARTUP_V2_VALIDATION_EVIDENCE_PACKAGE_2026-05-31.md](../startup-architecture-v2/STARTUP_V2_VALIDATION_EVIDENCE_PACKAGE_2026-05-31.md)
+- [../startup-architecture-v2/STARTUP_V2_CERTIFICATION_RECOMMENDATION_2026-05-31.md](../startup-architecture-v2/STARTUP_V2_CERTIFICATION_RECOMMENDATION_2026-05-31.md)
+- [../founder-briefings/briefings/FOUNDER_BRIEFING_012_STARTUP_ARCHITECTURE_V2_VALIDATION_BLOCKER_2026-05-31.md](../founder-briefings/briefings/FOUNDER_BRIEFING_012_STARTUP_ARCHITECTURE_V2_VALIDATION_BLOCKER_2026-05-31.md)
+
+---
+
 ## Register Maintenance Guidance
 
 1. Add new decisions in ascending ID order.

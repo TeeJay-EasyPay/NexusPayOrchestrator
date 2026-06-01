@@ -4,17 +4,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AppDropdownMenu } from "../navigation/AppDropdownMenu";
 import { AppMenu } from "../navigation/AppMenu";
+import { isPublicStartupRoute } from "../../startup/startupRoutes";
 import { colors } from "../../theme";
-
-const PUBLIC_ROUTES = new Set([
-  "/auth",
-  "/check-email",
-  "/account-created",
-]);
 
 export function Screen({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const showAppChrome = !PUBLIC_ROUTES.has(pathname);
+  const showAppChrome = !isPublicStartupRoute(pathname);
 
   return (
     <SafeAreaView style={styles.safe}>

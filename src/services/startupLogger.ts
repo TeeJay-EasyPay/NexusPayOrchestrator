@@ -21,18 +21,19 @@ function emitStartupLog(level: StartupLevel, payload: StartupLogPayload) {
     level,
     ...payload,
   };
+  const line = `[Startup] ${JSON.stringify(entry)}`;
 
   if (level === "ERROR") {
-    console.error("[Startup]", entry);
+    console.error(line);
     return;
   }
 
   if (level === "WARN") {
-    console.warn("[Startup]", entry);
+    console.warn(line);
     return;
   }
 
-  console.log("[Startup]", entry);
+  console.log(line);
 }
 
 export function logStartupInfo(payload: StartupLogPayload) {
