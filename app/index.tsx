@@ -610,7 +610,7 @@ export default function HomeScreen() {
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                 <BalanceAction icon="arrow-up-right" label="Send Money" onPress={() => router.push("/send")} />
                 <BalanceAction icon="link" label="Funding Sources" onPress={() => router.push("/payment-methods")} />
-                <BalanceAction icon="clock" label="Transfer History" onPress={() => router.push("/account")} />
+                <BalanceAction icon="clock" label="Transfer History" onPress={() => router.push("/transactions")} />
               </View>
             </View>
           </AppCard>
@@ -1022,8 +1022,8 @@ export default function HomeScreen() {
 
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, justifyContent: "space-between" }}>
             <QuickTile icon="map-pin" label="Route Intelligence" onPress={() => router.push("/routes")} />
+            <QuickTile icon="list" label="Transaction Centre" onPress={() => router.push("/transactions" as never)} />
             <QuickTile icon="radio" label="Live Intelligence" onPress={() => router.push("/live-intelligence-feeds")} />
-            <QuickTile icon="briefcase" label="Operations Centre" onPress={() => router.push("/operations")} />
             <QuickTile icon="cpu" label="Nexus AI" onPress={() => router.push("/nexus-ai" as never)} />
           </View>
 

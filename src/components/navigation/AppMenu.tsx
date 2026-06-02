@@ -5,11 +5,11 @@ import { colors } from "../../theme";
 import { AppText } from "../ui/AppText";
 
 const MENU_ITEMS = [
-  { label: "Home", route: "/", match: "/", icon: "⌂" },
-  { label: "Send", route: "/send", match: "/send", icon: "➤" },
-  { label: "Routes", route: "/routes", match: "/routes", icon: "⎇" },
-  { label: "Track", route: "/track", match: "/track", icon: "◎" },
-  { label: "Account", route: "/account", match: "/account", icon: "☺" },
+  { label: "Home", route: "/", match: "/", icon: "H" },
+  { label: "Send", route: "/send", match: "/send", icon: "S" },
+  { label: "Transfers", route: "/transactions", match: "/transactions", icon: "T" },
+  { label: "Routes", route: "/routes", match: "/routes", icon: "R" },
+  { label: "Account", route: "/account", match: "/account", icon: "A" },
 ] as const;
 
 export function AppMenu() {
@@ -49,6 +49,7 @@ export function AppMenu() {
               style={{
                 fontSize: 16,
                 color: isActive ? colors.gold : "#6B8CA3",
+                fontWeight: "900",
               }}
             >
               {item.icon}

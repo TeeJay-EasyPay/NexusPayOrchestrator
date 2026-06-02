@@ -22,6 +22,12 @@ const MENU_ITEMS = [
     match: "/send",
   },
   {
+    label: "Transaction Centre",
+    description: "Search, filter and repeat transfer history",
+    route: "/transactions",
+    match: "/transactions",
+  },
+  {
     label: "Route Intelligence",
     description: "Compare ranked payment routes",
     route: "/routes",
