@@ -421,5 +421,21 @@ Mitigations:
 4. Confirm WS2 may proceed in parallel with explicit auth/parity dependency note.
 5. Approve merge order and pilot-certification block condition.
 
+---
+
+## Branch Inventory
+
+| Parent branch | Branch name | Creation timestamp | Commit hash used | Purpose | Merge target |
+|---|---|---|---|---|---|
+| `startup-v2` | `startup-v2-ws1-build-device-parity` | 2026-06-02T11:39:35+01:00 | `779fe7627e655322e0debe6d464f4041ee779f83` | Build-to-device runtime parity investigation and certification gate evidence. | `startup-v2` |
+| `startup-v2` | `startup-v2-ws2-transaction-centre-v1` | 2026-06-02T11:39:35+01:00 | `779fe7627e655322e0debe6d464f4041ee779f83` | Transaction Centre V1 product implementation. | `startup-v2` |
+| `startup-v2` | `startup-v2-ws3-private-user-experience-multi-account-design` | 2026-06-02T11:39:35+01:00 | `779fe7627e655322e0debe6d464f4041ee779f83` | Private-user experience and multi-account design architecture. | `startup-v2` |
+
+Branch separation control:
+- WS1 changes must only be committed to `startup-v2-ws1-build-device-parity`.
+- WS2 changes must only be committed to `startup-v2-ws2-transaction-centre-v1`.
+- WS3 changes must only be committed to `startup-v2-ws3-private-user-experience-multi-account-design`.
+- No workstream branch is authorised for automatic merge.
+
 ## Final Recommendation
 Launch all three workstreams in parallel from startup-v2 baseline, but treat Workstream 1 as the release/certification gate. Continue product momentum through Workstream 2 and design acceleration through Workstream 3 without waiting for parity closure, while keeping pilot certification blocked until parity is proven.
