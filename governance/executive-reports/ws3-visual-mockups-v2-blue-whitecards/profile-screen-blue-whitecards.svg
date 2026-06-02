@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920" role="img" aria-labelledby="title desc">
+  <title id="title">NexusPay Profile Screen Blue Theme</title>
+  <desc id="desc">Profile and account context screen in blue trust palette with white cards.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F4FAFF"/>
+      <stop offset="100%" stop-color="#EAF3FF"/>
+    </linearGradient>
+    <style>
+      .h1 { font: 700 50px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #163B66; }
+      .h2 { font: 700 33px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #163B66; }
+      .t1 { font: 600 26px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #1E4D83; }
+      .t2 { font: 500 22px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #486E98; }
+      .tag { font: 700 20px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #2F7C4A; }
+      .btn { font: 700 21px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #1A487A; }
+    </style>
+  </defs>
+
+  <rect width="1080" height="1920" fill="url(#bg)"/>
+
+  <text x="72" y="116" class="h1">Profile</text>
+  <text x="72" y="162" class="t2">Identity, security, and account context</text>
+
+  <rect x="56" y="208" rx="30" ry="30" width="968" height="260" fill="#CFE7FF"/>
+  <circle cx="170" cy="318" r="64" fill="#FFFFFF"/>
+  <text x="138" y="332" class="h2">TJ</text>
+  <text x="268" y="302" class="h2">Tayo Jehonathan</text>
+  <text x="268" y="348" class="t2">Personal account</text>
+  <rect x="268" y="372" rx="14" ry="14" width="200" height="44" fill="#DFF4E4"/>
+  <text x="312" y="402" class="tag">Verified soon</text>
+
+  <rect x="56" y="500" rx="28" ry="28" width="968" height="246" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+  <text x="92" y="568" class="h2">Verification</text>
+  <text x="92" y="612" class="t2">Identity verification: Not started</text>
+  <text x="92" y="652" class="t2">Transfer limits: Demo/private preview</text>
+  <rect x="92" y="676" rx="16" ry="16" width="232" height="52" fill="#EDF5FF"/>
+  <text x="128" y="710" class="btn">Start verification</text>
+
+  <rect x="56" y="776" rx="28" ry="28" width="968" height="246" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+  <text x="92" y="844" class="h2">Security</text>
+  <text x="92" y="888" class="t2">Password: Enabled</text>
+  <text x="92" y="928" class="t2">Trusted devices: 1</text>
+  <rect x="92" y="952" rx="16" ry="16" width="210" height="52" fill="#EDF5FF"/>
+  <text x="128" y="986" class="btn">Manage security</text>
+
+  <rect x="56" y="1052" rx="28" ry="28" width="968" height="328" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+  <text x="92" y="1120" class="h2">Account switcher</text>
+  <rect x="92" y="1152" rx="18" ry="18" width="896" height="76" fill="#F2F8FF"/>
+  <text x="122" y="1200" class="t1">Personal account</text>
+  <text x="840" y="1200" class="tag">Active</text>
+
+  <rect x="92" y="1246" rx="18" ry="18" width="896" height="76" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+  <text x="122" y="1294" class="t1">Family account</text>
+  <text x="834" y="1294" class="t2">Planned</text>
+
+  <rect x="48" y="1724" rx="32" ry="32" width="984" height="136" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+  <text x="118" y="1806" class="t2">Home</text>
+  <text x="306" y="1806" class="t2">Send</text>
+  <text x="474" y="1806" class="t2">Transfers</text>
+  <text x="700" y="1806" class="t1">Profile</text>
+  <text x="874" y="1806" class="t2">Settings</text>
+</svg>

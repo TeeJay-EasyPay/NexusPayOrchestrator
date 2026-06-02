@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920" role="img" aria-labelledby="title desc">
+  <title id="title">Verification Placeholder Screen Blue Theme</title>
+  <desc id="desc">KYC and XML verification placeholder visual for phased private-user rollout.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F4FAFF"/>
+      <stop offset="100%" stop-color="#EAF3FF"/>
+    </linearGradient>
+    <style>
+      .h1 { font: 700 50px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #163B66; }
+      .h2 { font: 700 32px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #163B66; }
+      .t1 { font: 600 25px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #1E4D83; }
+      .t2 { font: 500 21px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #486E98; }
+      .state { font: 700 19px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #8A5B17; }
+    </style>
+  </defs>
+
+  <rect width="1080" height="1920" fill="url(#bg)"/>
+
+  <text x="72" y="116" class="h1">Verification</text>
+  <text x="72" y="162" class="t2">Required before live high-limit transfers</text>
+
+  <rect x="56" y="210" rx="30" ry="30" width="968" height="210" fill="#DDEEFF"/>
+  <text x="92" y="286" class="h2">Verification status</text>
+  <text x="92" y="332" class="t2">Personal account checks are planned for rollout phase 2.</text>
+
+  <rect x="56" y="452" rx="28" ry="28" width="968" height="520" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+
+  <rect x="92" y="500" rx="18" ry="18" width="896" height="104" fill="#F2F8FF"/>
+  <text x="126" y="560" class="h2">Identity document</text>
+  <text x="840" y="560" class="state">Later phase</text>
+
+  <rect x="92" y="626" rx="18" ry="18" width="896" height="104" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+  <text x="126" y="686" class="h2">Address check</text>
+  <text x="840" y="686" class="state">Later phase</text>
+
+  <rect x="92" y="752" rx="18" ry="18" width="896" height="104" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+  <text x="126" y="812" class="h2">XML/compliance provider</text>
+  <text x="840" y="812" class="state">Later phase</text>
+
+  <rect x="56" y="1004" rx="28" ry="28" width="968" height="240" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+  <text x="92" y="1072" class="h2">Why this matters</text>
+  <text x="92" y="1120" class="t2">Verification unlocks higher limits and stronger trust controls.</text>
+  <text x="92" y="1160" class="t2">You will receive guided steps when this phase is enabled.</text>
+
+  <rect x="56" y="1278" rx="24" ry="24" width="968" height="84" fill="#2C7EDB"/>
+  <text x="392" y="1332" fill="#FFFFFF" font="700 24px 'Segoe UI', Arial, sans-serif">Notify me when live</text>
+
+  <rect x="48" y="1724" rx="32" ry="32" width="984" height="136" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+  <text x="118" y="1806" class="t2">Home</text>
+  <text x="306" y="1806" class="t2">Send</text>
+  <text x="474" y="1806" class="t2">Transfers</text>
+  <text x="700" y="1806" class="t1">Profile</text>
+  <text x="874" y="1806" class="t2">Settings</text>
+</svg>

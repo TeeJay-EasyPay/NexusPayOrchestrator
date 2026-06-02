@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920" role="img" aria-labelledby="title desc">
+  <title id="title">Account Switcher Screen Blue Theme</title>
+  <desc id="desc">Multi-account context switch visual with clear ownership boundaries.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F4FAFF"/>
+      <stop offset="100%" stop-color="#EAF3FF"/>
+    </linearGradient>
+    <style>
+      .h1 { font: 700 50px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #163B66; }
+      .h2 { font: 700 33px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #163B66; }
+      .t1 { font: 600 26px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #1E4D83; }
+      .t2 { font: 500 22px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #486E98; }
+      .good { font: 700 20px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #2F7C4A; }
+      .later { font: 700 20px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #8A5B17; }
+    </style>
+  </defs>
+
+  <rect width="1080" height="1920" fill="url(#bg)"/>
+
+  <text x="72" y="116" class="h1">Switch account</text>
+  <text x="72" y="162" class="t2">Choose your active context</text>
+
+  <rect x="56" y="210" rx="28" ry="28" width="968" height="500" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+
+  <rect x="92" y="266" rx="18" ry="18" width="896" height="116" fill="#EAF4FF" stroke="#2C7EDB" stroke-width="3"/>
+  <text x="128" y="334" class="h2">Personal account</text>
+  <text x="848" y="334" class="good">Active</text>
+
+  <rect x="92" y="400" rx="18" ry="18" width="896" height="116" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+  <text x="128" y="468" class="h2">Family account</text>
+  <text x="836" y="468" class="later">Planned</text>
+
+  <rect x="92" y="534" rx="18" ry="18" width="896" height="116" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+  <text x="128" y="602" class="h2">Business account</text>
+  <text x="864" y="602" class="later">Later</text>
+
+  <rect x="56" y="742" rx="28" ry="28" width="968" height="370" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+  <text x="92" y="810" class="h2">What changes by account</text>
+  <text x="92" y="858" class="t2">- Recipients</text>
+  <text x="92" y="898" class="t2">- Transfer history and receipts</text>
+  <text x="92" y="938" class="t2">- Payment methods and limits</text>
+  <text x="92" y="978" class="t2">- Verification state and permissions</text>
+  <text x="92" y="1020" class="t2">- Audit trail by user and account context</text>
+
+  <rect x="56" y="1142" rx="24" ry="24" width="968" height="84" fill="#2C7EDB"/>
+  <text x="430" y="1196" fill="#FFFFFF" font="700 24px 'Segoe UI', Arial, sans-serif">Switch to account</text>
+
+  <rect x="48" y="1724" rx="32" ry="32" width="984" height="136" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+  <text x="118" y="1806" class="t2">Home</text>
+  <text x="306" y="1806" class="t2">Send</text>
+  <text x="474" y="1806" class="t2">Transfers</text>
+  <text x="700" y="1806" class="t1">Profile</text>
+  <text x="874" y="1806" class="t2">Settings</text>
+</svg>

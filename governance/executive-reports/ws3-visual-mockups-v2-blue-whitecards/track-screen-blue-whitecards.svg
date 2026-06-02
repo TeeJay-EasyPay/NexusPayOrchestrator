@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920" role="img" aria-labelledby="title desc">
+  <title id="title">NexusPay Track Screen Blue Theme</title>
+  <desc id="desc">Payment flow tracking screen for transfer NP-48192 in a soft blue trust palette with white cards.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F4FAFF"/>
+      <stop offset="100%" stop-color="#EAF3FF"/>
+    </linearGradient>
+    <linearGradient id="hero" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#CFE7FF"/>
+      <stop offset="100%" stop-color="#B8DCFF"/>
+    </linearGradient>
+    <style>
+      .h1 { font: 700 50px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #163B66; }
+      .h2 { font: 700 33px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #163B66; }
+      .t1 { font: 600 26px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #1E4D83; }
+      .t2 { font: 500 22px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #486E98; }
+      .ok { font: 700 22px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #2F7C4A; }
+      .warn { font: 700 22px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #8A5B17; }
+      .pending { font: 700 22px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #5E6E85; }
+      .btn { font: 700 22px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #FFFFFF; }
+      .chip { font: 700 20px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #1A487A; }
+    </style>
+  </defs>
+
+  <rect width="1080" height="1920" fill="url(#bg)"/>
+
+  <text x="72" y="116" class="h1">Track transfer</text>
+  <text x="72" y="162" class="t2">Follow payment flow in real time</text>
+
+  <rect x="56" y="210" rx="30" ry="30" width="968" height="268" fill="url(#hero)"/>
+  <text x="92" y="286" class="h2">Transfer #NP-48192</text>
+  <text x="92" y="338" class="t1">GBP 500 -> Philippines</text>
+  <rect x="92" y="368" rx="16" ry="16" width="184" height="52" fill="#DFF4E4"/>
+  <text x="138" y="401" class="ok">On track</text>
+  <rect x="292" y="368" rx="16" ry="16" width="210" height="52" fill="#EDF5FF"/>
+  <text x="348" y="401" class="chip">ETA: minutes</text>
+
+  <rect x="56" y="510" rx="28" ry="28" width="968" height="920" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+  <text x="92" y="578" class="h2">Payment flow</text>
+
+  <line x1="132" y1="628" x2="132" y2="1278" stroke="#BFD8F1" stroke-width="4"/>
+
+  <circle cx="132" cy="668" r="22" fill="#DFF4E4"/>
+  <text x="124" y="676" font="700 18px 'Segoe UI', Arial, sans-serif" fill="#2F7C4A">✓</text>
+  <text x="178" y="676" class="ok">Money Received</text>
+  <text x="878" y="676" class="t2">09:01</text>
+
+  <circle cx="132" cy="792" r="22" fill="#DFF4E4"/>
+  <text x="124" y="800" font="700 18px 'Segoe UI', Arial, sans-serif" fill="#2F7C4A">✓</text>
+  <text x="178" y="800" class="ok">Route Selected</text>
+  <text x="878" y="800" class="t2">09:02</text>
+
+  <circle cx="132" cy="916" r="22" fill="#DFF4E4"/>
+  <text x="124" y="924" font="700 18px 'Segoe UI', Arial, sans-serif" fill="#2F7C4A">✓</text>
+  <text x="178" y="924" class="ok">FX Conversion Complete</text>
+  <text x="878" y="924" class="t2">09:02</text>
+
+  <circle cx="132" cy="1040" r="22" fill="#FFE9CC"/>
+  <text x="118" y="1048" font="700 18px 'Segoe UI', Arial, sans-serif" fill="#8A5B17">⏳</text>
+  <text x="178" y="1048" class="warn">Local Bank Processing</text>
+  <text x="878" y="1048" class="t2">09:03</text>
+
+  <circle cx="132" cy="1164" r="22" fill="#E9EEF5"/>
+  <text x="122" y="1172" font="700 18px 'Segoe UI', Arial, sans-serif" fill="#6B7C92">○</text>
+  <text x="178" y="1172" class="pending">Delivered</text>
+  <text x="844" y="1172" class="pending">Pending</text>
+
+  <rect x="92" y="1250" rx="18" ry="18" width="896" height="146" fill="#F6FAFF" stroke="#D7E8F9" stroke-width="2"/>
+  <text x="124" y="1312" class="t1">Nexus AI insight</text>
+  <text x="124" y="1354" class="t2">Transfer is healthy. Waiting on local bank handoff.</text>
+
+  <rect x="56" y="1466" rx="24" ry="24" width="968" height="84" fill="#2C7EDB"/>
+  <text x="442" y="1520" class="btn">View receipt</text>
+
+  <rect x="48" y="1724" rx="32" ry="32" width="984" height="136" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+  <text x="118" y="1806" class="t2">Home</text>
+  <text x="306" y="1806" class="t2">Send</text>
+  <text x="474" y="1806" class="t1">Transfers</text>
+  <text x="700" y="1806" class="t2">Profile</text>
+  <text x="874" y="1806" class="t2">Settings</text>
+</svg>

@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920" role="img" aria-labelledby="title desc">
+  <title id="title">NexusPay Transfers Screen Blue Theme</title>
+  <desc id="desc">Transfer history screen in a soft blue trust palette with white cards.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F4FAFF"/>
+      <stop offset="100%" stop-color="#EAF3FF"/>
+    </linearGradient>
+    <style>
+      .h1 { font: 700 50px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #163B66; }
+      .h2 { font: 700 33px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #163B66; }
+      .t1 { font: 600 26px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #1E4D83; }
+      .t2 { font: 500 22px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #486E98; }
+      .pill { font: 700 20px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #2F7C4A; }
+      .btn { font: 700 21px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #1A487A; }
+    </style>
+  </defs>
+
+  <rect width="1080" height="1920" fill="url(#bg)"/>
+  <text x="72" y="116" class="h1">Transfers</text>
+  <text x="72" y="162" class="t2">Find receipts, repeat payments, and track confidence</text>
+
+  <rect x="56" y="210" rx="24" ry="24" width="968" height="94" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+  <text x="92" y="270" class="t2">Search recipient, reference, country</text>
+
+  <rect x="56" y="326" rx="20" ry="20" width="204" height="62" fill="#DDEEFF"/>
+  <text x="116" y="366" class="btn">All status</text>
+  <rect x="276" y="326" rx="20" ry="20" width="224" height="62" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+  <text x="326" y="366" class="btn">All corridors</text>
+  <rect x="516" y="326" rx="20" ry="20" width="164" height="62" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+  <text x="566" y="366" class="btn">30 days</text>
+
+  <rect x="56" y="430" rx="28" ry="28" width="968" height="278" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+  <text x="92" y="500" class="h2">Maria Santos</text>
+  <rect x="816" y="466" rx="16" ry="16" width="160" height="48" fill="#DFF4E4"/>
+  <text x="846" y="498" class="pill">COMPLETED</text>
+  <text x="92" y="544" class="t2">GBP -> PHP  |  Philippines</text>
+  <text x="92" y="584" class="t2">NXP-2026-004981</text>
+  <rect x="92" y="620" rx="16" ry="16" width="142" height="50" fill="#EDF5FF"/>
+  <text x="126" y="652" class="btn">Repeat</text>
+  <rect x="248" y="620" rx="16" ry="16" width="144" height="50" fill="#EDF5FF"/>
+  <text x="284" y="652" class="btn">Receipt</text>
+
+  <rect x="56" y="736" rx="28" ry="28" width="968" height="278" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+  <text x="92" y="806" class="h2">Ahmed Khan</text>
+  <rect x="816" y="772" rx="16" ry="16" width="160" height="48" fill="#DFF4E4"/>
+  <text x="846" y="804" class="pill">COMPLETED</text>
+  <text x="92" y="850" class="t2">GBP -> AED  |  UAE</text>
+  <text x="92" y="890" class="t2">NXP-2026-004877</text>
+  <rect x="92" y="926" rx="16" ry="16" width="142" height="50" fill="#EDF5FF"/>
+  <text x="126" y="958" class="btn">Repeat</text>
+  <rect x="248" y="926" rx="16" ry="16" width="144" height="50" fill="#EDF5FF"/>
+  <text x="284" y="958" class="btn">Receipt</text>
+
+  <rect x="56" y="1050" rx="28" ry="28" width="968" height="226" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+  <text x="92" y="1118" class="h2">Nexus AI note</text>
+  <text x="92" y="1166" class="t2">Most recent transfers are on-time and complete.</text>
+  <text x="92" y="1208" class="t2">Use Repeat for faster setup on your frequent recipients.</text>
+
+  <rect x="48" y="1724" rx="32" ry="32" width="984" height="136" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+  <text x="118" y="1806" class="t2">Home</text>
+  <text x="306" y="1806" class="t2">Send</text>
+  <text x="474" y="1806" class="t1">Transfers</text>
+  <text x="700" y="1806" class="t2">Profile</text>
+  <text x="874" y="1806" class="t2">Settings</text>
+</svg>

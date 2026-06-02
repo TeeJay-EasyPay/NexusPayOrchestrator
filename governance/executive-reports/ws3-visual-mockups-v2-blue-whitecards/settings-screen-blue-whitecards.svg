@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920" role="img" aria-labelledby="title desc">
+  <title id="title">NexusPay Settings Screen Blue Theme</title>
+  <desc id="desc">Central settings hub screen in blue and white-card design language.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F4FAFF"/>
+      <stop offset="100%" stop-color="#EAF3FF"/>
+    </linearGradient>
+    <style>
+      .h1 { font: 700 50px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #163B66; }
+      .h2 { font: 700 31px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #163B66; }
+      .t1 { font: 600 25px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #1E4D83; }
+      .t2 { font: 500 21px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #486E98; }
+      .btn { font: 700 20px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #1A487A; }
+    </style>
+  </defs>
+
+  <rect width="1080" height="1920" fill="url(#bg)"/>
+
+  <text x="72" y="116" class="h1">Settings</text>
+  <text x="72" y="162" class="t2">Control your account, privacy, and preferences</text>
+
+  <rect x="56" y="210" rx="28" ry="28" width="968" height="1080" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+
+  <g transform="translate(92,270)">
+    <rect width="896" height="96" rx="20" ry="20" fill="#F2F8FF"/>
+    <text x="28" y="58" class="h2">Payment methods</text>
+    <text x="760" y="58" class="btn">Manage</text>
+  </g>
+
+  <g transform="translate(92,386)">
+    <rect width="896" height="96" rx="20" ry="20" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+    <text x="28" y="58" class="h2">Nexus AI</text>
+    <text x="760" y="58" class="btn">Manage</text>
+  </g>
+
+  <g transform="translate(92,502)">
+    <rect width="896" height="96" rx="20" ry="20" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+    <text x="28" y="58" class="h2">Notifications</text>
+    <text x="760" y="58" class="btn">Manage</text>
+  </g>
+
+  <g transform="translate(92,618)">
+    <rect width="896" height="96" rx="20" ry="20" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+    <text x="28" y="58" class="h2">Privacy and data</text>
+    <text x="760" y="58" class="btn">Manage</text>
+  </g>
+
+  <g transform="translate(92,734)">
+    <rect width="896" height="96" rx="20" ry="20" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+    <text x="28" y="58" class="h2">Verification</text>
+    <text x="760" y="58" class="btn">Manage</text>
+  </g>
+
+  <g transform="translate(92,850)">
+    <rect width="896" height="96" rx="20" ry="20" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+    <text x="28" y="58" class="h2">Help and support</text>
+    <text x="790" y="58" class="btn">Open</text>
+  </g>
+
+  <g transform="translate(92,966)">
+    <rect width="896" height="96" rx="20" ry="20" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+    <text x="28" y="58" class="h2">Account switcher</text>
+    <text x="790" y="58" class="btn">Open</text>
+  </g>
+
+  <rect x="56" y="1320" rx="28" ry="28" width="968" height="220" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+  <text x="92" y="1388" class="h2">Quick preference</text>
+  <text x="92" y="1432" class="t2">Nexus AI guidance</text>
+  <rect x="738" y="1400" rx="24" ry="24" width="250" height="56" fill="#DFF4E4"/>
+  <text x="818" y="1436" class="t1">Enabled</text>
+
+  <rect x="48" y="1724" rx="32" ry="32" width="984" height="136" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+  <text x="118" y="1806" class="t2">Home</text>
+  <text x="306" y="1806" class="t2">Send</text>
+  <text x="474" y="1806" class="t2">Transfers</text>
+  <text x="700" y="1806" class="t2">Profile</text>
+  <text x="874" y="1806" class="t1">Settings</text>
+</svg>

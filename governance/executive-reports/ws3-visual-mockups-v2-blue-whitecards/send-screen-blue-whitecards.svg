@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920" role="img" aria-labelledby="title desc">
+  <title id="title">NexusPay Send Money Screen Blue Theme</title>
+  <desc id="desc">Blue-trust send flow with white cards and clear route choices.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#F4FAFF"/>
+      <stop offset="100%" stop-color="#EAF3FF"/>
+    </linearGradient>
+    <style>
+      .h1 { font: 700 52px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #163B66; }
+      .h2 { font: 700 34px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #163B66; }
+      .t1 { font: 600 27px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #1E4D83; }
+      .t2 { font: 500 23px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #466C95; }
+      .btn { font: 700 25px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #FFFFFF; }
+      .tag { font: 700 21px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #1A487A; }
+    </style>
+  </defs>
+
+  <rect width="1080" height="1920" fill="url(#bg)"/>
+
+  <text x="72" y="116" class="h1">Send Money</text>
+  <text x="72" y="162" class="t2">Quick, clear, and confidence-first transfer setup</text>
+
+  <rect x="56" y="210" rx="26" ry="26" width="968" height="190" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+  <text x="92" y="278" class="h2">Amount</text>
+  <rect x="92" y="302" rx="18" ry="18" width="896" height="70" fill="#F2F8FF"/>
+  <text x="124" y="348" class="t1">GBP 250.00</text>
+
+  <rect x="56" y="430" rx="26" ry="26" width="968" height="190" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+  <text x="92" y="498" class="h2">Recipient</text>
+  <rect x="92" y="522" rx="18" ry="18" width="896" height="70" fill="#F2F8FF"/>
+  <text x="124" y="568" class="t1">Maria Santos   |   Philippines - Bank account</text>
+
+  <rect x="56" y="650" rx="26" ry="26" width="968" height="570" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+  <text x="92" y="718" class="h2">Choose route</text>
+
+  <rect x="92" y="752" rx="22" ry="22" width="432" height="300" fill="#EAF4FF" stroke="#2C7EDB" stroke-width="3"/>
+  <text x="128" y="820" class="h2">Cheapest</text>
+  <text x="128" y="868" class="t2">Lower fees</text>
+  <text x="128" y="910" class="t2">Receives PHP 18,210</text>
+  <rect x="128" y="950" rx="15" ry="15" width="188" height="50" fill="#2C7EDB"/>
+  <text x="170" y="983" class="btn">Selected</text>
+
+  <rect x="556" y="752" rx="22" ry="22" width="432" height="300" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+  <text x="592" y="820" class="h2">Most Stable</text>
+  <text x="592" y="868" class="t2">Reliable delivery</text>
+  <text x="592" y="910" class="t2">Receives PHP 18,090</text>
+  <rect x="592" y="950" rx="15" ry="15" width="220" height="50" fill="#E8F3FF"/>
+  <text x="630" y="983" class="tag">Safer timing</text>
+
+  <text x="92" y="1110" class="t1">Summary: Fee GBP 3.20  |  ETA minutes</text>
+
+  <rect x="56" y="1250" rx="26" ry="26" width="968" height="170" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+  <text x="92" y="1320" class="t1">Nexus AI tip: Cheapest works well now with stable corridor health.</text>
+  <text x="92" y="1360" class="t2">Switch to Most Stable when delivery certainty is your top priority.</text>
+
+  <rect x="56" y="1490" rx="24" ry="24" width="968" height="84" fill="#2C7EDB"/>
+  <text x="476" y="1545" class="btn">Continue</text>
+
+  <rect x="48" y="1724" rx="32" ry="32" width="984" height="136" fill="#FFFFFF" stroke="#D7E8F9" stroke-width="2"/>
+  <text x="118" y="1806" class="t2">Home</text>
+  <text x="306" y="1806" class="t1">Send</text>
+  <text x="474" y="1806" class="t2">Transfers</text>
+  <text x="700" y="1806" class="t2">Profile</text>
+  <text x="874" y="1806" class="t2">Settings</text>
+</svg>
