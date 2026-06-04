@@ -19,7 +19,8 @@ export type StartupRenderMode =
 export type StartupRedirectReason =
   | "unauthenticated-protected-route"
   | "authenticated-public-route"
-  | "locked-public-route";
+  | "locked-public-route"
+  | "founder-validation-startup-override";
 
 export type StartupRouteAction =
   | {
@@ -163,4 +164,3 @@ export function resolveStartupDecision(input: StartupDecisionInput): StartupDeci
 
   return allowDecision(input, "authenticated", "content", true);
 }
-

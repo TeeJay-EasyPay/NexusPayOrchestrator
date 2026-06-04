@@ -9,10 +9,17 @@ import { logStartupInfo } from "../services/startupLogger";
 import { useAuth } from "../state/AuthContext";
 import { useDeviceUnlock } from "../state/DeviceUnlockContext";
 import { colors } from "../theme/colors";
-import { isPublicStartupRoute, normalizeStartupPathname } from "./startupRoutes";
-import { resolveStartupDecision } from "./startupStateMachine";
+import {
+  DEFAULT_UNAUTHENTICATED_STARTUP_ROUTE,
+  isPublicStartupRoute,
+  normalizeStartupPathname,
+} from "./startupRoutes";
+import { resolveStartupDecision, StartupDecision } from "./startupStateMachine";
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
+
+const FOUNDER_VALIDATION_STARTUP_OVERRIDE_ENABLED = true;
+const FOUNDER_VALIDATION_STARTUP_ROUTE = DEFAULT_UNAUTHENTICATED_STARTUP_ROUTE;
 
 function LoadingOverlay() {
   return (
@@ -38,14 +45,47 @@ export function StartupCoordinator({ children }: { children: React.ReactNode }) 
   const redirectInFlightRef = useRef<string | null>(null);
   const evidenceSequenceRef = useRef(0);
   const splashHiddenRef = useRef(false);
+  const founderValidationRouteReachedRef = useRef(false);
 
   if (!isPublicStartupRoute(pathname)) {
     lastProtectedRouteRef.current = pathname;
   }
 
-  const decision = useMemo(
-    () =>
-      resolveStartupDecision({
+  const decision = useMemo<StartupDecision>(
+    () => {
+      if (
+        FOUNDER_VALIDATION_STARTUP_OVERRIDE_ENABLED &&
+        (pathname === FOUNDER_VALIDATION_STARTUP_ROUTE ||
+          !founderValidationRouteReachedRef.current)
+      ) {
+        const routeReached = pathname === FOUNDER_VALIDATION_STARTUP_ROUTE;
+
+        return {
+          phase: "unauthenticated",
+          pathname,
+          isPublicRoute: true,
+          hasAccess: false,
+          routeAction: routeReached
+            ? {
+                type: "allow",
+                targetRoute: null,
+                reason: null,
+              }
+            : {
+                type: "replace",
+                targetRoute: FOUNDER_VALIDATION_STARTUP_ROUTE,
+                reason: "founder-validation-startup-override",
+              },
+          renderMode: routeReached ? "content" : "startup-overlay",
+          startupDestination: FOUNDER_VALIDATION_STARTUP_ROUTE,
+          startupComplete: routeReached,
+          routingDecision: routeReached
+            ? `founder-validation-allow:${FOUNDER_VALIDATION_STARTUP_ROUTE}`
+            : `founder-validation-replace:${pathname}->${FOUNDER_VALIDATION_STARTUP_ROUTE}`,
+        };
+      }
+
+      return resolveStartupDecision({
         pathname,
         loading,
         sessionValidated,
@@ -54,7 +94,8 @@ export function StartupCoordinator({ children }: { children: React.ReactNode }) 
         demoAccessEnabled,
         locked,
         lastProtectedRoute: lastProtectedRouteRef.current,
-      }),
+      });
+    },
     [
       demoAccessEnabled,
       loading,
@@ -65,6 +106,12 @@ export function StartupCoordinator({ children }: { children: React.ReactNode }) 
       sessionValidated,
     ]
   );
+
+  useEffect(() => {
+    if (pathname === FOUNDER_VALIDATION_STARTUP_ROUTE) {
+      founderValidationRouteReachedRef.current = true;
+    }
+  }, [pathname]);
 
   useEffect(() => {
     evidenceSequenceRef.current += 1;
