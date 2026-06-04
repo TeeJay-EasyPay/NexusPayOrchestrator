@@ -96,7 +96,7 @@ export function UnlockPanel() {
             variant="secondary"
             onPress={async () => {
               await signOut();
-              router.replace("/auth");
+              router.replace("/multi-account-preview");
             }}
           />
         </View>

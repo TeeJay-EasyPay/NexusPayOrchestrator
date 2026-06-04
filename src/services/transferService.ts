@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabase";
+import { getStoredAccountScope } from "../state/AccountContext";
 import { Currency, PayoutMethod, Recipient, RouteQuote, Transfer } from "../types/transfer";
 
 function toNumber(value: unknown, fallback = 0) {
@@ -115,6 +116,7 @@ function buildSelectedRoutePayload(transfer: Transfer) {
 
   return {
     ...transfer.selectedRoute,
+    accountScope: transfer.accountScope,
     recipientSnapshot: transfer.recipient,
   };
 }
@@ -128,8 +130,10 @@ export async function saveTransferProgress(transfer: Transfer) {
     return;
   }
 
+  const accountScope = transfer.accountScope ?? (await getStoredAccountScope());
+
   const recipient = transfer.recipient ?? ({} as Recipient);
-  const routePayload = buildSelectedRoutePayload(transfer);
+  const routePayload = buildSelectedRoutePayload({ ...transfer, accountScope });
   const now = new Date().toISOString();
 
   const { error } = await supabase.from("transfers").upsert({
@@ -169,6 +173,8 @@ export async function loadCompletedTransfers(): Promise<Transfer[]> {
     return [];
   }
 
+  const accountScope = await getStoredAccountScope();
+
   const { data, error } = await supabase
     .from("transfers")
     .select("*")
@@ -181,8 +187,14 @@ export async function loadCompletedTransfers(): Promise<Transfer[]> {
     return [];
   }
 
-  return (data ?? []).map((row: any) => {
+  return (data ?? [])
+    .map((row: any) => {
     const selectedRoute = row.selected_route as RouteQuote | undefined;
+    const rowScope = (selectedRoute?.accountScope as "demo" | "personal" | undefined) ?? "demo";
+
+    if (rowScope !== accountScope) {
+      return null;
+    }
 
     return {
       id: row.id,
@@ -193,6 +205,8 @@ export async function loadCompletedTransfers(): Promise<Transfer[]> {
       selectedRoute,
       status: row.status ?? "COMPLETED",
       createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
+      accountScope: rowScope,
     } as Transfer;
-  });
+  })
+    .filter((item): item is Transfer => Boolean(item));
 }

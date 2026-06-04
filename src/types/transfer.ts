@@ -20,6 +20,7 @@ export type RailType = "FIAT" | "CRYPTO" | "HYBRID";
 export type PayoutMethod = "BANK" | "MOBILE_WALLET";
 
 export type FundingMethod = "OPEN_BANKING" | "CARD";
+export type AccountScope = "demo" | "personal";
 
 export type FundingStatus =
   | "NOT_STARTED"
@@ -165,6 +166,7 @@ export interface RouteQuote {
   orchestrationSafetyReason?: string;
   failoverRecommended?: boolean;
   failoverRouteId?: string;
+  accountScope?: AccountScope;
 
   steps: string[];
 }
@@ -182,4 +184,5 @@ export interface Transfer {
   fundingAuthorisedAt?: number;
   status: TransferStatus;
   createdAt: number;
+  accountScope?: AccountScope;
 }

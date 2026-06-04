@@ -55,7 +55,7 @@ export default function CheckEmailScreen() {
               After confirmation, NexusPay will open the account-created screen. You can then return to login and access your account.
             </AppText>
 
-            <AppButton title="Back to Login" onPress={() => router.replace("/auth")} />
+            <AppButton title="Back to Login" onPress={() => router.replace("/multi-account-preview")} />
           </View>
         </AppCard>
       </View>

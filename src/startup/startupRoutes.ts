@@ -1,7 +1,8 @@
 export const DEFAULT_AUTHENTICATED_STARTUP_ROUTE = "/";
-export const DEFAULT_UNAUTHENTICATED_STARTUP_ROUTE = "/auth";
+export const DEFAULT_UNAUTHENTICATED_STARTUP_ROUTE = "/multi-account-preview";
 
 export const PUBLIC_STARTUP_ROUTES = new Set([
+  "/multi-account-preview",
   "/auth",
   "/check-email",
   "/account-created",

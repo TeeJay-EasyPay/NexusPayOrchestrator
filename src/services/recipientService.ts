@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabase";
+import { getStoredAccountScope } from "../state/AccountContext";
 import { SavedRecipient } from "../types/recipient";
 import { Currency, PayoutMethod, Recipient, RouteQuote, Transfer } from "../types/transfer";
 import { writeAuditLog } from "./auditLog";
@@ -54,11 +55,11 @@ function splitRecipientName(fullName: string) {
   };
 }
 
-function buildRecipientId(userId: string, transfer: Transfer) {
+function buildRecipientId(userId: string, transfer: Transfer, scope: "demo" | "personal") {
   const r = transfer.recipient;
   const uniqueReference = r.accountNumber ?? r.mobileNumber ?? r.name ?? transfer.id;
 
-  return `${userId}-${r.country}-${r.payoutMethod}-${uniqueReference}`
+  return `${userId}-${scope}-${r.country}-${r.payoutMethod}-${uniqueReference}`
     .replace(/\s+/g, "-")
     .toLowerCase();
 }
@@ -134,6 +135,7 @@ function recipientFromTransferRow(row: any, userId: string): SavedRecipient {
 }
 
 async function loadRecipientsFromTransfers(userId: string): Promise<SavedRecipient[]> {
+  const scope = await getStoredAccountScope();
   const { data, error } = await supabase
     .from("transfers")
     .select("*")
@@ -150,7 +152,7 @@ async function loadRecipientsFromTransfers(userId: string): Promise<SavedRecipie
   const dedupedRecipients = new Map<string, SavedRecipient>();
 
   for (const row of data ?? []) {
-    const recipient = recipientFromTransferRow(row, userId);
+    const recipient = recipientFromTransferRow(row, `${userId}-${scope}`);
     const key = buildRecipientKey(recipient);
 
     if (!key) continue;
@@ -173,6 +175,8 @@ export async function saveRecipientFromTransfer(transfer: Transfer) {
     return;
   }
 
+  const scope = transfer.accountScope ?? (await getStoredAccountScope());
+
   const r = transfer.recipient;
 
   if (!r?.name || !r.country || !r.currency || !r.payoutMethod) {
@@ -180,7 +184,7 @@ export async function saveRecipientFromTransfer(transfer: Transfer) {
     return;
   }
 
-  const id = buildRecipientId(user.id, transfer);
+  const id = buildRecipientId(user.id, transfer, scope);
   const payload = {
     id,
     user_id: user.id,
@@ -241,6 +245,8 @@ export async function loadSavedRecipients(): Promise<SavedRecipient[]> {
 
   if (!user) return [];
 
+  const scope = await getStoredAccountScope();
+
   const { data, error } = await supabase
     .from("recipients")
     .select("*")
@@ -254,11 +260,15 @@ export async function loadSavedRecipients(): Promise<SavedRecipient[]> {
     return loadRecipientsFromTransfers(user.id);
   }
 
-  if (!data || data.length === 0) {
+  const scopedRows = (data ?? []).filter((row: any) =>
+    String(row.id ?? "").startsWith(`${user.id}-${scope}-`)
+  );
+
+  if (scopedRows.length === 0) {
     return loadRecipientsFromTransfers(user.id);
   }
 
-  return data.map((row: any) => ({
+  return scopedRows.map((row: any) => ({
     id: row.id,
     name: row.name,
     firstName: row.first_name,

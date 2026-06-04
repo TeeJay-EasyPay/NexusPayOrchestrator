@@ -1,4 +1,6 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../lib/supabase";
+import { getStoredAccountScope } from "../state/AccountContext";
 import { logStartupWarn } from "./startupLogger";
 
 export type NexusAISensitivity = "conservative" | "balanced" | "aggressive";
@@ -28,6 +30,25 @@ export const defaultNexusAISettings = (userId: string): NexusAISettings => ({
   sensitivity: "balanced",
 });
 
+function settingsStorageKey(userId: string, scope: "demo" | "personal") {
+  return `nexus-ai-settings:${userId}:${scope}`;
+}
+
+async function getLocalSettings(userId: string, scope: "demo" | "personal") {
+  const payload = await AsyncStorage.getItem(settingsStorageKey(userId, scope));
+  if (!payload) return null;
+
+  try {
+    return JSON.parse(payload) as NexusAISettings;
+  } catch {
+    return null;
+  }
+}
+
+async function setLocalSettings(userId: string, scope: "demo" | "personal", settings: NexusAISettings) {
+  await AsyncStorage.setItem(settingsStorageKey(userId, scope), JSON.stringify(settings));
+}
+
 function isRlsError(error: unknown) {
   if (!error || typeof error !== "object") {
     return false;
@@ -44,6 +65,13 @@ function isRlsError(error: unknown) {
 }
 
 export async function getNexusAISettings(userId: string) {
+  const scope = await getStoredAccountScope();
+  const local = await getLocalSettings(userId, scope);
+
+  if (local) {
+    return local;
+  }
+
   const { data, error } = await supabase
     .from("nexus_ai_settings")
     .select("*")
@@ -61,7 +89,9 @@ export async function getNexusAISettings(userId: string) {
           reason: error.message,
         },
       });
-      return defaultNexusAISettings(userId);
+      const fallback = defaultNexusAISettings(userId);
+      await setLocalSettings(userId, scope, fallback);
+      return fallback;
     }
 
     throw error;
@@ -88,22 +118,28 @@ export async function getNexusAISettings(userId: string) {
           },
         });
 
+        await setLocalSettings(userId, scope, defaults);
         return defaults;
       }
 
       throw insertError;
     }
 
-    return inserted as NexusAISettings;
+    const insertedSettings = inserted as NexusAISettings;
+    await setLocalSettings(userId, scope, insertedSettings);
+    return insertedSettings;
   }
 
-  return data as NexusAISettings;
+  const settings = data as NexusAISettings;
+  await setLocalSettings(userId, scope, settings);
+  return settings;
 }
 
 export async function updateNexusAISettings(
   userId: string,
   updates: Partial<Omit<NexusAISettings, "user_id">>
 ) {
+  const scope = await getStoredAccountScope();
   const { data, error } = await supabase
     .from("nexus_ai_settings")
     .update({
@@ -126,14 +162,18 @@ export async function updateNexusAISettings(
         },
       });
 
-      return {
+      const fallback = {
         ...defaultNexusAISettings(userId),
         ...updates,
       } as NexusAISettings;
+      await setLocalSettings(userId, scope, fallback);
+      return fallback;
     }
 
     throw error;
   }
 
-  return data as NexusAISettings;
+  const settings = data as NexusAISettings;
+  await setLocalSettings(userId, scope, settings);
+  return settings;
 }

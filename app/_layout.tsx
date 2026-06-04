@@ -9,6 +9,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { beginStartupEvidenceLaunch } from "../src/services/startupEvidence";
 import { logStartupInfo } from "../src/services/startupLogger";
 import { StartupCoordinator } from "../src/startup/StartupCoordinator";
+import { AccountProvider } from "../src/state/AccountContext";
 import { AuthProvider } from "../src/state/AuthContext";
 import { DeviceUnlockProvider } from "../src/state/DeviceUnlockContext";
 import { PaymentMethodsProvider } from "../src/state/PaymentMethodsContext";
@@ -32,25 +33,27 @@ export default function Layout() {
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#000000", opacity: 1 }}>
       <View style={{ flex: 1, backgroundColor: "#000000" }}>
         <SafeAreaProvider>
-          <AuthProvider>
-            <DeviceUnlockProvider>
-              <WalletProvider>
-                <PaymentMethodsProvider>
-                  <TransferProvider>
-                    <StartupCoordinator>
-                      <Stack
-                        screenOptions={{
-                          headerShown: false,
-                          contentStyle: { backgroundColor: "#000000" },
-                          animation: "none",
-                        }}
-                      />
-                    </StartupCoordinator>
-                  </TransferProvider>
-                </PaymentMethodsProvider>
-              </WalletProvider>
-            </DeviceUnlockProvider>
-          </AuthProvider>
+          <AccountProvider>
+            <AuthProvider>
+              <DeviceUnlockProvider>
+                <WalletProvider>
+                  <PaymentMethodsProvider>
+                    <TransferProvider>
+                      <StartupCoordinator>
+                        <Stack
+                          screenOptions={{
+                            headerShown: false,
+                            contentStyle: { backgroundColor: "#000000" },
+                            animation: "none",
+                          }}
+                        />
+                      </StartupCoordinator>
+                    </TransferProvider>
+                  </PaymentMethodsProvider>
+                </WalletProvider>
+              </DeviceUnlockProvider>
+            </AuthProvider>
+          </AccountProvider>
         </SafeAreaProvider>
 
         {ROOT_DEBUG_VISUAL ? (

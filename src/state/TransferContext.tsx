@@ -1,16 +1,17 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { createTransferId } from "../lib/id";
 import { supabase } from "../lib/supabase";
-import { loadCompletedTransfers, saveCompletedTransfer } from "../services/transferService";
 import { saveRecipientFromTransfer } from "../services/recipientService";
 import { writeTransactionAuditLog } from "../services/transactionAuditService";
+import { loadCompletedTransfers, saveCompletedTransfer } from "../services/transferService";
 import {
-  FundingMethod,
-  FundingStatus,
-  Recipient,
-  RouteQuote,
-  Transfer,
+    FundingMethod,
+    FundingStatus,
+    Recipient,
+    RouteQuote,
+    Transfer,
 } from "../types/transfer";
+import { useAccount } from "./AccountContext";
 
 interface TransferContextType {
   transfer: Transfer | null;
@@ -34,6 +35,7 @@ const TransferContext = createContext<TransferContextType | undefined>(
 );
 
 export function TransferProvider({ children }: { children: React.ReactNode }) {
+  const { accountScope } = useAccount();
   const [transfer, setTransfer] = useState<Transfer | null>(null);
   const [completedTransfers, setCompletedTransfers] = useState<Transfer[]>([]);
   const [isLoadingTransfers, setIsLoadingTransfers] = useState(false);
@@ -78,6 +80,7 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
       fundingStatus: "NOT_STARTED",
       status: "CREATED",
       createdAt: Date.now(),
+      accountScope,
     };
 
     setTransfer(newTransfer);

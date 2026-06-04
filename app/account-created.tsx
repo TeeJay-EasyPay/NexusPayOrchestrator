@@ -50,7 +50,7 @@ export default function AccountCreatedScreen() {
 
             <AppButton
               title="Continue to Login"
-              onPress={() => router.replace("/auth")}
+              onPress={() => router.replace("/multi-account-preview")}
             />
           </View>
         </AppCard>
