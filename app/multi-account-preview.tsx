@@ -13,7 +13,7 @@ import { colors } from "../src/theme/colors";
 
 export default function MultiAccountPreviewScreen() {
   const router = useRouter();
-  const { enableDemoAccess } = useAuth();
+  const { enableDemoAccess, enablePrivateUserAccess } = useAuth();
   const { setAccountScope } = useAccount();
   const { unlock, unlockWithPassword, biometricAvailable, lockApp } = useDeviceUnlock();
   const [busy, setBusy] = useState(false);
@@ -71,7 +71,7 @@ export default function MultiAccountPreviewScreen() {
       }
 
       await setAccountScope("personal");
-      const error = await enableDemoAccess();
+      const error = await enablePrivateUserAccess();
 
       if (error) {
         setErrorMessage(error);

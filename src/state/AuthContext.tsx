@@ -22,6 +22,8 @@ import {
 
 const DEMO_EMAIL = process.env.EXPO_PUBLIC_DEMO_EMAIL;
 const DEMO_PASSWORD = process.env.EXPO_PUBLIC_DEMO_PASSWORD;
+const PRIVATE_USER_EMAIL = process.env.EXPO_PUBLIC_PRIVATE_USER_EMAIL;
+const PRIVATE_USER_PASSWORD = process.env.EXPO_PUBLIC_PRIVATE_USER_PASSWORD;
 
 const FORCE_LOGIN_ON_DEV_RELOAD = process.env.EXPO_PUBLIC_FORCE_LOGIN_ON_DEV_RELOAD === "true";
 const AUTH_BOOTSTRAP_TIMEOUT_MS = 8000;
@@ -36,6 +38,7 @@ interface AuthContextType {
   sessionValidated: boolean;
   demoAccessEnabled: boolean;
   enableDemoAccess: () => Promise<string | null>;
+  enablePrivateUserAccess: () => Promise<string | null>;
   disableDemoAccess: () => void;
   signIn: (email: string, password: string) => Promise<string | null>;
   signUp: (email: string, password: string) => Promise<string | null>;
@@ -492,6 +495,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return null;
   }
 
+  async function enablePrivateUserAccess() {
+    if (!PRIVATE_USER_EMAIL || !PRIVATE_USER_PASSWORD) {
+      return "Private user access is not configured. Add EXPO_PUBLIC_PRIVATE_USER_EMAIL and EXPO_PUBLIC_PRIVATE_USER_PASSWORD to your .env file.";
+    }
+
+    const error = await signIn(PRIVATE_USER_EMAIL, PRIVATE_USER_PASSWORD);
+
+    if (error) {
+      setDemoAccessEnabled(false);
+      return error;
+    }
+
+    setDemoAccessEnabled(false);
+
+    await writeAuditLog({
+      eventType: "LOGIN",
+      metadata: {
+        email: PRIVATE_USER_EMAIL.trim().toLowerCase(),
+        mode: "FOUNDER_VALIDATION_PRIVATE_USER_ACCESS",
+      },
+    });
+
+    return null;
+  }
+
   function disableDemoAccess() {
     setDemoAccessEnabled(false);
   }
@@ -600,6 +628,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     sessionValidated,
     demoAccessEnabled,
     enableDemoAccess,
+    enablePrivateUserAccess,
     disableDemoAccess,
     signIn,
     signUp,

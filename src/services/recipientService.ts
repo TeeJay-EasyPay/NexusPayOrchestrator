@@ -152,6 +152,11 @@ async function loadRecipientsFromTransfers(userId: string): Promise<SavedRecipie
   const dedupedRecipients = new Map<string, SavedRecipient>();
 
   for (const row of data ?? []) {
+    const selectedRoute = row.selected_route as RouteQuote | undefined;
+    const rowScope = selectedRoute?.accountScope ?? "demo";
+
+    if (rowScope !== scope) continue;
+
     const recipient = recipientFromTransferRow(row, `${userId}-${scope}`);
     const key = buildRecipientKey(recipient);
 
