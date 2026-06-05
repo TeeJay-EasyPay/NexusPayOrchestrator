@@ -1,6 +1,6 @@
-import { usePathname, useRouter } from "expo-router";
+import { useNavigationContainerRef, usePathname, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 
 import { UnlockPanel } from "../components/auth/UnlockPanel";
@@ -14,7 +14,8 @@ import {
   isPublicStartupRoute,
   normalizeStartupPathname,
 } from "./startupRoutes";
-import { resolveStartupDecision, StartupDecision } from "./startupStateMachine";
+import { resolveStartupDecision } from "./startupStateMachine";
+import type { StartupDecision } from "./startupStateMachine";
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
@@ -31,6 +32,7 @@ function LoadingOverlay() {
 
 export function StartupCoordinator({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const rootNavigationRef = useNavigationContainerRef();
   const pathname = normalizeStartupPathname(usePathname());
   const {
     session,
@@ -46,6 +48,7 @@ export function StartupCoordinator({ children }: { children: React.ReactNode }) 
   const evidenceSequenceRef = useRef(0);
   const splashHiddenRef = useRef(false);
   const founderValidationRouteReachedRef = useRef(false);
+  const [rootNavigationReady, setRootNavigationReady] = useState(false);
 
   if (!isPublicStartupRoute(pathname)) {
     lastProtectedRouteRef.current = pathname;
@@ -114,6 +117,37 @@ export function StartupCoordinator({ children }: { children: React.ReactNode }) 
   }, [pathname]);
 
   useEffect(() => {
+    if (rootNavigationReady) {
+      return;
+    }
+
+    let cancelled = false;
+    let frame: number | null = null;
+
+    const checkNavigationReady = () => {
+      if (cancelled) {
+        return;
+      }
+
+      if (rootNavigationRef.current?.isReady()) {
+        setRootNavigationReady(true);
+        return;
+      }
+
+      frame = requestAnimationFrame(checkNavigationReady);
+    };
+
+    frame = requestAnimationFrame(checkNavigationReady);
+
+    return () => {
+      cancelled = true;
+      if (frame !== null) {
+        cancelAnimationFrame(frame);
+      }
+    };
+  }, [rootNavigationReady, rootNavigationRef]);
+
+  useEffect(() => {
     evidenceSequenceRef.current += 1;
     const sequence = evidenceSequenceRef.current;
 
@@ -173,6 +207,10 @@ export function StartupCoordinator({ children }: { children: React.ReactNode }) 
 
     const target = decision.routeAction.targetRoute;
 
+    if (!rootNavigationReady) {
+      return;
+    }
+
     if (!target || pathname === target) {
       redirectInFlightRef.current = null;
       return;
@@ -197,7 +235,7 @@ export function StartupCoordinator({ children }: { children: React.ReactNode }) 
     });
 
     router.replace(target as never);
-  }, [decision, pathname, router]);
+  }, [decision, pathname, rootNavigationReady, router]);
 
   useEffect(() => {
     redirectInFlightRef.current = null;
