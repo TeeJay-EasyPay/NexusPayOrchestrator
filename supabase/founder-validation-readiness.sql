@@ -14,9 +14,9 @@
 --      demo@nexuspay.app
 --      4db7a3ef-bbd6-4782-bf0d-65e0200641fa
 -- 2. Create the private Auth user in Supabase Authentication > Users.
--- 3. Replace the two placeholders below:
---      __PRIVATE_USER_ID__
---      __PRIVATE_USER_EMAIL__
+-- 3. Confirm the private Auth user exists:
+--      private.user@nexuspay.app
+--      b5d0a4f3-8038-469e-8bfc-1ff45f43719b
 --
 -- This script does not create Supabase Auth users or passwords.
 -- Auth users must be created through Supabase Auth/admin tooling.
@@ -29,23 +29,20 @@ create extension if not exists pgcrypto;
 do $$
 declare
   demo_user_id constant uuid := '4db7a3ef-bbd6-4782-bf0d-65e0200641fa';
-  private_user_id_text constant text := '__PRIVATE_USER_ID__';
-  private_user_id uuid;
-  private_user_email constant text := '__PRIVATE_USER_EMAIL__';
+  private_user_id constant uuid := 'b5d0a4f3-8038-469e-8bfc-1ff45f43719b';
+  private_user_email constant text := 'private.user@nexuspay.app';
   demo_exists boolean;
   private_exists boolean;
 begin
-  if private_user_id_text = '__PRIVATE_USER_ID__'
-    or private_user_email = '__PRIVATE_USER_EMAIL__' then
-    raise exception 'Replace __PRIVATE_USER_ID__ and __PRIVATE_USER_EMAIL__ before running founder-validation-readiness.sql';
-  end if;
-
-  private_user_id := private_user_id_text::uuid;
-
   select exists(select 1 from auth.users where id = demo_user_id)
     into demo_exists;
 
-  select exists(select 1 from auth.users where id = private_user_id and email = private_user_email)
+  select exists(
+    select 1
+    from auth.users
+    where id = private_user_id
+      and lower(email) = lower(private_user_email)
+  )
     into private_exists;
 
   if not demo_exists then
@@ -68,6 +65,11 @@ create table if not exists public.profiles (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.profiles
+  add column if not exists display_name text,
+  add column if not exists account_purpose text,
+  add column if not exists updated_at timestamptz not null default now();
 
 create table if not exists public.transfers (
   id text primary key,
@@ -151,6 +153,9 @@ create index if not exists payment_methods_user_id_idx
 create unique index if not exists payment_methods_one_primary_per_user_idx
   on public.payment_methods(user_id)
   where is_primary = true;
+
+create unique index if not exists payment_methods_user_reference_idx
+  on public.payment_methods(user_id, reference);
 
 create table if not exists public.nexus_ai_settings (
   user_id uuid primary key references auth.users(id) on delete cascade,
@@ -294,17 +299,9 @@ do $$
 declare
   demo_user_id constant uuid := '4db7a3ef-bbd6-4782-bf0d-65e0200641fa';
   demo_email constant text := 'demo@nexuspay.app';
-  private_user_id_text constant text := '__PRIVATE_USER_ID__';
-  private_user_id uuid;
-  private_user_email constant text := '__PRIVATE_USER_EMAIL__';
+  private_user_id constant uuid := 'b5d0a4f3-8038-469e-8bfc-1ff45f43719b';
+  private_user_email constant text := 'private.user@nexuspay.app';
 begin
-  if private_user_id_text = '__PRIVATE_USER_ID__'
-    or private_user_email = '__PRIVATE_USER_EMAIL__' then
-    raise exception 'Replace __PRIVATE_USER_ID__ and __PRIVATE_USER_EMAIL__ before running founder-validation-readiness.sql';
-  end if;
-
-  private_user_id := private_user_id_text::uuid;
-
   insert into public.profiles (id, email, display_name, account_purpose, updated_at)
   values
     (demo_user_id, demo_email, 'Demo Workspace', 'Founder Validation Corporate Experience', now()),
@@ -354,9 +351,16 @@ begin
     funding_limit_gbp
   )
   values
-    (demo_user_id, 'CARD', 'Demo corporate card', 'Founder validation demo funding', 'Demo Bank', 'demo-card-founder-validation', 'ACTIVE', true, '4242', 5000),
-    (private_user_id, 'CARD', 'Personal debit card', 'Founder validation personal funding', 'Personal Bank', 'personal-card-founder-validation', 'ACTIVE', true, '1111', 1000)
-  on conflict do nothing;
+    (demo_user_id, 'CARD', 'Demo corporate card', 'Founder validation demo funding', 'Demo Bank', 'demo-card-founder-validation', 'ACTIVE', false, '4242', 5000),
+    (private_user_id, 'CARD', 'Personal debit card', 'Founder validation personal funding', 'Personal Bank', 'personal-card-founder-validation', 'ACTIVE', false, '1111', 1000)
+  on conflict (user_id, reference) do update
+  set label = excluded.label,
+      subtitle = excluded.subtitle,
+      provider = excluded.provider,
+      status = excluded.status,
+      last4 = excluded.last4,
+      funding_limit_gbp = excluded.funding_limit_gbp,
+      updated_at = now();
 
   insert into public.recipients (
     id,
@@ -495,27 +499,27 @@ select
 from auth.users
 where id in (
   '4db7a3ef-bbd6-4782-bf0d-65e0200641fa',
-  '__PRIVATE_USER_ID__'
+  'b5d0a4f3-8038-469e-8bfc-1ff45f43719b'
 )
 order by email;
 
 select 'profiles' as table_name, id::text as owner_id, count(*) from public.profiles
-where id in ('4db7a3ef-bbd6-4782-bf0d-65e0200641fa', '__PRIVATE_USER_ID__')
+where id in ('4db7a3ef-bbd6-4782-bf0d-65e0200641fa', 'b5d0a4f3-8038-469e-8bfc-1ff45f43719b')
 group by id
 union all
 select 'transfers', user_id::text, count(*) from public.transfers
-where user_id in ('4db7a3ef-bbd6-4782-bf0d-65e0200641fa', '__PRIVATE_USER_ID__')
+where user_id in ('4db7a3ef-bbd6-4782-bf0d-65e0200641fa', 'b5d0a4f3-8038-469e-8bfc-1ff45f43719b')
 group by user_id
 union all
 select 'recipients', user_id::text, count(*) from public.recipients
-where user_id in ('4db7a3ef-bbd6-4782-bf0d-65e0200641fa', '__PRIVATE_USER_ID__')
+where user_id in ('4db7a3ef-bbd6-4782-bf0d-65e0200641fa', 'b5d0a4f3-8038-469e-8bfc-1ff45f43719b')
 group by user_id
 union all
 select 'payment_methods', user_id::text, count(*) from public.payment_methods
-where user_id in ('4db7a3ef-bbd6-4782-bf0d-65e0200641fa', '__PRIVATE_USER_ID__')
+where user_id in ('4db7a3ef-bbd6-4782-bf0d-65e0200641fa', 'b5d0a4f3-8038-469e-8bfc-1ff45f43719b')
 group by user_id
 union all
 select 'nexus_ai_settings', user_id::text, count(*) from public.nexus_ai_settings
-where user_id in ('4db7a3ef-bbd6-4782-bf0d-65e0200641fa', '__PRIVATE_USER_ID__')
+where user_id in ('4db7a3ef-bbd6-4782-bf0d-65e0200641fa', 'b5d0a4f3-8038-469e-8bfc-1ff45f43719b')
 group by user_id
 order by table_name, owner_id;
