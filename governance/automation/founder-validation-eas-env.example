@@ -1,0 +1,17 @@
+# Founder Validation EAS environment template
+#
+# Do not commit real passwords in this file.
+# Configure these values in EAS with:
+#   eas env:create --environment preview --name <NAME> --value <VALUE> --visibility <plaintext|sensitive>
+#
+# Public Supabase client configuration
+EXPO_PUBLIC_SUPABASE_URL=https://gsekiwpqzushrmglncns.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=<supabase-anon-key>
+
+# Demo Workspace / Corporate Experience
+EXPO_PUBLIC_DEMO_EMAIL=demo@nexuspay.app
+EXPO_PUBLIC_DEMO_PASSWORD=<demo-password>
+
+# Personal Account / Consumer Experience
+EXPO_PUBLIC_PRIVATE_USER_EMAIL=<private-user-email>
+EXPO_PUBLIC_PRIVATE_USER_PASSWORD=<private-user-password>
