@@ -6,16 +6,17 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText } from "../ui/AppText";
 
 export const consumerColors = {
-  background: "#EAF4FF",
-  blue: "#0B4F8A",
-  blueDark: "#073B66",
-  blueSoft: "#D7ECFF",
+  background: "#F4F8FD",
+  blue: "#0A3D78",
+  blueDark: "#062D5A",
+  blueSoft: "#DCEBFF",
   white: "#FFFFFF",
-  text: "#102033",
-  muted: "#5D7188",
-  border: "#C8DAEC",
+  text: "#0F2239",
+  muted: "#5F728A",
+  border: "#CBD8E7",
   success: "#0F8A5F",
-  warning: "#A66A00",
+  warning: "#8C5D06",
+  surface: "#F8FBFF",
 };
 
 const tabs = [
@@ -166,9 +167,11 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 18,
-    paddingTop: 10,
-    paddingBottom: 24,
+    paddingTop: 12,
+    paddingBottom: 26,
     backgroundColor: consumerColors.blue,
+    borderBottomLeftRadius: 14,
+    borderBottomRightRadius: 14,
   },
   identity: {
     flexDirection: "row",
@@ -180,9 +183,11 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: consumerColors.blueDark,
+    backgroundColor: "#0B4D95",
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.28)",
   },
   avatarText: {
     fontWeight: "900",
@@ -203,7 +208,7 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
   title: {
-    fontSize: 34,
+    fontSize: 32,
     fontWeight: "900",
     marginTop: 6,
   },
@@ -211,22 +216,28 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 23,
     marginTop: 7,
+    maxWidth: 420,
   },
   content: {
-    paddingHorizontal: 14,
-    paddingTop: 14,
+    paddingHorizontal: 16,
+    paddingTop: 16,
     gap: 12,
   },
   card: {
-    backgroundColor: consumerColors.white,
-    borderRadius: 8,
+    backgroundColor: consumerColors.surface,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: consumerColors.border,
     padding: 16,
     gap: 12,
+    shadowColor: "#0F2239",
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
   },
   cardAccent: {
-    backgroundColor: "#F7FBFF",
+    backgroundColor: "#EEF5FF",
   },
   pill: {
     alignSelf: "flex-start",
@@ -236,7 +247,7 @@ const styles = StyleSheet.create({
   },
   action: {
     minHeight: 46,
-    borderRadius: 8,
+    borderRadius: 10,
     backgroundColor: consumerColors.blue,
     alignItems: "center",
     justifyContent: "center",
@@ -258,7 +269,7 @@ const styles = StyleSheet.create({
     right: 10,
     bottom: 10,
     minHeight: 72,
-    borderRadius: 8,
+    borderRadius: 12,
     backgroundColor: consumerColors.white,
     borderWidth: 1,
     borderColor: consumerColors.border,

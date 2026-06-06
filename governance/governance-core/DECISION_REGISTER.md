@@ -651,6 +651,63 @@ Approved Implementation / Certification NO-GO
 
 ---
 
+## Decision ID
+D-012
+
+## Title
+Consumer Banking Experience Sprint Authorization Under Startup V2 Preservation Constraints
+
+## Date
+2026-06-06
+
+## Decision Owner
+Chief Orchestrator
+
+## Participating Roles
+- Founder / CEO
+- Chief Orchestrator
+- Chief Technology Officer
+- Testing Director
+- Engineering Quality & Assurance Officer
+
+## Background
+Founder Validation confirmed Startup V2 architecture, multi-account authentication, account isolation foundations, Supabase integration, Nexus AI integration, EAS configuration, and APK launch into the Multi-Account Preview entry. The Personal Account workspace remained functional but prototype-grade in UX and incomplete for real send, tracking, history, and persisted profile/settings behavior.
+
+## Decision
+Authorize a dedicated Consumer Banking Experience Sprint to transform the Personal Account workspace into a premium consumer banking experience while preserving Startup V2, authentication, account isolation, Supabase integration, Nexus AI integration, Demo Workspace behavior, APK compatibility, and EAS environment-variable architecture.
+
+## Rationale
+Consumer value can be increased immediately without destabilizing validated foundations by using additive implementation that reuses existing route, transfer, recipient, audit, and settings services.
+
+## Alternatives Considered
+- Delay consumer upgrades until full enterprise account schema migration.
+- Replace validated startup/authentication paths with a separate consumer-only architecture.
+- Continue with static prototype consumer screens and defer real flows.
+
+## Risks
+- Medium: Regression risk if consumer UI rewrites bypass established transfer orchestration services.
+- Medium: Data isolation risk if account-scope filtering is not enforced consistently in all consumer reads/writes.
+- Low: Visual redesign drift from NexusPay design standards if tokens and shell patterns diverge.
+
+## Expected Outcome
+Consumer workspace supports real transfer creation, user-scoped tracking/history, and persisted profile/settings while preserving validated startup/auth/account architecture and maintaining release gating through existing governance controls.
+
+## Status
+Approved and Active
+
+## Follow-up Actions
+1. Deliver required programme reports and founder briefing package for the sprint.
+2. Validate consumer flows with lint, diagnostics, and user-scope isolation checks before APK recommendation.
+3. Keep Demo Workspace unchanged and document Corporate Workspace V2 roadmap recommendations without modifying existing corporate functionality.
+
+## Reference Documents
+- [../founder-review-packages/CONSUMER_BANKING_EXPERIENCE_SPRINT_2026-06-06/EXECUTIVE_PROGRAMME_REVIEW.md](../founder-review-packages/CONSUMER_BANKING_EXPERIENCE_SPRINT_2026-06-06/EXECUTIVE_PROGRAMME_REVIEW.md)
+- [../founder-review-packages/CONSUMER_BANKING_EXPERIENCE_SPRINT_2026-06-06/CONSUMER_BANKING_SPRINT_PLAN.md](../founder-review-packages/CONSUMER_BANKING_EXPERIENCE_SPRINT_2026-06-06/CONSUMER_BANKING_SPRINT_PLAN.md)
+- [../founder-review-packages/CONSUMER_BANKING_EXPERIENCE_SPRINT_2026-06-06/TECHNICAL_DESIGN_REPORT.md](../founder-review-packages/CONSUMER_BANKING_EXPERIENCE_SPRINT_2026-06-06/TECHNICAL_DESIGN_REPORT.md)
+- [../founder-review-packages/CONSUMER_BANKING_EXPERIENCE_SPRINT_2026-06-06/UI_UX_DESIGN_REPORT.md](../founder-review-packages/CONSUMER_BANKING_EXPERIENCE_SPRINT_2026-06-06/UI_UX_DESIGN_REPORT.md)
+
+---
+
 ## Register Maintenance Guidance
 
 1. Add new decisions in ascending ID order.

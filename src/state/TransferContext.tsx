@@ -19,7 +19,16 @@ interface TransferContextType {
   isLoadingTransfers: boolean;
 
   hydrateTransfers: () => Promise<void>;
-  createTransfer: (amount: number) => void;
+  createTransfer: (
+    amount: number,
+    options?: {
+      recipient?: Recipient;
+      routes?: RouteQuote[];
+      selectedRoute?: RouteQuote;
+      fundingMethod?: FundingMethod;
+      fundingStatus?: FundingStatus;
+    }
+  ) => Transfer;
   setRecipient: (recipient: Recipient) => void;
   setRoutes: (routes: RouteQuote[]) => void;
   selectRoute: (route: RouteQuote) => void;
@@ -70,15 +79,30 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const createTransfer = (amount: number) => {
+  const createTransfer = (
+    amount: number,
+    options?: {
+      recipient?: Recipient;
+      routes?: RouteQuote[];
+      selectedRoute?: RouteQuote;
+      fundingMethod?: FundingMethod;
+      fundingStatus?: FundingStatus;
+    }
+  ) => {
     const newTransfer: Transfer = {
       id: createTransferId(),
       senderCurrency: "GBP",
       senderAmount: amount,
-      recipient: {} as Recipient,
-      routes: [],
-      fundingStatus: "NOT_STARTED",
-      status: "CREATED",
+      recipient: options?.recipient ?? ({} as Recipient),
+      routes: options?.routes ?? [],
+      selectedRoute: options?.selectedRoute,
+      fundingMethod: options?.fundingMethod,
+      fundingStatus: options?.fundingStatus ?? "NOT_STARTED",
+      status: options?.selectedRoute
+        ? "ROUTE_SELECTED"
+        : options?.routes?.length
+          ? "ROUTES_FETCHED"
+          : "CREATED",
       createdAt: Date.now(),
       accountScope,
     };
@@ -95,6 +119,41 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
         sender_amount: newTransfer.senderAmount,
       },
     });
+
+    if (options?.routes?.length) {
+      void writeTransactionAuditLog({
+        transactionId: newTransfer.id,
+        eventType: "ROUTES_GENERATED",
+        status: "SUCCESS",
+        message: "Route intelligence generated ranked transfer options.",
+        metadata: {
+          route_count: options.routes.length,
+          providers: options.routes.map((route) => route.provider),
+          best_route_provider: options.routes[0]?.provider,
+          best_route_score: options.routes[0]?.score,
+        },
+      });
+    }
+
+    if (options?.selectedRoute) {
+      void writeTransactionAuditLog({
+        transactionId: newTransfer.id,
+        eventType: "ROUTE_SELECTED",
+        status: "SUCCESS",
+        message: "User selected a route for transfer execution.",
+        metadata: {
+          provider: options.selectedRoute.provider,
+          rail: options.selectedRoute.rail,
+          score: options.selectedRoute.score,
+          fee: options.selectedRoute.fee,
+          estimated_time: options.selectedRoute.estimatedTime,
+          receive_amount: options.selectedRoute.receiveAmount,
+          bridge_asset: options.selectedRoute.bridgeAsset ?? null,
+        },
+      });
+    }
+
+    return newTransfer;
   };
 
   const setRecipient = (recipient: Recipient) => {

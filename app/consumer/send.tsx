@@ -1,74 +1,298 @@
-import { View } from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useMemo, useState } from "react";
+import { Pressable, TextInput, View } from "react-native";
 
 import {
-    ConsumerAction,
-    ConsumerCard,
-    ConsumerPill,
-    ConsumerShell,
-    consumerColors,
+  ConsumerAction,
+  ConsumerCard,
+  ConsumerPill,
+  ConsumerShell,
+  consumerColors,
 } from "../../src/components/consumer/ConsumerShell";
-import { routeOptions } from "../../src/components/consumer/consumerData";
+import { buildOrchestratedRouteQuotes } from "../../src/lib/settlementOrchestrator";
+import { loadSavedRecipients } from "../../src/services/recipientService";
+import { useTransfer } from "../../src/state/TransferContext";
+import { useWallet } from "../../src/state/WalletContext";
 import { AppText } from "../../src/components/ui/AppText";
+import { SavedRecipient } from "../../src/types/recipient";
+import { Currency, Recipient, RouteQuote } from "../../src/types/transfer";
+
+function inputStyle() {
+  return {
+    borderWidth: 1,
+    borderColor: consumerColors.border,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: consumerColors.white,
+    color: consumerColors.text,
+    fontSize: 15,
+  } as const;
+}
+
+function asString(value: string | string[] | undefined) {
+  if (Array.isArray(value)) {
+    return value[0] ?? "";
+  }
+
+  return value ?? "";
+}
+
+function toRecipient(saved: SavedRecipient): Recipient {
+  return {
+    name: saved.name,
+    firstName: saved.firstName,
+    middleName: saved.middleName,
+    surname: saved.surname,
+    country: saved.country,
+    currency: saved.currency,
+    payoutMethod: saved.payoutMethod,
+    bankName: saved.bankName,
+    bankCode: saved.bankCode,
+    accountNumber: saved.accountNumber,
+    mobileWalletProvider: saved.mobileWalletProvider,
+    mobileNumber: saved.mobileNumber,
+  };
+}
 
 export default function ConsumerSendScreen() {
+  const router = useRouter();
+  const params = useLocalSearchParams();
+  const { simulatedRlusdBalance } = useWallet();
+  const { createTransfer } = useTransfer();
+
+  const [amount, setAmount] = useState(asString(params.amount) || "250");
+  const [savedRecipients, setSavedRecipients] = useState<SavedRecipient[]>([]);
+  const [selectedRecipientId, setSelectedRecipientId] = useState(asString(params.recipientId));
+  const [manualName, setManualName] = useState(asString(params.name));
+  const [manualCountry, setManualCountry] = useState(asString(params.country) || "Philippines");
+  const [manualCurrency, setManualCurrency] = useState<Currency>(
+    (asString(params.currency) as Currency) || "PHP"
+  );
+  const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    loadSavedRecipients().then((rows) => {
+      if (!mounted) return;
+      setSavedRecipients(rows);
+
+      if (!selectedRecipientId && rows[0]?.id) {
+        setSelectedRecipientId(rows[0].id);
+      }
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, [selectedRecipientId]);
+
+  const selectedSavedRecipient = useMemo(
+    () => savedRecipients.find((recipient) => recipient.id === selectedRecipientId),
+    [savedRecipients, selectedRecipientId]
+  );
+
+  const parsedAmount = Number(amount);
+  const sendAmount = Number.isFinite(parsedAmount) ? parsedAmount : 0;
+
+  const recipient = useMemo<Recipient | null>(() => {
+    if (selectedSavedRecipient) {
+      return toRecipient(selectedSavedRecipient);
+    }
+
+    if (!manualName.trim()) {
+      return null;
+    }
+
+    return {
+      name: manualName.trim(),
+      country: manualCountry.trim() || "Philippines",
+      currency: manualCurrency,
+      payoutMethod: "BANK",
+      bankName: "Recipient Bank",
+      accountNumber: "****1234",
+    };
+  }, [manualCountry, manualCurrency, manualName, selectedSavedRecipient]);
+
+  const routes = useMemo<RouteQuote[]>(() => {
+    if (!recipient || sendAmount <= 0) {
+      return [];
+    }
+
+    return buildOrchestratedRouteQuotes({
+      amount: sendAmount,
+      currency: recipient.currency,
+      simulatedRlusdBalance,
+    });
+  }, [recipient, sendAmount, simulatedRlusdBalance]);
+
+  const selectedRoute = routes.find((route) => route.id === selectedRouteId) ?? routes[0];
+
+  function submitTransfer() {
+    if (!recipient) {
+      setErrorMessage("Select a recipient or add recipient details.");
+      return;
+    }
+
+    if (sendAmount <= 0) {
+      setErrorMessage("Enter a valid amount greater than 0.");
+      return;
+    }
+
+    if (!selectedRoute) {
+      setErrorMessage("Choose a delivery route to continue.");
+      return;
+    }
+
+    createTransfer(sendAmount, {
+      recipient,
+      routes,
+      selectedRoute,
+      fundingMethod: "OPEN_BANKING",
+      fundingStatus: "AUTHORISED",
+    });
+
+    router.push("/consumer/track" as never);
+  }
+
   return (
     <ConsumerShell
       eyebrow="SEND"
-      title="Send money"
-      subtitle="Choose the amount, recipient and delivery option that best fits your needs."
+      title="Real transfer creation"
+      subtitle="Create and persist a transfer with recipient, amount and route selection."
     >
       <ConsumerCard>
         <AppText variant="caption" color={consumerColors.muted}>
-          You send
+          Amount to send (GBP)
         </AppText>
-        <AppText color={consumerColors.text} style={{ fontSize: 32, fontWeight: "900" }}>
-          GBP 250.00
-        </AppText>
-        <AppText color={consumerColors.muted}>Recipient: Maria Santos - Philippines</AppText>
+        <TextInput
+          value={amount}
+          onChangeText={setAmount}
+          keyboardType="decimal-pad"
+          placeholder="250"
+          placeholderTextColor={consumerColors.muted}
+          style={inputStyle()}
+        />
       </ConsumerCard>
 
       <ConsumerCard accent>
         <AppText color={consumerColors.text} style={{ fontWeight: "900", fontSize: 18 }}>
-          Choose delivery option
+          Recipient selection
         </AppText>
-        {routeOptions.map((option) => (
-          <View
-            key={option.title}
-            style={{
-              borderWidth: 1,
-              borderColor: consumerColors.border,
-              borderRadius: 8,
-              padding: 12,
-              gap: 7,
-              backgroundColor: consumerColors.white,
-            }}
-          >
-            <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
-              <View style={{ flex: 1 }}>
-                <AppText color={consumerColors.text} style={{ fontWeight: "900", fontSize: 17 }}>
-                  {option.title}
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          {savedRecipients.map((item) => {
+            const active = item.id === selectedRecipientId;
+            return (
+              <Pressable
+                key={item.id}
+                onPress={() => setSelectedRecipientId(item.id)}
+                style={{
+                  paddingHorizontal: 10,
+                  paddingVertical: 8,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: active ? consumerColors.blue : consumerColors.border,
+                  backgroundColor: active ? consumerColors.blueSoft : consumerColors.white,
+                }}
+              >
+                <AppText
+                  variant="caption"
+                  style={{ color: active ? consumerColors.blueDark : consumerColors.muted, fontWeight: "900" }}
+                >
+                  {item.name}
                 </AppText>
-                <AppText color={consumerColors.muted}>{option.subtitle}</AppText>
-              </View>
-              <ConsumerPill label={option.eta} tone={option.title === "Cheapest" ? "gold" : "green"} />
-            </View>
-            <AppText color={consumerColors.text} style={{ fontWeight: "900" }}>
-              Amount received: {option.received}
-            </AppText>
-            <AppText color={consumerColors.muted}>FX rate: {option.rate}</AppText>
-            <AppText color={consumerColors.muted}>Fee: {option.fee}</AppText>
-          </View>
-        ))}
+              </Pressable>
+            );
+          })}
+        </View>
+
+        <AppText variant="caption" color={consumerColors.muted}>
+          Or add new recipient details
+        </AppText>
+        <TextInput
+          value={manualName}
+          onChangeText={(value) => {
+            setSelectedRecipientId("");
+            setManualName(value);
+          }}
+          placeholder="Recipient full name"
+          placeholderTextColor={consumerColors.muted}
+          style={inputStyle()}
+        />
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <TextInput
+            value={manualCountry}
+            onChangeText={setManualCountry}
+            placeholder="Country"
+            placeholderTextColor={consumerColors.muted}
+            style={[inputStyle(), { flex: 1 }]}
+          />
+          <TextInput
+            value={manualCurrency}
+            onChangeText={(value) => setManualCurrency((value.toUpperCase() as Currency) || "PHP")}
+            placeholder="Currency"
+            placeholderTextColor={consumerColors.muted}
+            style={[inputStyle(), { flex: 1 }]}
+          />
+        </View>
       </ConsumerCard>
 
       <ConsumerCard>
         <AppText color={consumerColors.text} style={{ fontWeight: "900", fontSize: 18 }}>
-          Before you continue
+          Route selection
+        </AppText>
+        {routes.length === 0 ? (
+          <AppText color={consumerColors.muted}>Enter recipient and amount to see available routes.</AppText>
+        ) : null}
+        {routes.map((route, index) => {
+          const active = (selectedRoute?.id ?? "") === route.id;
+          return (
+            <Pressable
+              key={route.id}
+              onPress={() => setSelectedRouteId(route.id)}
+              style={{
+                borderWidth: 1,
+                borderColor: active ? consumerColors.blue : consumerColors.border,
+                borderRadius: 8,
+                padding: 12,
+                gap: 7,
+                backgroundColor: active ? consumerColors.blueSoft : consumerColors.white,
+              }}
+            >
+              <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
+                <View style={{ flex: 1 }}>
+                  <AppText color={consumerColors.text} style={{ fontWeight: "900", fontSize: 17 }}>
+                    {index === 0 ? "Recommended" : `Option ${index + 1}`} • {route.provider}
+                  </AppText>
+                  <AppText color={consumerColors.muted}>{route.rail} • ETA {route.estimatedTime}</AppText>
+                </View>
+                <ConsumerPill label={`Score ${route.score}`} tone={index === 0 ? "green" : "blue"} />
+              </View>
+              <AppText color={consumerColors.text} style={{ fontWeight: "900" }}>
+                Amount received: {route.receiveAmount.toFixed(2)} {recipient?.currency ?? "PHP"}
+              </AppText>
+              <AppText color={consumerColors.muted}>FX rate: {route.fxRate.toFixed(2)}</AppText>
+              <AppText color={consumerColors.muted}>Fee: GBP {route.fee.toFixed(2)}</AppText>
+            </Pressable>
+          );
+        })}
+      </ConsumerCard>
+
+      <ConsumerCard accent>
+        <AppText color={consumerColors.text} style={{ fontWeight: "900", fontSize: 18 }}>
+          Confirmation
         </AppText>
         <AppText color={consumerColors.muted}>
-          You will see the final receipt, estimated arrival time, and all costs before confirmation.
+          Transfer creation persists data and opens live tracking for the selected route.
         </AppText>
-        <ConsumerAction label="Continue" icon="arrow-right" onPress={() => undefined} />
+        {errorMessage ? (
+          <AppText variant="caption" style={{ color: "#B91C1C", fontWeight: "900" }}>
+            {errorMessage}
+          </AppText>
+        ) : null}
+        <ConsumerAction label="Create transfer" icon="arrow-right" onPress={submitTransfer} />
       </ConsumerCard>
     </ConsumerShell>
   );

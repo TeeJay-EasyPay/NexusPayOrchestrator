@@ -1,43 +1,151 @@
+import { useEffect, useMemo, useState } from "react";
 import { View } from "react-native";
 
 import {
-    ConsumerAction,
-    ConsumerCard,
-    ConsumerPill,
-    ConsumerShell,
-    consumerColors,
+  ConsumerAction,
+  ConsumerCard,
+  ConsumerPill,
+  ConsumerShell,
+  consumerColors,
 } from "../../src/components/consumer/ConsumerShell";
-import { transferTimeline } from "../../src/components/consumer/consumerData";
 import { AppText } from "../../src/components/ui/AppText";
+import { loadTransactionAuditLogs } from "../../src/services/transactionAuditService";
+import { useTransfer } from "../../src/state/TransferContext";
+
+type TimelineStep = {
+  title: string;
+  state: "Done" | "Current" | "Next";
+  detail: string;
+};
+
+function timelineForStatus(status: string): TimelineStep[] {
+  const isCompleted = status === "COMPLETED";
+  const inProgress = status === "IN_PROGRESS";
+
+  return [
+    {
+      title: "Transfer created",
+      state: "Done",
+      detail: "Transfer reference generated and secured.",
+    },
+    {
+      title: "Route selected",
+      state: status === "CREATED" ? "Next" : "Done",
+      detail: "Best delivery rail selected for recipient payout.",
+    },
+    {
+      title: "Funding authorised",
+      state: status === "FUNDING_AUTHORISED" || inProgress || isCompleted ? "Done" : "Next",
+      detail: "Funding source authorisation completed.",
+    },
+    {
+      title: "In flight",
+      state: inProgress ? "Current" : isCompleted ? "Done" : "Next",
+      detail: "Transfer execution engine is coordinating payout.",
+    },
+    {
+      title: "Delivered",
+      state: isCompleted ? "Done" : "Next",
+      detail: "Recipient payout and receipt confirmation.",
+    },
+  ];
+}
 
 export default function ConsumerTrackScreen() {
+  const { transfer, completedTransfers, startTransfer, completeTransfer, hydrateTransfers } = useTransfer();
+  const [auditLines, setAuditLines] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!transfer?.id) {
+      setAuditLines([]);
+      return;
+    }
+
+    let mounted = true;
+
+    loadTransactionAuditLogs(transfer.id).then((rows) => {
+      if (!mounted) return;
+
+      setAuditLines(
+        rows.slice(-5).map((row: any) => `${row.event_type}: ${row.message}`)
+      );
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, [transfer?.id, transfer?.status]);
+
+  const latestCompleted = completedTransfers[0] ?? null;
+  const activeTransfer = transfer ?? latestCompleted;
+
+  const timeline = useMemo(
+    () => timelineForStatus(activeTransfer?.status ?? "CREATED"),
+    [activeTransfer?.status]
+  );
+
+  async function markDelivered() {
+    if (!transfer) {
+      return;
+    }
+
+    if (transfer.status !== "IN_PROGRESS") {
+      startTransfer();
+    }
+
+    completeTransfer();
+    await hydrateTransfers();
+  }
+
+  if (!activeTransfer) {
+    return (
+      <ConsumerShell
+        eyebrow="TRACK"
+        title="No transfer to track"
+        subtitle="Create a transfer in Send to view live status and timeline updates."
+      >
+        <ConsumerCard>
+          <AppText color={consumerColors.muted}>
+            Once you create a transfer, timeline milestones and receipt details appear here.
+          </AppText>
+        </ConsumerCard>
+      </ConsumerShell>
+    );
+  }
+
+  const recipientName = activeTransfer.recipient?.name ?? "Recipient";
+  const statusLabel = activeTransfer.status === "COMPLETED" ? "Delivered" : "On track";
+  const progress = activeTransfer.status === "COMPLETED" ? 100 : activeTransfer.status === "IN_PROGRESS" ? 72 : 45;
+
   return (
     <ConsumerShell
       eyebrow="TRACK"
-      title="Track transfer"
-      subtitle="Clear progress updates and helpful guidance while your transfer is delivered."
+      title="Live transfer tracking"
+      subtitle="User-scoped timeline, status events and transfer details from your active session."
     >
       <ConsumerCard>
         <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
           <View style={{ flex: 1 }}>
             <AppText color={consumerColors.text} style={{ fontSize: 20, fontWeight: "900" }}>
-              Maria Santos
+              {recipientName}
             </AppText>
-            <AppText color={consumerColors.muted}>Reference NXP-2026-004981</AppText>
+            <AppText color={consumerColors.muted}>Reference {activeTransfer.id}</AppText>
           </View>
-          <ConsumerPill label="On track" tone="green" />
+          <ConsumerPill label={statusLabel} tone={activeTransfer.status === "COMPLETED" ? "green" : "blue"} />
         </View>
         <View style={{ height: 10, borderRadius: 999, backgroundColor: consumerColors.blueSoft, overflow: "hidden" }}>
-          <View style={{ width: "72%", height: "100%", backgroundColor: consumerColors.blue }} />
+          <View style={{ width: `${progress}%`, height: "100%", backgroundColor: consumerColors.blue }} />
         </View>
-        <AppText color={consumerColors.muted}>Estimated arrival: 4 minutes</AppText>
+        <AppText color={consumerColors.muted}>
+          {activeTransfer.selectedRoute?.provider ?? "Routing engine"} • ETA {activeTransfer.selectedRoute?.estimatedTime ?? "Pending"}
+        </AppText>
       </ConsumerCard>
 
       <ConsumerCard>
         <AppText color={consumerColors.text} style={{ fontSize: 18, fontWeight: "900" }}>
           Transfer timeline
         </AppText>
-        {transferTimeline.map((step) => (
+        {timeline.map((step) => (
           <View key={step.title} style={{ flexDirection: "row", gap: 10 }}>
             <View
               style={{
@@ -45,7 +153,12 @@ export default function ConsumerTrackScreen() {
                 height: 12,
                 borderRadius: 6,
                 marginTop: 4,
-                backgroundColor: step.state === "Done" ? consumerColors.success : consumerColors.blue,
+                backgroundColor:
+                  step.state === "Done"
+                    ? consumerColors.success
+                    : step.state === "Current"
+                      ? consumerColors.blue
+                      : consumerColors.border,
               }}
             />
             <View style={{ flex: 1 }}>
@@ -60,17 +173,24 @@ export default function ConsumerTrackScreen() {
 
       <ConsumerCard accent>
         <AppText color={consumerColors.text} style={{ fontSize: 18, fontWeight: "900" }}>
-          Nexus AI explanation panel
+          Operational events
         </AppText>
-        <AppText color={consumerColors.muted}>
-          Your transfer is moving normally. We will notify you if delivery time changes or if you need to take action.
-        </AppText>
+        {auditLines.length === 0 ? (
+          <AppText color={consumerColors.muted}>
+            Event feed will populate as transfer milestones are written to audit logs.
+          </AppText>
+        ) : (
+          auditLines.map((line) => (
+            <AppText key={line} color={consumerColors.muted}>
+              • {line}
+            </AppText>
+          ))
+        )}
       </ConsumerCard>
 
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-        <ConsumerAction label="Delivery confirmation" icon="check-circle" onPress={() => undefined} />
-        <ConsumerAction label="View receipt" icon="file-text" secondary onPress={() => undefined} />
-      </View>
+      {transfer && transfer.status !== "COMPLETED" ? (
+        <ConsumerAction label="Mark delivered" icon="check-circle" onPress={markDelivered} />
+      ) : null}
     </ConsumerShell>
   );
 }
