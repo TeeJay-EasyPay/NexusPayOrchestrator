@@ -4,11 +4,11 @@ import { useEffect, useMemo } from "react";
 import { View } from "react-native";
 
 import {
-  ConsumerAction,
-  ConsumerCard,
-  ConsumerPill,
-  ConsumerShell,
-  consumerColors,
+    ConsumerAction,
+    ConsumerCard,
+    ConsumerPill,
+    ConsumerShell,
+    consumerColors,
 } from "../../src/components/consumer/ConsumerShell";
 import { AppText } from "../../src/components/ui/AppText";
 import { useTransfer } from "../../src/state/TransferContext";
@@ -21,7 +21,7 @@ function formatGbp(value: number) {
 export default function ConsumerHomeScreen() {
   const router = useRouter();
   const { transfer, completedTransfers, hydrateTransfers } = useTransfer();
-  const { balances } = useWallet();
+  const { gbpBalance } = useWallet();
 
   useEffect(() => {
     void hydrateTransfers();
@@ -44,7 +44,7 @@ export default function ConsumerHomeScreen() {
           Available to send
         </AppText>
         <AppText color={consumerColors.text} style={{ fontSize: 34, fontWeight: "900" }}>
-          {formatGbp(balances.gbp)}
+          {formatGbp(gbpBalance)}
         </AppText>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
           <ConsumerAction label="Send money" icon="send" onPress={() => router.push("/consumer/send" as never)} />

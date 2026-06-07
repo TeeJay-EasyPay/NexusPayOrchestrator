@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { createTransferId } from "../lib/id";
 import { supabase } from "../lib/supabase";
 import { saveRecipientFromTransfer } from "../services/recipientService";
@@ -66,9 +66,9 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [hydrateTransfers]);
 
-  async function hydrateTransfers() {
+  const hydrateTransfers = useCallback(async () => {
     setIsLoadingTransfers(true);
 
     try {
@@ -77,7 +77,7 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoadingTransfers(false);
     }
-  }
+  }, []);
 
   const createTransfer = (
     amount: number,
