@@ -36,19 +36,19 @@ export default function ConsumerHomeScreen() {
   return (
     <ConsumerShell
       eyebrow="HOME"
-      title="Premium personal banking"
-      subtitle="Your user-scoped dashboard for send, track, history and profile controls."
+      title="Good afternoon"
+      subtitle="Your money movement is ready. Clear actions, trusted controls, and fast transfer visibility."
     >
-      <ConsumerCard>
+      <ConsumerCard accent>
         <AppText color={consumerColors.muted} variant="caption">
           Available to send
         </AppText>
-        <AppText color={consumerColors.text} style={{ fontSize: 34, fontWeight: "900" }}>
+        <AppText color={consumerColors.blueDark} style={{ fontSize: 40, fontWeight: "900" }}>
           {formatGbp(gbpBalance)}
         </AppText>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
           <ConsumerAction label="Send money" icon="send" onPress={() => router.push("/consumer/send" as never)} />
-          <ConsumerAction label="Track transfer" icon="clock" secondary onPress={() => router.push("/consumer/track" as never)} />
+          <ConsumerAction label="Add funding source" icon="plus-circle" secondary onPress={() => router.push("/payment-methods" as never)} />
         </View>
       </ConsumerCard>
 
@@ -70,7 +70,7 @@ export default function ConsumerHomeScreen() {
         <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
           <View style={{ flex: 1 }}>
             <AppText color={consumerColors.text} style={{ fontWeight: "900", fontSize: 18 }}>
-              Active transfer
+              Active transfer status
             </AppText>
             <AppText color={consumerColors.muted} style={{ marginTop: 4 }}>
               {transfer
@@ -78,8 +78,9 @@ export default function ConsumerHomeScreen() {
                 : "No active transfer"}
             </AppText>
           </View>
-          <ConsumerPill label={transfer ? "Live" : "Idle"} tone={transfer ? "green" : "blue"} />
+          <ConsumerPill label={transfer ? "LIVE" : "IDLE"} tone={transfer ? "green" : "blue"} />
         </View>
+        <ConsumerAction label="View transfer" icon="arrow-right" secondary onPress={() => router.push("/consumer/track" as never)} />
       </ConsumerCard>
 
       <ConsumerCard accent>

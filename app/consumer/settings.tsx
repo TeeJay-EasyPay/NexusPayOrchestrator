@@ -3,16 +3,16 @@ import { useEffect, useState } from "react";
 import { Pressable, View } from "react-native";
 
 import {
-  ConsumerAction,
-  ConsumerCard,
-  ConsumerShell,
-  consumerColors,
+    ConsumerAction,
+    ConsumerCard,
+    ConsumerShell,
+    consumerColors,
 } from "../../src/components/consumer/ConsumerShell";
 import { AppText } from "../../src/components/ui/AppText";
 import {
-  ConsumerPreferences,
-  loadConsumerSettings,
-  updateConsumerPreferences,
+    ConsumerPreferences,
+    loadConsumerSettings,
+    updateConsumerPreferences,
 } from "../../src/services/consumerSettingsService";
 import { usePaymentMethods } from "../../src/state/PaymentMethodsContext";
 
@@ -98,8 +98,8 @@ export default function ConsumerSettingsScreen() {
   return (
     <ConsumerShell
       eyebrow="SETTINGS"
-      title="Profile settings"
-      subtitle="Persisted preferences for notifications, security and personal workspace defaults."
+      title="Settings"
+      subtitle="Simple controls for your money, privacy, and security in one place."
     >
       <ConsumerCard>
         <AppText color={consumerColors.text} style={{ fontWeight: "900", fontSize: 18 }}>

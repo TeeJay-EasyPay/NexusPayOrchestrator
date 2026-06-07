@@ -3,16 +3,16 @@ import { useEffect, useState } from "react";
 import { TextInput, View } from "react-native";
 
 import {
-  ConsumerAction,
-  ConsumerCard,
-  ConsumerPill,
-  ConsumerShell,
-  consumerColors,
+    ConsumerAction,
+    ConsumerCard,
+    ConsumerPill,
+    ConsumerShell,
+    consumerColors,
 } from "../../src/components/consumer/ConsumerShell";
 import { AppText } from "../../src/components/ui/AppText";
 import {
-  loadConsumerSettings,
-  updateConsumerProfile,
+    loadConsumerSettings,
+    updateConsumerProfile,
 } from "../../src/services/consumerSettingsService";
 import { useAuth } from "../../src/state/AuthContext";
 
@@ -58,8 +58,8 @@ export default function ConsumerProfileScreen() {
   return (
     <ConsumerShell
       eyebrow="PROFILE"
-      title="Live profile"
-      subtitle="Persisted personal profile, linked to the active authenticated account scope."
+      title="Your profile"
+      subtitle="Manage identity, account controls, and verification status with confidence."
     >
       <ConsumerCard>
         <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>

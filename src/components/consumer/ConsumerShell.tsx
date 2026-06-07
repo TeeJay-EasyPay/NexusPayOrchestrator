@@ -66,10 +66,10 @@ export function ConsumerShell({
                 </AppText>
               </View>
               <View style={{ flex: 1 }}>
-                <AppText variant="caption" color={consumerColors.blueSoft}>
+                <AppText variant="caption" color={consumerColors.blue}>
                   Personal Account
                 </AppText>
-                <AppText color={consumerColors.white} style={styles.accountName}>
+                <AppText color={consumerColors.text} style={styles.accountName}>
                   NexusPay
                 </AppText>
               </View>
@@ -87,15 +87,17 @@ export function ConsumerShell({
               </View>
             </View>
 
-            <AppText variant="caption" color={consumerColors.blueSoft} style={styles.eyebrow}>
-              {eyebrow}
-            </AppText>
-            <AppText color={consumerColors.white} style={styles.title}>
-              {title}
-            </AppText>
-            <AppText color={consumerColors.blueSoft} style={styles.subtitle}>
-              {subtitle}
-            </AppText>
+            <View style={styles.heroPanel}>
+              <AppText variant="caption" color={consumerColors.blue} style={styles.eyebrow}>
+                {eyebrow}
+              </AppText>
+              <AppText color={consumerColors.blueDark} style={styles.title}>
+                {title}
+              </AppText>
+              <AppText color={consumerColors.muted} style={styles.subtitle}>
+                {subtitle}
+              </AppText>
+            </View>
 
             {menuOpen ? (
               <View style={styles.dropdown}>
@@ -213,10 +215,12 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 18,
     paddingTop: 12,
-    paddingBottom: 26,
-    backgroundColor: consumerColors.blue,
-    borderBottomLeftRadius: 14,
-    borderBottomRightRadius: 14,
+    paddingBottom: 16,
+    backgroundColor: consumerColors.white,
+    borderBottomLeftRadius: 22,
+    borderBottomRightRadius: 22,
+    borderBottomWidth: 1,
+    borderBottomColor: consumerColors.border,
   },
   identity: {
     flexDirection: "row",
@@ -228,7 +232,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: "#0B4D95",
+    backgroundColor: consumerColors.blue,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
@@ -247,7 +251,7 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.18)",
+    backgroundColor: consumerColors.blueSoft,
   },
   headerActions: {
     flexDirection: "row",
@@ -282,15 +286,24 @@ const styles = StyleSheet.create({
   eyebrow: {
     fontWeight: "900",
   },
+  heroPanel: {
+    marginTop: 2,
+    backgroundColor: consumerColors.blueSoft,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: consumerColors.border,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
   title: {
-    fontSize: 32,
+    fontSize: 34,
     fontWeight: "900",
-    marginTop: 6,
+    marginTop: 4,
   },
   subtitle: {
-    fontSize: 16,
-    lineHeight: 23,
-    marginTop: 7,
+    fontSize: 15,
+    lineHeight: 22,
+    marginTop: 6,
     maxWidth: 420,
   },
   content: {

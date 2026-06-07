@@ -175,12 +175,12 @@ export default function ConsumerSendScreen() {
   return (
     <ConsumerShell
       eyebrow="SEND"
-      title="Real transfer creation"
-      subtitle="Create and persist a transfer with recipient, amount and route selection."
+      title="Send money"
+      subtitle="Quick, clear, and confidence-first transfer setup."
     >
-      <ConsumerCard>
+      <ConsumerCard accent>
         <AppText variant="caption" color={consumerColors.muted}>
-          Amount to send (GBP)
+          Amount
         </AppText>
         <TextInput
           value={amount}
@@ -192,7 +192,7 @@ export default function ConsumerSendScreen() {
         />
       </ConsumerCard>
 
-      <ConsumerCard accent>
+      <ConsumerCard>
         <AppText color={consumerColors.text} style={{ fontWeight: "900", fontSize: 18 }}>
           Recipient selection
         </AppText>
@@ -256,7 +256,7 @@ export default function ConsumerSendScreen() {
 
       <ConsumerCard>
         <AppText color={consumerColors.text} style={{ fontWeight: "900", fontSize: 18 }}>
-          Route selection
+          Choose route
         </AppText>
         {routes.length === 0 ? (
           <AppText color={consumerColors.muted}>Enter recipient and amount to see available routes.</AppText>
@@ -286,6 +286,9 @@ export default function ConsumerSendScreen() {
                 </View>
                 <ConsumerPill label={routeLabel} tone={index === 0 ? "gold" : "green"} />
               </View>
+              <AppText color={consumerColors.muted}>
+                {index === 0 ? "Lower fees" : "Reliable delivery"}
+              </AppText>
               <AppText color={consumerColors.text} style={{ fontWeight: "900" }}>
                 Amount received: {route.receiveAmount.toFixed(2)} {recipient?.currency ?? "PHP"}
               </AppText>
@@ -298,10 +301,10 @@ export default function ConsumerSendScreen() {
 
       <ConsumerCard accent>
         <AppText color={consumerColors.text} style={{ fontWeight: "900", fontSize: 18 }}>
-          Confirmation
+          Before you continue
         </AppText>
         <AppText color={consumerColors.muted}>
-          Transfer creation persists data and opens live tracking for the selected route.
+          Transfer creation persists the record and opens tracking automatically.
         </AppText>
         {errorMessage ? (
           <AppText variant="caption" style={{ color: "#B91C1C", fontWeight: "900" }}>
