@@ -1,8 +1,11 @@
 import { Feather } from "@expo/vector-icons";
 import { usePathname, useRouter } from "expo-router";
+import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { useAccount } from "../../state/AccountContext";
+import { useAuth } from "../../state/AuthContext";
 import { AppText } from "../ui/AppText";
 
 export const consumerColors = {
@@ -40,6 +43,16 @@ export function ConsumerShell({
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const { signOut } = useAuth();
+  const { clearAccountScope } = useAccount();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  async function handleSignOut() {
+    setMenuOpen(false);
+    await clearAccountScope();
+    await signOut();
+    router.replace("/multi-account-preview" as never);
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -60,9 +73,18 @@ export function ConsumerShell({
                   NexusPay
                 </AppText>
               </View>
-              <Pressable onPress={() => router.push("/multi-account-preview" as never)} style={styles.operatorLink}>
-                <Feather name="repeat" size={15} color={consumerColors.white} />
-              </Pressable>
+              <View style={styles.headerActions}>
+                <Pressable
+                  onPress={() => router.push("/multi-account-preview" as never)}
+                  style={styles.operatorLink}
+                >
+                  <Feather name="repeat" size={15} color={consumerColors.white} />
+                </Pressable>
+
+                <Pressable onPress={() => setMenuOpen((open) => !open)} style={styles.operatorLink}>
+                  <Feather name="menu" size={16} color={consumerColors.white} />
+                </Pressable>
+              </View>
             </View>
 
             <AppText variant="caption" color={consumerColors.blueSoft} style={styles.eyebrow}>
@@ -74,6 +96,29 @@ export function ConsumerShell({
             <AppText color={consumerColors.blueSoft} style={styles.subtitle}>
               {subtitle}
             </AppText>
+
+            {menuOpen ? (
+              <View style={styles.dropdown}>
+                <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer" as never); }} style={styles.dropdownItem}>
+                  <AppText style={styles.dropdownTitle}>Home</AppText>
+                </Pressable>
+                <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/send" as never); }} style={styles.dropdownItem}>
+                  <AppText style={styles.dropdownTitle}>Send</AppText>
+                </Pressable>
+                <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/transfers" as never); }} style={styles.dropdownItem}>
+                  <AppText style={styles.dropdownTitle}>Transfers</AppText>
+                </Pressable>
+                <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/profile" as never); }} style={styles.dropdownItem}>
+                  <AppText style={styles.dropdownTitle}>Profile</AppText>
+                </Pressable>
+                <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/settings" as never); }} style={styles.dropdownItem}>
+                  <AppText style={styles.dropdownTitle}>Settings</AppText>
+                </Pressable>
+                <Pressable onPress={handleSignOut} style={[styles.dropdownItem, styles.signOutItem]}>
+                  <AppText style={styles.signOutText}>Sign out</AppText>
+                </Pressable>
+              </View>
+            ) : null}
           </View>
 
           <View style={styles.content}>{children}</View>
@@ -203,6 +248,36 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(255,255,255,0.18)",
+  },
+  headerActions: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  dropdown: {
+    marginTop: 12,
+    backgroundColor: consumerColors.white,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: consumerColors.border,
+    overflow: "hidden",
+  },
+  dropdownItem: {
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E9F0F8",
+  },
+  dropdownTitle: {
+    color: consumerColors.text,
+    fontWeight: "800",
+  },
+  signOutItem: {
+    borderBottomWidth: 0,
+    backgroundColor: "#FFF3F3",
+  },
+  signOutText: {
+    color: "#B91C1C",
+    fontWeight: "900",
   },
   eyebrow: {
     fontWeight: "900",

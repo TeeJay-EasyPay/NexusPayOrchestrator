@@ -3,17 +3,17 @@ import { useEffect, useMemo, useState } from "react";
 import { Pressable, TextInput, View } from "react-native";
 
 import {
-  ConsumerAction,
-  ConsumerCard,
-  ConsumerPill,
-  ConsumerShell,
-  consumerColors,
+    ConsumerAction,
+    ConsumerCard,
+    ConsumerPill,
+    ConsumerShell,
+    consumerColors,
 } from "../../src/components/consumer/ConsumerShell";
+import { AppText } from "../../src/components/ui/AppText";
 import { buildOrchestratedRouteQuotes } from "../../src/lib/settlementOrchestrator";
 import { loadSavedRecipients } from "../../src/services/recipientService";
 import { useTransfer } from "../../src/state/TransferContext";
 import { useWallet } from "../../src/state/WalletContext";
-import { AppText } from "../../src/components/ui/AppText";
 import { SavedRecipient } from "../../src/types/recipient";
 import { Currency, Recipient, RouteQuote } from "../../src/types/transfer";
 
@@ -59,7 +59,7 @@ export default function ConsumerSendScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { simulatedRlusdBalance } = useWallet();
-  const { createTransfer } = useTransfer();
+  const { createTransfer, startTransfer } = useTransfer();
 
   const [amount, setAmount] = useState(asString(params.amount) || "250");
   const [savedRecipients, setSavedRecipients] = useState<SavedRecipient[]>([]);
@@ -116,7 +116,7 @@ export default function ConsumerSendScreen() {
     };
   }, [manualCountry, manualCurrency, manualName, selectedSavedRecipient]);
 
-  const routes = useMemo<RouteQuote[]>(() => {
+  const allRoutes = useMemo<RouteQuote[]>(() => {
     if (!recipient || sendAmount <= 0) {
       return [];
     }
@@ -127,6 +127,19 @@ export default function ConsumerSendScreen() {
       simulatedRlusdBalance,
     });
   }, [recipient, sendAmount, simulatedRlusdBalance]);
+
+  const routes = useMemo<RouteQuote[]>(() => {
+    if (allRoutes.length === 0) {
+      return [];
+    }
+
+    const cheapest = [...allRoutes].sort((a, b) => a.fee - b.fee)[0];
+    const safest = [...allRoutes]
+      .filter((route) => route.id !== cheapest.id)
+      .sort((a, b) => b.score - a.score)[0];
+
+    return safest ? [cheapest, safest] : [cheapest];
+  }, [allRoutes]);
 
   const selectedRoute = routes.find((route) => route.id === selectedRouteId) ?? routes[0];
 
@@ -153,6 +166,8 @@ export default function ConsumerSendScreen() {
       fundingMethod: "OPEN_BANKING",
       fundingStatus: "AUTHORISED",
     });
+
+    startTransfer();
 
     router.push("/consumer/track" as never);
   }
@@ -248,6 +263,7 @@ export default function ConsumerSendScreen() {
         ) : null}
         {routes.map((route, index) => {
           const active = (selectedRoute?.id ?? "") === route.id;
+          const routeLabel = index === 0 ? "Cheapest" : "Safest";
           return (
             <Pressable
               key={route.id}
@@ -264,11 +280,11 @@ export default function ConsumerSendScreen() {
               <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
                 <View style={{ flex: 1 }}>
                   <AppText color={consumerColors.text} style={{ fontWeight: "900", fontSize: 17 }}>
-                    {index === 0 ? "Recommended" : `Option ${index + 1}`} • {route.provider}
+                    {routeLabel} • {route.provider}
                   </AppText>
                   <AppText color={consumerColors.muted}>{route.rail} • ETA {route.estimatedTime}</AppText>
                 </View>
-                <ConsumerPill label={`Score ${route.score}`} tone={index === 0 ? "green" : "blue"} />
+                <ConsumerPill label={routeLabel} tone={index === 0 ? "gold" : "green"} />
               </View>
               <AppText color={consumerColors.text} style={{ fontWeight: "900" }}>
                 Amount received: {route.receiveAmount.toFixed(2)} {recipient?.currency ?? "PHP"}

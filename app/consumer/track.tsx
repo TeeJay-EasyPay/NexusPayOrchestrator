@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { View } from "react-native";
 
 import {
-  ConsumerAction,
-  ConsumerCard,
-  ConsumerPill,
-  ConsumerShell,
-  consumerColors,
+    ConsumerAction,
+    ConsumerCard,
+    ConsumerPill,
+    ConsumerShell,
+    consumerColors,
 } from "../../src/components/consumer/ConsumerShell";
 import { AppText } from "../../src/components/ui/AppText";
 import { loadTransactionAuditLogs } from "../../src/services/transactionAuditService";
@@ -54,6 +54,7 @@ function timelineForStatus(status: string): TimelineStep[] {
 export default function ConsumerTrackScreen() {
   const { transfer, completedTransfers, startTransfer, completeTransfer, hydrateTransfers } = useTransfer();
   const [auditLines, setAuditLines] = useState<string[]>([]);
+  const autoCompleteForTransferRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!transfer?.id) {
@@ -96,6 +97,29 @@ export default function ConsumerTrackScreen() {
     completeTransfer();
     await hydrateTransfers();
   }
+
+  useEffect(() => {
+    if (!transfer?.id || transfer.status === "COMPLETED") {
+      return;
+    }
+
+    if (autoCompleteForTransferRef.current === transfer.id) {
+      return;
+    }
+
+    autoCompleteForTransferRef.current = transfer.id;
+
+    const timer = setTimeout(() => {
+      if (transfer.status !== "IN_PROGRESS") {
+        startTransfer();
+      }
+
+      completeTransfer();
+      void hydrateTransfers();
+    }, 1200);
+
+    return () => clearTimeout(timer);
+  }, [completeTransfer, hydrateTransfers, startTransfer, transfer?.id, transfer?.status]);
 
   if (!activeTransfer) {
     return (
