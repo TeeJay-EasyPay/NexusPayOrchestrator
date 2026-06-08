@@ -279,14 +279,15 @@ export default function ConsumerSendScreen() {
         </View>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
           <ConsumerPill label={`Amount ${amount || "0"} GBP`} tone="blue" />
-          <ConsumerPill label={`Country ${manualCountry}`} tone="blue" />
-          <ConsumerPill label={selectedBank ? `Bank ${selectedBank}` : "Bank pending"} tone={selectedBank ? "green" : "gold"} />
+          <ConsumerPill label={`Destination ${manualCountry}`} tone="blue" />
           <ConsumerPill
-            label={recipientNameValid ? `${firstName.trim()} ${lastName.trim()}` : "Recipient pending"}
-            tone={recipientNameValid ? "green" : "gold"}
+            label={recipientReady ? "Recipient complete" : "Recipient pending"}
+            tone={recipientReady ? "green" : "gold"}
           />
-          <ConsumerPill label={fundingReference ? "Funding selected" : "Funding pending"} tone={fundingReference ? "green" : "gold"} />
-          <ConsumerPill label={routeReady ? "Route selected" : "Route pending"} tone={routeReady ? "green" : "gold"} />
+          <ConsumerPill
+            label={fundingReady && routeReady ? "Funding and route ready" : "Funding/route pending"}
+            tone={fundingReady && routeReady ? "green" : "gold"}
+          />
         </View>
         <ConsumerAction
           label="View FX rates"

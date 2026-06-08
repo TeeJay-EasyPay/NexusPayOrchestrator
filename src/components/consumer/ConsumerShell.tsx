@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { usePathname, useRouter } from "expo-router";
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, StatusBar, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAccount } from "../../state/AccountContext";
@@ -56,6 +56,7 @@ export function ConsumerShell({
 
   return (
     <SafeAreaView style={styles.safe}>
+      <StatusBar barStyle="dark-content" backgroundColor={consumerColors.white} />
       <View style={styles.root}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
           <View style={styles.header}>
@@ -78,11 +79,11 @@ export function ConsumerShell({
                   onPress={() => router.push("/multi-account-preview" as never)}
                   style={styles.operatorLink}
                 >
-                  <Feather name="repeat" size={15} color={consumerColors.white} />
+                  <Feather name="repeat" size={15} color={consumerColors.blue} />
                 </Pressable>
 
                 <Pressable onPress={() => setMenuOpen((open) => !open)} style={styles.operatorLink}>
-                  <Feather name="menu" size={16} color={consumerColors.white} />
+                  <Feather name="menu" size={16} color={consumerColors.blue} />
                 </Pressable>
               </View>
             </View>
@@ -254,7 +255,9 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: consumerColors.blueSoft,
+    backgroundColor: consumerColors.white,
+    borderWidth: 1,
+    borderColor: consumerColors.border,
   },
   headerActions: {
     flexDirection: "row",
