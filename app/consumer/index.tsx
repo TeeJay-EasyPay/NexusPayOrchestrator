@@ -12,7 +12,6 @@ import {
 } from "../../src/components/consumer/ConsumerShell";
 import { AppText } from "../../src/components/ui/AppText";
 import { useTransfer } from "../../src/state/TransferContext";
-import { useWallet } from "../../src/state/WalletContext";
 
 function formatGbp(value: number) {
   return `GBP ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -21,7 +20,6 @@ function formatGbp(value: number) {
 export default function ConsumerHomeScreen() {
   const router = useRouter();
   const { transfer, completedTransfers, hydrateTransfers } = useTransfer();
-  const { gbpBalance } = useWallet();
 
   useEffect(() => {
     void hydrateTransfers();
@@ -41,14 +39,17 @@ export default function ConsumerHomeScreen() {
     >
       <ConsumerCard accent>
         <AppText color={consumerColors.muted} variant="caption">
-          Available to send
+          Orchestration mode
         </AppText>
         <AppText color={consumerColors.blueDark} style={{ fontSize: 40, fontWeight: "900" }}>
-          {formatGbp(gbpBalance)}
+          No stored wallet
+        </AppText>
+        <AppText color={consumerColors.muted}>
+          NexusPay orchestrates movement between selected funding sources and destination payout rails without holding customer balances.
         </AppText>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
           <ConsumerAction label="Send money" icon="send" onPress={() => router.push("/consumer/send" as never)} />
-          <ConsumerAction label="Add funding source" icon="plus-circle" secondary onPress={() => router.push("/payment-methods" as never)} />
+          <ConsumerAction label="Manage funding sources" icon="credit-card" secondary onPress={() => router.push("/payment-methods" as never)} />
         </View>
       </ConsumerCard>
 

@@ -10,12 +10,13 @@ import {
     consumerColors,
 } from "../../src/components/consumer/ConsumerShell";
 import { AppText } from "../../src/components/ui/AppText";
+import { corridors } from "../../src/data/corridors";
 import { buildOrchestratedRouteQuotes } from "../../src/lib/settlementOrchestrator";
 import { loadSavedRecipients } from "../../src/services/recipientService";
 import { useTransfer } from "../../src/state/TransferContext";
 import { useWallet } from "../../src/state/WalletContext";
 import { SavedRecipient } from "../../src/types/recipient";
-import { Currency, Recipient, RouteQuote } from "../../src/types/transfer";
+import { Currency, FundingMethod, Recipient, RouteQuote } from "../../src/types/transfer";
 
 function inputStyle() {
   return {
@@ -66,11 +67,19 @@ export default function ConsumerSendScreen() {
   const [selectedRecipientId, setSelectedRecipientId] = useState(asString(params.recipientId));
   const [manualName, setManualName] = useState(asString(params.name));
   const [manualCountry, setManualCountry] = useState(asString(params.country) || "Philippines");
-  const [manualCurrency, setManualCurrency] = useState<Currency>(
-    (asString(params.currency) as Currency) || "PHP"
-  );
+  const [manualSortCode, setManualSortCode] = useState(asString(params.bankCode));
+  const [manualAccountNumber, setManualAccountNumber] = useState(asString(params.accountNumber));
+  const [fundingMethod, setFundingMethod] = useState<FundingMethod>("CARD");
+  const [fundingReference, setFundingReference] = useState("Visa **** 4242");
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const selectedCorridor = useMemo(
+    () => corridors.find((item) => item.country === manualCountry),
+    [manualCountry]
+  );
+
+  const manualCurrency = (selectedCorridor?.currency ?? "PHP") as Currency;
 
   useEffect(() => {
     let mounted = true;
@@ -102,19 +111,29 @@ export default function ConsumerSendScreen() {
       return toRecipient(selectedSavedRecipient);
     }
 
-    if (!manualName.trim()) {
+    const normalizedName = manualName.trim();
+    if (!normalizedName) {
+      return null;
+    }
+
+    if (normalizedName.toLowerCase() === "personal family recipient") {
+      return null;
+    }
+
+    if (!manualSortCode.trim() || !manualAccountNumber.trim()) {
       return null;
     }
 
     return {
-      name: manualName.trim(),
+      name: normalizedName,
       country: manualCountry.trim() || "Philippines",
       currency: manualCurrency,
       payoutMethod: "BANK",
       bankName: "Recipient Bank",
-      accountNumber: "****1234",
+      bankCode: manualSortCode.trim(),
+      accountNumber: manualAccountNumber.trim(),
     };
-  }, [manualCountry, manualCurrency, manualName, selectedSavedRecipient]);
+  }, [manualAccountNumber, manualCountry, manualCurrency, manualName, manualSortCode, selectedSavedRecipient]);
 
   const allRoutes = useMemo<RouteQuote[]>(() => {
     if (!recipient || sendAmount <= 0) {
@@ -145,12 +164,37 @@ export default function ConsumerSendScreen() {
 
   function submitTransfer() {
     if (!recipient) {
-      setErrorMessage("Select a recipient or add recipient details.");
+      setErrorMessage("Enter recipient name, country, sort code, and account number.");
+      return;
+    }
+
+    if (recipient.name.trim().toLowerCase() === "personal family recipient") {
+      setErrorMessage("Recipient name must be a real named beneficiary.");
+      return;
+    }
+
+    if (!recipient.bankCode?.trim()) {
+      setErrorMessage("Recipient sort code is required.");
+      return;
+    }
+
+    if (!recipient.accountNumber?.trim()) {
+      setErrorMessage("Recipient account number is required.");
+      return;
+    }
+
+    if (recipient.payoutMethod !== "BANK") {
+      setErrorMessage("Recipient must be configured for bank payout with sort code and account number.");
       return;
     }
 
     if (sendAmount <= 0) {
       setErrorMessage("Enter a valid amount greater than 0.");
+      return;
+    }
+
+    if (!fundingReference.trim()) {
+      setErrorMessage("Select a funding source before continuing.");
       return;
     }
 
@@ -163,7 +207,8 @@ export default function ConsumerSendScreen() {
       recipient,
       routes,
       selectedRoute,
-      fundingMethod: "OPEN_BANKING",
+      fundingMethod,
+      fundingReference,
       fundingStatus: "AUTHORISED",
     });
 
@@ -238,20 +283,104 @@ export default function ConsumerSendScreen() {
         />
         <View style={{ flexDirection: "row", gap: 8 }}>
           <TextInput
-            value={manualCountry}
-            onChangeText={setManualCountry}
-            placeholder="Country"
+            value={manualSortCode}
+            onChangeText={(value) => {
+              setSelectedRecipientId("");
+              setManualSortCode(value);
+            }}
+            placeholder="Sort code"
             placeholderTextColor={consumerColors.muted}
             style={[inputStyle(), { flex: 1 }]}
           />
           <TextInput
-            value={manualCurrency}
-            onChangeText={(value) => setManualCurrency((value.toUpperCase() as Currency) || "PHP")}
-            placeholder="Currency"
+            value={manualAccountNumber}
+            onChangeText={(value) => {
+              setSelectedRecipientId("");
+              setManualAccountNumber(value);
+            }}
+            placeholder="Account number"
             placeholderTextColor={consumerColors.muted}
             style={[inputStyle(), { flex: 1 }]}
           />
         </View>
+        <AppText variant="caption" color={consumerColors.muted}>
+          Destination country ({manualCurrency})
+        </AppText>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          {corridors.map((corridor) => {
+            const active = corridor.country === manualCountry;
+            return (
+              <Pressable
+                key={corridor.country}
+                onPress={() => {
+                  setSelectedRecipientId("");
+                  setManualCountry(corridor.country);
+                }}
+                style={{
+                  paddingHorizontal: 10,
+                  paddingVertical: 8,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: active ? consumerColors.blue : consumerColors.border,
+                  backgroundColor: active ? consumerColors.blueSoft : consumerColors.white,
+                }}
+              >
+                <AppText
+                  variant="caption"
+                  style={{ color: active ? consumerColors.blueDark : consumerColors.muted, fontWeight: "900" }}
+                >
+                  {corridor.country} • {corridor.currency}
+                </AppText>
+              </Pressable>
+            );
+          })}
+        </View>
+      </ConsumerCard>
+
+      <ConsumerCard>
+        <AppText color={consumerColors.text} style={{ fontWeight: "900", fontSize: 18 }}>
+          Funding source
+        </AppText>
+        <AppText color={consumerColors.muted}>
+          Select how this transfer is funded before execution.
+        </AppText>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          {[
+            { id: "Visa **** 4242", method: "CARD" as FundingMethod },
+            { id: "Visa **** 1088", method: "CARD" as FundingMethod },
+            { id: "Barclays UK • Main", method: "OPEN_BANKING" as FundingMethod },
+            { id: "HSBC UK • Current", method: "OPEN_BANKING" as FundingMethod },
+          ].map((source) => {
+            const active = fundingReference === source.id;
+            return (
+              <Pressable
+                key={source.id}
+                onPress={() => {
+                  setFundingMethod(source.method);
+                  setFundingReference(source.id);
+                }}
+                style={{
+                  paddingHorizontal: 10,
+                  paddingVertical: 8,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: active ? consumerColors.blue : consumerColors.border,
+                  backgroundColor: active ? consumerColors.blueSoft : consumerColors.white,
+                }}
+              >
+                <AppText
+                  variant="caption"
+                  style={{ color: active ? consumerColors.blueDark : consumerColors.muted, fontWeight: "900" }}
+                >
+                  {source.id}
+                </AppText>
+              </Pressable>
+            );
+          })}
+        </View>
+        <AppText color={consumerColors.muted}>
+          Selected: {fundingMethod === "CARD" ? "Card" : "Bank account"} • {fundingReference}
+        </AppText>
       </ConsumerCard>
 
       <ConsumerCard>

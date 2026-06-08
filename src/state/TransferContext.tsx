@@ -26,6 +26,7 @@ interface TransferContextType {
       routes?: RouteQuote[];
       selectedRoute?: RouteQuote;
       fundingMethod?: FundingMethod;
+      fundingReference?: string;
       fundingStatus?: FundingStatus;
     }
   ) => Transfer;
@@ -49,6 +50,17 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
   const [completedTransfers, setCompletedTransfers] = useState<Transfer[]>([]);
   const [isLoadingTransfers, setIsLoadingTransfers] = useState(false);
 
+  const hydrateTransfers = useCallback(async () => {
+    setIsLoadingTransfers(true);
+
+    try {
+      const persistedTransfers = await loadCompletedTransfers();
+      setCompletedTransfers(persistedTransfers);
+    } finally {
+      setIsLoadingTransfers(false);
+    }
+  }, []);
+
   useEffect(() => {
     hydrateTransfers();
 
@@ -68,17 +80,6 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
     };
   }, [hydrateTransfers]);
 
-  const hydrateTransfers = useCallback(async () => {
-    setIsLoadingTransfers(true);
-
-    try {
-      const persistedTransfers = await loadCompletedTransfers();
-      setCompletedTransfers(persistedTransfers);
-    } finally {
-      setIsLoadingTransfers(false);
-    }
-  }, []);
-
   const createTransfer = (
     amount: number,
     options?: {
@@ -86,6 +87,7 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
       routes?: RouteQuote[];
       selectedRoute?: RouteQuote;
       fundingMethod?: FundingMethod;
+      fundingReference?: string;
       fundingStatus?: FundingStatus;
     }
   ) => {
@@ -97,6 +99,7 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
       routes: options?.routes ?? [],
       selectedRoute: options?.selectedRoute,
       fundingMethod: options?.fundingMethod,
+      fundingReference: options?.fundingReference,
       fundingStatus: options?.fundingStatus ?? "NOT_STARTED",
       status: options?.selectedRoute
         ? "ROUTE_SELECTED"
