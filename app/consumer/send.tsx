@@ -53,6 +53,8 @@ export default function ConsumerSendScreen() {
   const [fundingMethod, setFundingMethod] = useState<FundingMethod>("CARD");
   const [fundingReference, setFundingReference] = useState("Visa **** 4242");
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
+  const [showAllCountries, setShowAllCountries] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const selectedCorridor = useMemo(
@@ -66,6 +68,20 @@ export default function ConsumerSendScreen() {
   }, [selectedCorridor]);
 
   const manualCurrency = (selectedCorridor?.currency ?? "PHP") as Currency;
+  const visibleCorridors = useMemo(() => {
+    const selected = corridors.find((item) => item.country === manualCountry);
+    const compact = corridors.slice(0, 6);
+
+    if (showAllCountries) {
+      return corridors;
+    }
+
+    if (!selected || compact.some((item) => item.country === selected.country)) {
+      return compact;
+    }
+
+    return [selected, ...compact.slice(0, 5)];
+  }, [manualCountry, showAllCountries]);
 
   const parsedAmount = Number(amount);
   const sendAmount = Number.isFinite(parsedAmount) ? parsedAmount : 0;
@@ -131,50 +147,106 @@ export default function ConsumerSendScreen() {
   }, [allRoutes]);
 
   const selectedRoute = routes.find((route) => route.id === selectedRouteId) ?? routes[0];
+  const recipientNameValid = firstName.trim().length > 0 && lastName.trim().length > 0;
+  const recipientBankValid =
+    selectedBank.trim().length > 0 &&
+    manualSortCode.trim().length > 0 &&
+    manualAccountNumber.trim().length > 0;
+  const recipientReady = Boolean(recipient);
+  const fundingReady = fundingReference.trim().length > 0;
+  const routeReady = Boolean(selectedRoute);
+
+  function continueToFunding() {
+    if (sendAmount <= 0) {
+      setErrorMessage("Enter amount before continuing.");
+      setCurrentStep(1);
+      return;
+    }
+
+    if (!recipientReady) {
+      setErrorMessage("Complete recipient details before continuing.");
+      setCurrentStep(1);
+      return;
+    }
+
+    setErrorMessage(null);
+    setCurrentStep(2);
+  }
+
+  function continueToRoute() {
+    if (!fundingReady) {
+      setErrorMessage("Select a funding source before continuing.");
+      setCurrentStep(2);
+      return;
+    }
+
+    setErrorMessage(null);
+    setCurrentStep(3);
+  }
+
+  function continueToReview() {
+    if (!routeReady) {
+      setErrorMessage("Choose a delivery route to continue.");
+      setCurrentStep(3);
+      return;
+    }
+
+    setErrorMessage(null);
+    setCurrentStep(4);
+  }
 
   function submitTransfer() {
     if (!recipient) {
       setErrorMessage("Enter recipient name, country, sort code, and account number.");
+      setCurrentStep(1);
       return;
     }
 
     if (recipient.name.trim().toLowerCase() === "personal family recipient") {
       setErrorMessage("Recipient name must be a real named beneficiary.");
+      setCurrentStep(1);
       return;
     }
 
     if (!recipient.bankCode?.trim()) {
       setErrorMessage("Recipient sort code is required.");
+      setCurrentStep(1);
       return;
     }
 
     if (!recipient.accountNumber?.trim()) {
       setErrorMessage("Recipient account number is required.");
+      setCurrentStep(1);
       return;
     }
 
     if (recipient.payoutMethod !== "BANK") {
       setErrorMessage("Recipient must be configured for bank payout with sort code and account number.");
+      setCurrentStep(1);
       return;
     }
 
     if (!recipient.bankName?.trim()) {
       setErrorMessage("Select a destination bank for the chosen country.");
+      setCurrentStep(1);
       return;
     }
 
     if (sendAmount <= 0) {
       setErrorMessage("Enter a valid amount greater than 0.");
+      setCurrentStep(1);
       return;
     }
 
     if (!fundingReference.trim()) {
       setErrorMessage("Select a funding source before continuing.");
+      setCurrentStep(2);
       return;
     }
 
     if (!selectedRoute) {
       setErrorMessage("Choose a delivery route to continue.");
+      setCurrentStep(3);
       return;
     }
 
@@ -199,6 +271,32 @@ export default function ConsumerSendScreen() {
       subtitle="Quick, clear, and confidence-first transfer setup."
     >
       <ConsumerCard accent>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+          <AppText color={consumerColors.text} style={{ fontWeight: "900", fontSize: 18 }}>
+            Transfer summary
+          </AppText>
+          <ConsumerPill label={`Step ${currentStep}/4`} tone="blue" />
+        </View>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          <ConsumerPill label={`Amount ${amount || "0"} GBP`} tone="blue" />
+          <ConsumerPill label={`Country ${manualCountry}`} tone="blue" />
+          <ConsumerPill label={selectedBank ? `Bank ${selectedBank}` : "Bank pending"} tone={selectedBank ? "green" : "gold"} />
+          <ConsumerPill
+            label={recipientNameValid ? `${firstName.trim()} ${lastName.trim()}` : "Recipient pending"}
+            tone={recipientNameValid ? "green" : "gold"}
+          />
+          <ConsumerPill label={fundingReference ? "Funding selected" : "Funding pending"} tone={fundingReference ? "green" : "gold"} />
+          <ConsumerPill label={routeReady ? "Route selected" : "Route pending"} tone={routeReady ? "green" : "gold"} />
+        </View>
+        <ConsumerAction
+          label="View FX rates"
+          icon="bar-chart-2"
+          secondary
+          onPress={() => router.push("/consumer/fx" as never)}
+        />
+      </ConsumerCard>
+
+      <ConsumerCard accent>
         <AppText variant="caption" color={consumerColors.muted}>
           Amount
         </AppText>
@@ -213,233 +311,328 @@ export default function ConsumerSendScreen() {
       </ConsumerCard>
 
       <ConsumerCard>
-        <AppText color={consumerColors.text} style={{ fontWeight: "900", fontSize: 18 }}>
-          Recipient selection
-        </AppText>
-        <AppText variant="caption" color={consumerColors.muted}>
-          Step 1: Select destination country
-        </AppText>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-          {corridors.map((corridor) => {
-            const active = corridor.country === manualCountry;
-            return (
-              <Pressable
-                key={corridor.country}
-                onPress={() => {
-                  setManualCountry(corridor.country);
-                  setSelectedBank("");
-                  setErrorMessage(null);
-                }}
-                style={{
-                  paddingHorizontal: 10,
-                  paddingVertical: 8,
-                  borderRadius: 999,
-                  borderWidth: 1,
-                  borderColor: active ? consumerColors.blue : consumerColors.border,
-                  backgroundColor: active ? consumerColors.blueSoft : consumerColors.white,
-                }}
-              >
-                <AppText
-                  variant="caption"
-                  style={{ color: active ? consumerColors.blueDark : consumerColors.muted, fontWeight: "900" }}
-                >
-                  {corridor.country} • {corridor.currency}
-                </AppText>
-              </Pressable>
-            );
-          })}
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+          <AppText color={consumerColors.text} style={{ fontWeight: "900", fontSize: 18 }}>
+            Recipient details
+          </AppText>
+          <ConsumerPill label={recipientReady ? "Complete" : "Required"} tone={recipientReady ? "green" : "gold"} />
         </View>
 
-        <AppText variant="caption" color={consumerColors.muted}>
-          Step 2: Select bank for {manualCountry} ({manualCurrency})
-        </AppText>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-          {bankProviders.map((provider) => {
-            const active = provider === selectedBank;
-            return (
-              <Pressable
-                key={provider}
-                onPress={() => {
-                  setSelectedBank(provider);
-                  setErrorMessage(null);
-                }}
-                style={{
-                  paddingHorizontal: 10,
-                  paddingVertical: 8,
-                  borderRadius: 999,
-                  borderWidth: 1,
-                  borderColor: active ? consumerColors.blue : consumerColors.border,
-                  backgroundColor: active ? consumerColors.blueSoft : consumerColors.white,
-                }}
-              >
-                <AppText
-                  variant="caption"
-                  style={{ color: active ? consumerColors.blueDark : consumerColors.muted, fontWeight: "900" }}
-                >
-                  {provider}
-                </AppText>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        <AppText variant="caption" color={consumerColors.muted}>
-          Step 3: Enter recipient name
-        </AppText>
-        <View style={{ flexDirection: "row", gap: 8 }}>
-          <TextInput
-            value={firstName}
-            onChangeText={(value) => {
-              setFirstName(value);
-              setErrorMessage(null);
-            }}
-            placeholder="First name"
-            placeholderTextColor={consumerColors.muted}
-            style={[inputStyle(), { flex: 1 }]}
-          />
-          <TextInput
-            value={lastName}
-            onChangeText={(value) => {
-              setLastName(value);
-              setErrorMessage(null);
-            }}
-            placeholder="Last name"
-            placeholderTextColor={consumerColors.muted}
-            style={[inputStyle(), { flex: 1 }]}
-          />
-        </View>
-
-        <AppText variant="caption" color={consumerColors.muted}>
-          Step 4: Enter recipient bank details
-        </AppText>
-        <View style={{ flexDirection: "row", gap: 8 }}>
-          <TextInput
-            value={manualSortCode}
-            onChangeText={(value) => {
-              setManualSortCode(value);
-              setErrorMessage(null);
-            }}
-            placeholder="Sort code"
-            placeholderTextColor={consumerColors.muted}
-            style={[inputStyle(), { flex: 1 }]}
-          />
-          <TextInput
-            value={manualAccountNumber}
-            onChangeText={(value) => {
-              setManualAccountNumber(value);
-              setErrorMessage(null);
-            }}
-            placeholder="Account number"
-            placeholderTextColor={consumerColors.muted}
-            style={[inputStyle(), { flex: 1 }]}
-          />
-        </View>
-      </ConsumerCard>
-
-      <ConsumerCard>
-        <AppText color={consumerColors.text} style={{ fontWeight: "900", fontSize: 18 }}>
-          Funding source
-        </AppText>
-        <AppText color={consumerColors.muted}>
-          Select how this transfer is funded before execution.
-        </AppText>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-          {[
-            { id: "Visa **** 4242", method: "CARD" as FundingMethod },
-            { id: "Visa **** 1088", method: "CARD" as FundingMethod },
-            { id: "Barclays UK • Main", method: "OPEN_BANKING" as FundingMethod },
-            { id: "HSBC UK • Current", method: "OPEN_BANKING" as FundingMethod },
-          ].map((source) => {
-            const active = fundingReference === source.id;
-            return (
-              <Pressable
-                key={source.id}
-                onPress={() => {
-                  setFundingMethod(source.method);
-                  setFundingReference(source.id);
-                }}
-                style={{
-                  paddingHorizontal: 10,
-                  paddingVertical: 8,
-                  borderRadius: 999,
-                  borderWidth: 1,
-                  borderColor: active ? consumerColors.blue : consumerColors.border,
-                  backgroundColor: active ? consumerColors.blueSoft : consumerColors.white,
-                }}
-              >
-                <AppText
-                  variant="caption"
-                  style={{ color: active ? consumerColors.blueDark : consumerColors.muted, fontWeight: "900" }}
-                >
-                  {source.id}
-                </AppText>
-              </Pressable>
-            );
-          })}
-        </View>
-        <AppText color={consumerColors.muted}>
-          Selected: {fundingMethod === "CARD" ? "Card" : "Bank account"} • {fundingReference}
-        </AppText>
-      </ConsumerCard>
-
-      <ConsumerCard>
-        <AppText color={consumerColors.text} style={{ fontWeight: "900", fontSize: 18 }}>
-          Choose route
-        </AppText>
-        {routes.length === 0 ? (
-          <AppText color={consumerColors.muted}>Enter recipient and amount to see available routes.</AppText>
-        ) : null}
-        {routes.map((route, index) => {
-          const active = (selectedRoute?.id ?? "") === route.id;
-          const routeLabel = index === 0 ? "Cheapest" : "Safest";
-          return (
-            <Pressable
-              key={route.id}
-              onPress={() => setSelectedRouteId(route.id)}
-              style={{
-                borderWidth: 1,
-                borderColor: active ? consumerColors.blue : consumerColors.border,
-                borderRadius: 8,
-                padding: 12,
-                gap: 7,
-                backgroundColor: active ? consumerColors.blueSoft : consumerColors.white,
-              }}
-            >
-              <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
-                <View style={{ flex: 1 }}>
-                  <AppText color={consumerColors.text} style={{ fontWeight: "900", fontSize: 17 }}>
-                    {routeLabel} • {route.provider}
-                  </AppText>
-                  <AppText color={consumerColors.muted}>{route.rail} • ETA {route.estimatedTime}</AppText>
-                </View>
-                <ConsumerPill label={routeLabel} tone={index === 0 ? "gold" : "green"} />
-              </View>
-              <AppText color={consumerColors.muted}>
-                {index === 0 ? "Lower fees" : "Reliable delivery"}
+        {currentStep !== 1 ? (
+          <>
+            <AppText color={consumerColors.muted}>
+              {firstName.trim()} {lastName.trim()} • {manualCountry} • {selectedBank || "Bank pending"}
+            </AppText>
+            <ConsumerAction label="Edit recipient" icon="edit-2" secondary onPress={() => setCurrentStep(1)} />
+          </>
+        ) : (
+          <>
+            <AppText variant="caption" color={consumerColors.muted}>
+              Step 1: Select destination country
+            </AppText>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              {visibleCorridors.map((corridor) => {
+                const active = corridor.country === manualCountry;
+                return (
+                  <Pressable
+                    key={corridor.country}
+                    onPress={() => {
+                      setManualCountry(corridor.country);
+                      setSelectedBank("");
+                      setErrorMessage(null);
+                    }}
+                    style={{
+                      paddingHorizontal: 10,
+                      paddingVertical: 8,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      borderColor: active ? consumerColors.blue : consumerColors.border,
+                      backgroundColor: active ? consumerColors.blueSoft : consumerColors.white,
+                    }}
+                  >
+                    <AppText
+                      variant="caption"
+                      style={{ color: active ? consumerColors.blueDark : consumerColors.muted, fontWeight: "900" }}
+                    >
+                      {corridor.country} • {corridor.currency}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <Pressable onPress={() => setShowAllCountries((open) => !open)}>
+              <AppText variant="caption" color={consumerColors.blue} style={{ fontWeight: "900" }}>
+                {showAllCountries ? "Show fewer countries" : "Show all countries"}
               </AppText>
-              <AppText color={consumerColors.text} style={{ fontWeight: "900" }}>
-                Amount received: {route.receiveAmount.toFixed(2)} {recipient?.currency ?? "PHP"}
-              </AppText>
-              <AppText color={consumerColors.muted}>FX rate: {route.fxRate.toFixed(2)}</AppText>
-              <AppText color={consumerColors.muted}>Fee: GBP {route.fee.toFixed(2)}</AppText>
             </Pressable>
-          );
-        })}
+
+            <AppText variant="caption" color={consumerColors.muted}>
+              Step 2: Select bank for {manualCountry} ({manualCurrency})
+            </AppText>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              {bankProviders.map((provider) => {
+                const active = provider === selectedBank;
+                return (
+                  <Pressable
+                    key={provider}
+                    onPress={() => {
+                      setSelectedBank(provider);
+                      setErrorMessage(null);
+                    }}
+                    style={{
+                      paddingHorizontal: 10,
+                      paddingVertical: 8,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      borderColor: active ? consumerColors.blue : consumerColors.border,
+                      backgroundColor: active ? consumerColors.blueSoft : consumerColors.white,
+                    }}
+                  >
+                    <AppText
+                      variant="caption"
+                      style={{ color: active ? consumerColors.blueDark : consumerColors.muted, fontWeight: "900" }}
+                    >
+                      {provider}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <AppText variant="caption" color={consumerColors.muted}>
+              Step 3: Enter recipient name
+            </AppText>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <TextInput
+                value={firstName}
+                onChangeText={(value) => {
+                  setFirstName(value);
+                  setErrorMessage(null);
+                }}
+                placeholder="First name"
+                placeholderTextColor={consumerColors.muted}
+                style={[inputStyle(), { flex: 1 }]}
+              />
+              <TextInput
+                value={lastName}
+                onChangeText={(value) => {
+                  setLastName(value);
+                  setErrorMessage(null);
+                }}
+                placeholder="Last name"
+                placeholderTextColor={consumerColors.muted}
+                style={[inputStyle(), { flex: 1 }]}
+              />
+            </View>
+            <AppText variant="caption" style={{ color: recipientNameValid ? consumerColors.success : consumerColors.muted }}>
+              {recipientNameValid ? "Recipient name complete" : "Enter first and last name"}
+            </AppText>
+
+            <AppText variant="caption" color={consumerColors.muted}>
+              Step 4: Enter recipient bank details
+            </AppText>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <TextInput
+                value={manualSortCode}
+                onChangeText={(value) => {
+                  setManualSortCode(value);
+                  setErrorMessage(null);
+                }}
+                placeholder="Sort code"
+                placeholderTextColor={consumerColors.muted}
+                style={[inputStyle(), { flex: 1 }]}
+              />
+              <TextInput
+                value={manualAccountNumber}
+                onChangeText={(value) => {
+                  setManualAccountNumber(value);
+                  setErrorMessage(null);
+                }}
+                placeholder="Account number"
+                placeholderTextColor={consumerColors.muted}
+                style={[inputStyle(), { flex: 1 }]}
+              />
+            </View>
+            <AppText variant="caption" style={{ color: recipientBankValid ? consumerColors.success : consumerColors.muted }}>
+              {recipientBankValid ? "Bank details complete" : "Select bank and enter sort code + account number"}
+            </AppText>
+
+            <ConsumerAction label="Continue to funding" icon="arrow-right" onPress={continueToFunding} />
+          </>
+        )}
+      </ConsumerCard>
+
+      <ConsumerCard>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+          <AppText color={consumerColors.text} style={{ fontWeight: "900", fontSize: 18 }}>
+            Funding source
+          </AppText>
+          <ConsumerPill label={fundingReady ? "Selected" : "Required"} tone={fundingReady ? "green" : "gold"} />
+        </View>
+
+        {currentStep !== 2 ? (
+          <>
+            <AppText color={consumerColors.muted}>
+              {fundingMethod === "CARD" ? "Card" : "Bank account"} • {fundingReference}
+            </AppText>
+            <ConsumerAction label="Edit funding" icon="edit-2" secondary onPress={() => setCurrentStep(2)} />
+          </>
+        ) : (
+          <>
+            <AppText color={consumerColors.muted}>
+              Select how this transfer is funded before execution.
+            </AppText>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              {[
+                { id: "Visa **** 4242", method: "CARD" as FundingMethod },
+                { id: "Visa **** 1088", method: "CARD" as FundingMethod },
+                { id: "Barclays UK • Main", method: "OPEN_BANKING" as FundingMethod },
+                { id: "HSBC UK • Current", method: "OPEN_BANKING" as FundingMethod },
+              ].map((source) => {
+                const active = fundingReference === source.id;
+                return (
+                  <Pressable
+                    key={source.id}
+                    onPress={() => {
+                      setFundingMethod(source.method);
+                      setFundingReference(source.id);
+                      setErrorMessage(null);
+                    }}
+                    style={{
+                      paddingHorizontal: 10,
+                      paddingVertical: 8,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      borderColor: active ? consumerColors.blue : consumerColors.border,
+                      backgroundColor: active ? consumerColors.blueSoft : consumerColors.white,
+                    }}
+                  >
+                    <AppText
+                      variant="caption"
+                      style={{ color: active ? consumerColors.blueDark : consumerColors.muted, fontWeight: "900" }}
+                    >
+                      {source.id}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <AppText color={consumerColors.muted}>
+              Selected: {fundingMethod === "CARD" ? "Card" : "Bank account"} • {fundingReference}
+            </AppText>
+            <ConsumerAction label="Continue to route" icon="arrow-right" onPress={continueToRoute} />
+          </>
+        )}
+      </ConsumerCard>
+
+      <ConsumerCard>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+          <AppText color={consumerColors.text} style={{ fontWeight: "900", fontSize: 18 }}>
+            Choose route
+          </AppText>
+          <ConsumerPill label={routeReady ? "Selected" : "Required"} tone={routeReady ? "green" : "gold"} />
+        </View>
+
+        {currentStep !== 3 ? (
+          <>
+            <AppText color={consumerColors.muted}>
+              {selectedRoute ? `${selectedRoute.provider} • ${selectedRoute.estimatedTime}` : "No route selected yet"}
+            </AppText>
+            <ConsumerAction label="Edit route" icon="edit-2" secondary onPress={() => setCurrentStep(3)} />
+          </>
+        ) : (
+          <>
+            {routes.length === 0 ? (
+              <AppText color={consumerColors.muted}>Complete recipient and amount to load route options.</AppText>
+            ) : null}
+            {routes.map((route, index) => {
+              const active = (selectedRoute?.id ?? "") === route.id;
+              const routeLabel = index === 0 ? "Cheapest" : "Safest";
+              return (
+                <Pressable
+                  key={route.id}
+                  onPress={() => {
+                    setSelectedRouteId(route.id);
+                    setErrorMessage(null);
+                  }}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: active ? consumerColors.blue : consumerColors.border,
+                    borderRadius: 8,
+                    padding: 12,
+                    gap: 7,
+                    backgroundColor: active ? consumerColors.blueSoft : consumerColors.white,
+                  }}
+                >
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
+                    <View style={{ flex: 1 }}>
+                      <AppText color={consumerColors.text} style={{ fontWeight: "900", fontSize: 17 }}>
+                        {routeLabel} • {route.provider}
+                      </AppText>
+                      <AppText color={consumerColors.muted}>{route.rail} • ETA {route.estimatedTime}</AppText>
+                    </View>
+                    <ConsumerPill label={routeLabel} tone={index === 0 ? "gold" : "green"} />
+                  </View>
+                  <AppText color={consumerColors.muted}>
+                    {index === 0 ? "Lower fees" : "Reliable delivery"}
+                  </AppText>
+                  <AppText color={consumerColors.text} style={{ fontWeight: "900" }}>
+                    Amount received: {route.receiveAmount.toFixed(2)} {recipient?.currency ?? "PHP"}
+                  </AppText>
+                  <AppText color={consumerColors.muted}>FX rate: {route.fxRate.toFixed(2)}</AppText>
+                  <AppText color={consumerColors.muted}>Fee: GBP {route.fee.toFixed(2)}</AppText>
+                </Pressable>
+              );
+            })}
+            <ConsumerAction label="Continue to review" icon="arrow-right" onPress={continueToReview} />
+          </>
+        )}
       </ConsumerCard>
 
       <ConsumerCard accent>
         <AppText color={consumerColors.text} style={{ fontWeight: "900", fontSize: 18 }}>
-          Before you continue
+          Review and send
         </AppText>
-        <AppText color={consumerColors.muted}>
-          Transfer creation persists the record and opens tracking automatically.
-        </AppText>
+        {currentStep !== 4 ? (
+          <AppText color={consumerColors.muted}>Complete previous steps to unlock final send confirmation.</AppText>
+        ) : (
+          <AppText color={consumerColors.muted}>
+            Transfer creation persists the record and opens tracking automatically.
+          </AppText>
+        )}
         {errorMessage ? (
           <AppText variant="caption" style={{ color: "#B91C1C", fontWeight: "900" }}>
             {errorMessage}
           </AppText>
         ) : null}
-        <ConsumerAction label="Send" icon="arrow-right" onPress={submitTransfer} />
+        {currentStep === 4 ? (
+          <ConsumerAction label="Send" icon="arrow-right" onPress={submitTransfer} />
+        ) : (
+          <ConsumerAction
+            label="Go to review"
+            icon="arrow-right"
+            secondary
+            onPress={() => {
+              if (!recipientReady) {
+                setCurrentStep(1);
+                setErrorMessage("Complete recipient details before review.");
+                return;
+              }
+              if (!fundingReady) {
+                setCurrentStep(2);
+                setErrorMessage("Select funding before review.");
+                return;
+              }
+              if (!routeReady) {
+                setCurrentStep(3);
+                setErrorMessage("Select route before review.");
+                return;
+              }
+              setErrorMessage(null);
+              setCurrentStep(4);
+            }}
+          />
+        )}
       </ConsumerCard>
     </ConsumerShell>
   );

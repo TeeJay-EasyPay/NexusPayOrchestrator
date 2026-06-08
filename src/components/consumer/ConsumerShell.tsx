@@ -25,8 +25,8 @@ export const consumerColors = {
 const tabs = [
   { label: "Home", route: "/consumer", icon: "home" },
   { label: "Send", route: "/consumer/send", icon: "send" },
+  { label: "FX", route: "/consumer/fx", icon: "trending-up" },
   { label: "Track", route: "/consumer/track", icon: "clock" },
-  { label: "Transfers", route: "/consumer/transfers", icon: "list" },
   { label: "Profile", route: "/consumer/profile", icon: "user" },
 ] as const;
 
@@ -106,6 +106,9 @@ export function ConsumerShell({
                 </Pressable>
                 <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/send" as never); }} style={styles.dropdownItem}>
                   <AppText style={styles.dropdownTitle}>Send</AppText>
+                </Pressable>
+                <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/fx" as never); }} style={styles.dropdownItem}>
+                  <AppText style={styles.dropdownTitle}>FX rates</AppText>
                 </Pressable>
                 <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/transfers" as never); }} style={styles.dropdownItem}>
                   <AppText style={styles.dropdownTitle}>Transfers</AppText>
