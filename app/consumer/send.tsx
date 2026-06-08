@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Pressable, TextInput, View } from "react-native";
 
 import {
@@ -12,10 +12,8 @@ import {
 import { AppText } from "../../src/components/ui/AppText";
 import { corridors } from "../../src/data/corridors";
 import { buildOrchestratedRouteQuotes } from "../../src/lib/settlementOrchestrator";
-import { loadSavedRecipients } from "../../src/services/recipientService";
 import { useTransfer } from "../../src/state/TransferContext";
 import { useWallet } from "../../src/state/WalletContext";
-import { SavedRecipient } from "../../src/types/recipient";
 import { Currency, FundingMethod, Recipient, RouteQuote } from "../../src/types/transfer";
 
 function inputStyle() {
@@ -39,23 +37,6 @@ function asString(value: string | string[] | undefined) {
   return value ?? "";
 }
 
-function toRecipient(saved: SavedRecipient): Recipient {
-  return {
-    name: saved.name,
-    firstName: saved.firstName,
-    middleName: saved.middleName,
-    surname: saved.surname,
-    country: saved.country,
-    currency: saved.currency,
-    payoutMethod: saved.payoutMethod,
-    bankName: saved.bankName,
-    bankCode: saved.bankCode,
-    accountNumber: saved.accountNumber,
-    mobileWalletProvider: saved.mobileWalletProvider,
-    mobileNumber: saved.mobileNumber,
-  };
-}
-
 export default function ConsumerSendScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -63,10 +44,10 @@ export default function ConsumerSendScreen() {
   const { createTransfer, startTransfer } = useTransfer();
 
   const [amount, setAmount] = useState(asString(params.amount) || "250");
-  const [savedRecipients, setSavedRecipients] = useState<SavedRecipient[]>([]);
-  const [selectedRecipientId, setSelectedRecipientId] = useState(asString(params.recipientId));
-  const [manualName, setManualName] = useState(asString(params.name));
+  const [firstName, setFirstName] = useState(asString(params.firstName));
+  const [lastName, setLastName] = useState(asString(params.surname));
   const [manualCountry, setManualCountry] = useState(asString(params.country) || "Philippines");
+  const [selectedBank, setSelectedBank] = useState("");
   const [manualSortCode, setManualSortCode] = useState(asString(params.bankCode));
   const [manualAccountNumber, setManualAccountNumber] = useState(asString(params.accountNumber));
   const [fundingMethod, setFundingMethod] = useState<FundingMethod>("CARD");
@@ -79,44 +60,31 @@ export default function ConsumerSendScreen() {
     [manualCountry]
   );
 
+  const bankProviders = useMemo(() => {
+    const bankMethod = selectedCorridor?.payoutMethods.find((method) => method.type === "BANK");
+    return bankMethod?.providers ?? [];
+  }, [selectedCorridor]);
+
   const manualCurrency = (selectedCorridor?.currency ?? "PHP") as Currency;
-
-  useEffect(() => {
-    let mounted = true;
-
-    loadSavedRecipients().then((rows) => {
-      if (!mounted) return;
-      setSavedRecipients(rows);
-
-      if (!selectedRecipientId && rows[0]?.id) {
-        setSelectedRecipientId(rows[0].id);
-      }
-    });
-
-    return () => {
-      mounted = false;
-    };
-  }, [selectedRecipientId]);
-
-  const selectedSavedRecipient = useMemo(
-    () => savedRecipients.find((recipient) => recipient.id === selectedRecipientId),
-    [savedRecipients, selectedRecipientId]
-  );
 
   const parsedAmount = Number(amount);
   const sendAmount = Number.isFinite(parsedAmount) ? parsedAmount : 0;
 
   const recipient = useMemo<Recipient | null>(() => {
-    if (selectedSavedRecipient) {
-      return toRecipient(selectedSavedRecipient);
-    }
+    const normalizedFirstName = firstName.trim();
+    const normalizedLastName = lastName.trim();
 
-    const normalizedName = manualName.trim();
-    if (!normalizedName) {
+    if (!normalizedFirstName || !normalizedLastName) {
       return null;
     }
 
+    const normalizedName = `${normalizedFirstName} ${normalizedLastName}`.trim();
+
     if (normalizedName.toLowerCase() === "personal family recipient") {
+      return null;
+    }
+
+    if (!selectedBank.trim()) {
       return null;
     }
 
@@ -126,14 +94,16 @@ export default function ConsumerSendScreen() {
 
     return {
       name: normalizedName,
+      firstName: normalizedFirstName,
+      surname: normalizedLastName,
       country: manualCountry.trim() || "Philippines",
       currency: manualCurrency,
       payoutMethod: "BANK",
-      bankName: "Recipient Bank",
+      bankName: selectedBank.trim(),
       bankCode: manualSortCode.trim(),
       accountNumber: manualAccountNumber.trim(),
     };
-  }, [manualAccountNumber, manualCountry, manualCurrency, manualName, manualSortCode, selectedSavedRecipient]);
+  }, [firstName, lastName, manualAccountNumber, manualCountry, manualCurrency, manualSortCode, selectedBank]);
 
   const allRoutes = useMemo<RouteQuote[]>(() => {
     if (!recipient || sendAmount <= 0) {
@@ -185,6 +155,11 @@ export default function ConsumerSendScreen() {
 
     if (recipient.payoutMethod !== "BANK") {
       setErrorMessage("Recipient must be configured for bank payout with sort code and account number.");
+      return;
+    }
+
+    if (!recipient.bankName?.trim()) {
+      setErrorMessage("Select a destination bank for the chosen country.");
       return;
     }
 
@@ -241,70 +216,8 @@ export default function ConsumerSendScreen() {
         <AppText color={consumerColors.text} style={{ fontWeight: "900", fontSize: 18 }}>
           Recipient selection
         </AppText>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-          {savedRecipients.map((item) => {
-            const active = item.id === selectedRecipientId;
-            return (
-              <Pressable
-                key={item.id}
-                onPress={() => setSelectedRecipientId(item.id)}
-                style={{
-                  paddingHorizontal: 10,
-                  paddingVertical: 8,
-                  borderRadius: 999,
-                  borderWidth: 1,
-                  borderColor: active ? consumerColors.blue : consumerColors.border,
-                  backgroundColor: active ? consumerColors.blueSoft : consumerColors.white,
-                }}
-              >
-                <AppText
-                  variant="caption"
-                  style={{ color: active ? consumerColors.blueDark : consumerColors.muted, fontWeight: "900" }}
-                >
-                  {item.name}
-                </AppText>
-              </Pressable>
-            );
-          })}
-        </View>
-
         <AppText variant="caption" color={consumerColors.muted}>
-          Or add new recipient details
-        </AppText>
-        <TextInput
-          value={manualName}
-          onChangeText={(value) => {
-            setSelectedRecipientId("");
-            setManualName(value);
-          }}
-          placeholder="Recipient full name"
-          placeholderTextColor={consumerColors.muted}
-          style={inputStyle()}
-        />
-        <View style={{ flexDirection: "row", gap: 8 }}>
-          <TextInput
-            value={manualSortCode}
-            onChangeText={(value) => {
-              setSelectedRecipientId("");
-              setManualSortCode(value);
-            }}
-            placeholder="Sort code"
-            placeholderTextColor={consumerColors.muted}
-            style={[inputStyle(), { flex: 1 }]}
-          />
-          <TextInput
-            value={manualAccountNumber}
-            onChangeText={(value) => {
-              setSelectedRecipientId("");
-              setManualAccountNumber(value);
-            }}
-            placeholder="Account number"
-            placeholderTextColor={consumerColors.muted}
-            style={[inputStyle(), { flex: 1 }]}
-          />
-        </View>
-        <AppText variant="caption" color={consumerColors.muted}>
-          Destination country ({manualCurrency})
+          Step 1: Select destination country
         </AppText>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
           {corridors.map((corridor) => {
@@ -313,8 +226,9 @@ export default function ConsumerSendScreen() {
               <Pressable
                 key={corridor.country}
                 onPress={() => {
-                  setSelectedRecipientId("");
                   setManualCountry(corridor.country);
+                  setSelectedBank("");
+                  setErrorMessage(null);
                 }}
                 style={{
                   paddingHorizontal: 10,
@@ -334,6 +248,91 @@ export default function ConsumerSendScreen() {
               </Pressable>
             );
           })}
+        </View>
+
+        <AppText variant="caption" color={consumerColors.muted}>
+          Step 2: Select bank for {manualCountry} ({manualCurrency})
+        </AppText>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          {bankProviders.map((provider) => {
+            const active = provider === selectedBank;
+            return (
+              <Pressable
+                key={provider}
+                onPress={() => {
+                  setSelectedBank(provider);
+                  setErrorMessage(null);
+                }}
+                style={{
+                  paddingHorizontal: 10,
+                  paddingVertical: 8,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: active ? consumerColors.blue : consumerColors.border,
+                  backgroundColor: active ? consumerColors.blueSoft : consumerColors.white,
+                }}
+              >
+                <AppText
+                  variant="caption"
+                  style={{ color: active ? consumerColors.blueDark : consumerColors.muted, fontWeight: "900" }}
+                >
+                  {provider}
+                </AppText>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        <AppText variant="caption" color={consumerColors.muted}>
+          Step 3: Enter recipient name
+        </AppText>
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <TextInput
+            value={firstName}
+            onChangeText={(value) => {
+              setFirstName(value);
+              setErrorMessage(null);
+            }}
+            placeholder="First name"
+            placeholderTextColor={consumerColors.muted}
+            style={[inputStyle(), { flex: 1 }]}
+          />
+          <TextInput
+            value={lastName}
+            onChangeText={(value) => {
+              setLastName(value);
+              setErrorMessage(null);
+            }}
+            placeholder="Last name"
+            placeholderTextColor={consumerColors.muted}
+            style={[inputStyle(), { flex: 1 }]}
+          />
+        </View>
+
+        <AppText variant="caption" color={consumerColors.muted}>
+          Step 4: Enter recipient bank details
+        </AppText>
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <TextInput
+            value={manualSortCode}
+            onChangeText={(value) => {
+              setManualSortCode(value);
+              setErrorMessage(null);
+            }}
+            placeholder="Sort code"
+            placeholderTextColor={consumerColors.muted}
+            style={[inputStyle(), { flex: 1 }]}
+          />
+          <TextInput
+            value={manualAccountNumber}
+            onChangeText={(value) => {
+              setManualAccountNumber(value);
+              setErrorMessage(null);
+            }}
+            placeholder="Account number"
+            placeholderTextColor={consumerColors.muted}
+            style={[inputStyle(), { flex: 1 }]}
+          />
         </View>
       </ConsumerCard>
 
@@ -440,7 +439,7 @@ export default function ConsumerSendScreen() {
             {errorMessage}
           </AppText>
         ) : null}
-        <ConsumerAction label="Create transfer" icon="arrow-right" onPress={submitTransfer} />
+        <ConsumerAction label="Send" icon="arrow-right" onPress={submitTransfer} />
       </ConsumerCard>
     </ConsumerShell>
   );
