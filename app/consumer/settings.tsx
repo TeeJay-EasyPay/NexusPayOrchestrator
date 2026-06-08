@@ -14,6 +14,7 @@ import {
     loadConsumerSettings,
     updateConsumerPreferences,
 } from "../../src/services/consumerSettingsService";
+import { useNexusAISettings } from "../../src/hooks/useNexusAISettings";
 import { usePaymentMethods } from "../../src/state/PaymentMethodsContext";
 
 function ToggleRow({
@@ -66,6 +67,7 @@ function ToggleRow({
 export default function ConsumerSettingsScreen() {
   const router = useRouter();
   const { primaryMethod } = usePaymentMethods();
+  const { settings: aiSettings, updateMasterEnabled } = useNexusAISettings();
   const [preferences, setPreferences] = useState<ConsumerPreferences | null>(null);
 
   useEffect(() => {
@@ -183,6 +185,14 @@ export default function ConsumerSettingsScreen() {
         <AppText color={consumerColors.muted}>
           Choose how much guidance Nexus AI gives while sending and tracking money.
         </AppText>
+        <ToggleRow
+          title="Nexus AI assistant"
+          subtitle="Turn AI guidance on or off for private account experiences."
+          value={Boolean(aiSettings?.master_enabled)}
+          onToggle={(value) => {
+            void updateMasterEnabled(value);
+          }}
+        />
         <ConsumerAction label="Manage Nexus AI" icon="cpu" onPress={() => router.push("/consumer/nexus-ai" as never)} />
       </ConsumerCard>
     </ConsumerShell>

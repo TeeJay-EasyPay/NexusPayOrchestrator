@@ -22,6 +22,7 @@ type UseNexusAISettingsResult = {
   settings: NexusAISettings | null;
   loading: boolean;
   refresh: () => Promise<void>;
+  updateMasterEnabled: (value: boolean) => Promise<void>;
   updateScreenEnabled: (key: NexusAIScreenKey, value: boolean) => Promise<void>;
 };
 
@@ -109,10 +110,34 @@ export function useNexusAISettings(): UseNexusAISettingsResult {
     [settings]
   );
 
+  const updateMasterEnabled = useCallback(
+    async (value: boolean) => {
+      if (!settings) return;
+
+      const previous = settings;
+      const next = { ...settings, master_enabled: value };
+
+      setSettings(next);
+
+      try {
+        const saved = await updateNexusAISettings(settings.user_id, {
+          master_enabled: value,
+        });
+
+        setSettings(saved);
+      } catch (error) {
+        console.error("Failed to update Nexus AI master setting", error);
+        setSettings(previous);
+      }
+    },
+    [settings]
+  );
+
   return {
     settings,
     loading,
     refresh,
+    updateMasterEnabled,
     updateScreenEnabled,
   };
 }

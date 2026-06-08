@@ -1,6 +1,12 @@
+import { useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { View } from "react-native";
 
+import {
+  analyseTransfer,
+  TransferAnalysisResult,
+} from "../../src/services/nexusAIService";
+import { useNexusAIScreenSetting } from "../../src/hooks/useNexusAISettings";
 import {
     ConsumerAction,
     ConsumerCard,
@@ -52,9 +58,14 @@ function timelineForStatus(status: string): TimelineStep[] {
 }
 
 export default function ConsumerTrackScreen() {
+  const router = useRouter();
   const { transfer, completedTransfers, startTransfer, completeTransfer, hydrateTransfers } = useTransfer();
+  const { enabled: trackingAIEnabled, settings: aiSettings } = useNexusAIScreenSetting("tracking_enabled");
   const [auditLines, setAuditLines] = useState<string[]>([]);
+  const [aiUpdate, setAiUpdate] = useState<TransferAnalysisResult | null>(null);
   const autoCompleteForTransferRef = useRef<string | null>(null);
+  const startedTransferRef = useRef<string | null>(null);
+  const successNavigationRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!transfer?.id) {
@@ -103,6 +114,8 @@ export default function ConsumerTrackScreen() {
       return;
     }
 
+    startedTransferRef.current = transfer.id;
+
     if (autoCompleteForTransferRef.current === transfer.id) {
       return;
     }
@@ -120,6 +133,76 @@ export default function ConsumerTrackScreen() {
 
     return () => clearTimeout(timer);
   }, [completeTransfer, hydrateTransfers, startTransfer, transfer?.id, transfer?.status]);
+
+  useEffect(() => {
+    if (!transfer?.id || transfer.status !== "COMPLETED") {
+      return;
+    }
+
+    if (startedTransferRef.current !== transfer.id) {
+      return;
+    }
+
+    if (successNavigationRef.current === transfer.id) {
+      return;
+    }
+
+    successNavigationRef.current = transfer.id;
+    router.push({ pathname: "/consumer/success", params: { transferId: transfer.id } } as never);
+  }, [router, transfer?.id, transfer?.status]);
+
+  useEffect(() => {
+    if (!trackingAIEnabled || !activeTransfer) {
+      setAiUpdate(null);
+      return;
+    }
+
+    let active = true;
+
+    const timelineMilestones = timeline.map((step) => ({
+      title: step.title,
+      status:
+        step.state === "Done"
+          ? "DONE"
+          : step.state === "Current"
+            ? "RUNNING"
+            : "PENDING",
+    })) as { title: string; status: "PENDING" | "RUNNING" | "DONE" | "FAILED" | "SKIPPED" }[];
+
+    const operationalEvents = auditLines.slice(0, 3).map((line) => ({
+      label: "event",
+      value: line,
+    }));
+
+    void analyseTransfer(
+      {
+        transferId: activeTransfer.id,
+        transferState: activeTransfer.status,
+        progressPercent:
+          activeTransfer.status === "COMPLETED"
+            ? 100
+            : activeTransfer.status === "IN_PROGRESS"
+              ? 72
+              : 45,
+        settlementCommentary: "Transfer execution timeline in progress.",
+        milestones: timelineMilestones,
+        operationalEvents,
+      },
+      aiSettings?.sensitivity ?? "balanced",
+      {
+        timeoutMs: 6500,
+        maxRetries: 1,
+        _transfer: activeTransfer,
+      }
+    ).then((result) => {
+      if (!active) return;
+      setAiUpdate(result.data);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [activeTransfer, aiSettings?.sensitivity, auditLines, timeline, trackingAIEnabled]);
 
   if (!activeTransfer) {
     return (
@@ -140,6 +223,7 @@ export default function ConsumerTrackScreen() {
   const recipientName = activeTransfer.recipient?.name ?? "Recipient";
   const statusLabel = activeTransfer.status === "COMPLETED" ? "Delivered" : "On track";
   const progress = activeTransfer.status === "COMPLETED" ? 100 : activeTransfer.status === "IN_PROGRESS" ? 72 : 45;
+  const rerouteDetected = auditLines.some((line) => /reroute|failover/i.test(line));
 
   return (
     <ConsumerShell
@@ -164,6 +248,28 @@ export default function ConsumerTrackScreen() {
           {activeTransfer.selectedRoute?.provider ?? "Routing engine"} • ETA {activeTransfer.selectedRoute?.estimatedTime ?? "Pending"}
         </AppText>
       </ConsumerCard>
+
+      {rerouteDetected ? (
+        <ConsumerCard accent>
+          <AppText color={consumerColors.text} style={{ fontSize: 18, fontWeight: "900" }}>
+            Route updated automatically
+          </AppText>
+          <AppText color={consumerColors.muted}>
+            A route change was applied to keep your transfer moving. No action is required.
+          </AppText>
+        </ConsumerCard>
+      ) : null}
+
+      {trackingAIEnabled ? (
+        <ConsumerCard>
+          <AppText color={consumerColors.text} style={{ fontSize: 18, fontWeight: "900" }}>
+            Nexus AI live update
+          </AppText>
+          <AppText color={consumerColors.muted}>
+            {aiUpdate?.progressAnalysis ?? "Nexus AI is preparing transfer commentary."}
+          </AppText>
+        </ConsumerCard>
+      ) : null}
 
       <ConsumerCard>
         <AppText color={consumerColors.text} style={{ fontSize: 18, fontWeight: "900" }}>

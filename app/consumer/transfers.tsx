@@ -1,16 +1,23 @@
+import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, TextInput, View } from "react-native";
 
 import {
-  ConsumerAction,
-  ConsumerCard,
-  ConsumerPill,
-  ConsumerShell,
-  consumerColors,
+    ConsumerAction,
+    ConsumerCard,
+    ConsumerPill,
+    ConsumerShell,
+    consumerColors,
 } from "../../src/components/consumer/ConsumerShell";
 import { AppText } from "../../src/components/ui/AppText";
+import {
+  loadSavedRecipients,
+  toggleRecipientFavorite,
+} from "../../src/services/recipientService";
 import { useTransfer } from "../../src/state/TransferContext";
+import { SavedRecipient } from "../../src/types/recipient";
+import { Transfer } from "../../src/types/transfer";
 
 type StatusFilter = "ALL" | "COMPLETED" | "FAILED" | "IN_PROGRESS";
 
@@ -21,13 +28,79 @@ function formatAmount(value: number) {
 export default function ConsumerTransfersScreen() {
   const router = useRouter();
   const { completedTransfers, isLoadingTransfers, hydrateTransfers } = useTransfer();
+  const [savedRecipients, setSavedRecipients] = useState<SavedRecipient[]>([]);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
   const [search, setSearch] = useState("");
   const [openTransferId, setOpenTransferId] = useState<string | null>(null);
 
+  function recipientKeyFromTransfer(transfer: Transfer) {
+    const recipient = transfer.recipient;
+
+    return [
+      recipient?.country,
+      recipient?.payoutMethod,
+      recipient?.accountNumber ?? recipient?.mobileNumber ?? recipient?.name,
+    ]
+      .filter(Boolean)
+      .join("-");
+  }
+
+  function recipientKeyFromSavedRecipient(recipient: SavedRecipient) {
+    return [
+      recipient.country,
+      recipient.payoutMethod,
+      recipient.accountNumber ?? recipient.mobileNumber ?? recipient.name,
+    ]
+      .filter(Boolean)
+      .join("-");
+  }
+
+  function splitName(fullName?: string) {
+    const parts = (fullName ?? "").trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return { firstName: "", surname: "" };
+    if (parts.length === 1) return { firstName: parts[0], surname: "" };
+    return { firstName: parts[0], surname: parts[parts.length - 1] };
+  }
+
+  function resendTransfer(transfer: Transfer) {
+    const recipient = transfer.recipient;
+    const split = splitName(recipient?.name);
+
+    router.push(
+      {
+        pathname: "/consumer/send",
+        params: {
+          amount: String(transfer.senderAmount),
+          firstName: recipient?.firstName ?? split.firstName,
+          surname: recipient?.surname ?? split.surname,
+          country: recipient?.country,
+          bankName: recipient?.bankName,
+          bankCode: recipient?.bankCode,
+          accountNumber: recipient?.accountNumber,
+          fundingMethod: transfer.fundingMethod,
+          fundingReference: transfer.fundingReference,
+        },
+      } as never
+    );
+  }
+
+  async function refreshRecipients() {
+    const rows = await loadSavedRecipients();
+    setSavedRecipients(rows);
+  }
+
   useEffect(() => {
     void hydrateTransfers();
+    void refreshRecipients();
   }, [hydrateTransfers]);
+
+  const savedRecipientByKey = useMemo(() => {
+    const map = new Map<string, SavedRecipient>();
+    savedRecipients.forEach((item) => {
+      map.set(recipientKeyFromSavedRecipient(item), item);
+    });
+    return map;
+  }, [savedRecipients]);
 
   const filteredTransfers = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -113,6 +186,51 @@ export default function ConsumerTransfersScreen() {
             Amount received: {transfer.selectedRoute?.receiveAmount?.toFixed(2) ?? "-"} {transfer.recipient?.currency ?? ""}
           </AppText>
 
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <Pressable
+              onPress={() => resendTransfer(transfer)}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                alignItems: "center",
+                justifyContent: "center",
+                borderWidth: 1,
+                borderColor: consumerColors.border,
+                backgroundColor: consumerColors.white,
+              }}
+            >
+              <Feather name="repeat" size={16} color={consumerColors.blue} />
+            </Pressable>
+
+            <Pressable
+              onPress={() => {
+                const recipient = savedRecipientByKey.get(recipientKeyFromTransfer(transfer));
+                if (!recipient) return;
+
+                void toggleRecipientFavorite(recipient).then(() => {
+                  void refreshRecipients();
+                });
+              }}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                alignItems: "center",
+                justifyContent: "center",
+                borderWidth: 1,
+                borderColor: consumerColors.border,
+                backgroundColor: consumerColors.white,
+              }}
+            >
+              <Feather
+                name="star"
+                size={16}
+                color={savedRecipientByKey.get(recipientKeyFromTransfer(transfer))?.isFavorite ? "#D97706" : consumerColors.muted}
+              />
+            </Pressable>
+          </View>
+
           <Pressable
             onPress={() => setOpenTransferId((current) => (current === transfer.id ? null : transfer.id))}
             style={{
@@ -145,6 +263,11 @@ export default function ConsumerTransfersScreen() {
               <AppText color={consumerColors.muted}>Rail: {transfer.selectedRoute?.rail ?? "Pending"}</AppText>
               <AppText color={consumerColors.muted}>Fee: GBP {transfer.selectedRoute?.fee?.toFixed(2) ?? "0.00"}</AppText>
               <AppText color={consumerColors.muted}>ETA: {transfer.selectedRoute?.estimatedTime ?? "Unknown"}</AppText>
+              <AppText color={consumerColors.muted}>Funding: {transfer.fundingMethod ?? "Not captured"}</AppText>
+              <AppText color={consumerColors.muted}>Funding reference: {transfer.fundingReference ?? "Not captured"}</AppText>
+              <AppText color={consumerColors.muted}>Bank: {transfer.recipient?.bankName ?? "Not captured"}</AppText>
+              <AppText color={consumerColors.muted}>Sort code: {transfer.recipient?.bankCode ?? "Not captured"}</AppText>
+              <AppText color={consumerColors.muted}>Account: {transfer.recipient?.accountNumber ?? "Not captured"}</AppText>
             </View>
           ) : null}
 
@@ -152,20 +275,7 @@ export default function ConsumerTransfersScreen() {
             <ConsumerAction
               label="Repeat"
               icon="repeat"
-              onPress={() =>
-                router.push(
-                  {
-                    pathname: "/consumer/send",
-                    params: {
-                      amount: String(transfer.senderAmount),
-                      recipientId: transfer.recipient?.name ? "" : undefined,
-                      name: transfer.recipient?.name,
-                      country: transfer.recipient?.country,
-                      currency: transfer.recipient?.currency,
-                    },
-                  } as never
-                )
-              }
+              onPress={() => resendTransfer(transfer)}
             />
             <ConsumerAction label="Receipt" icon="file-text" secondary onPress={() => setOpenTransferId(transfer.id)} />
           </View>

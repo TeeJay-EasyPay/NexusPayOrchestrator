@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, TextInput, View } from "react-native";
 
 import {
@@ -11,6 +11,8 @@ import {
 } from "../../src/components/consumer/ConsumerShell";
 import { AppText } from "../../src/components/ui/AppText";
 import { corridors } from "../../src/data/corridors";
+import { useNexusAIScreenSetting } from "../../src/hooks/useNexusAISettings";
+import { explainRoute } from "../../src/services/nexusAIService";
 import { buildOrchestratedRouteQuotes } from "../../src/lib/settlementOrchestrator";
 import { useTransfer } from "../../src/state/TransferContext";
 import { useWallet } from "../../src/state/WalletContext";
@@ -41,20 +43,29 @@ export default function ConsumerSendScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { simulatedRlusdBalance } = useWallet();
-  const { createTransfer, startTransfer } = useTransfer();
+  const { transfer, createTransfer, startTransfer } = useTransfer();
+  const { enabled: routeAIEnabled, settings: aiSettings } = useNexusAIScreenSetting("route_enabled");
 
   const [amount, setAmount] = useState(asString(params.amount) || "250");
   const [firstName, setFirstName] = useState(asString(params.firstName));
   const [lastName, setLastName] = useState(asString(params.surname));
   const [manualCountry, setManualCountry] = useState(asString(params.country) || "Philippines");
-  const [selectedBank, setSelectedBank] = useState("");
+  const [selectedBank, setSelectedBank] = useState(asString(params.bankName));
   const [manualSortCode, setManualSortCode] = useState(asString(params.bankCode));
   const [manualAccountNumber, setManualAccountNumber] = useState(asString(params.accountNumber));
-  const [fundingMethod, setFundingMethod] = useState<FundingMethod>("CARD");
-  const [fundingReference, setFundingReference] = useState("Visa **** 4242");
+  const [fundingMethod, setFundingMethod] = useState<FundingMethod>((asString(params.fundingMethod) as FundingMethod) || "CARD");
+  const [fundingReference, setFundingReference] = useState(asString(params.fundingReference) || "Visa **** 4242");
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(
+    asString(params.fundingReference)
+      ? 3
+      : asString(params.firstName) || asString(params.surname) || asString(params.bankCode)
+        ? 2
+        : 1
+  );
   const [showAllCountries, setShowAllCountries] = useState(false);
+  const [routeAiSummary, setRouteAiSummary] = useState<string | null>(null);
+  const [routeAiLoading, setRouteAiLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const selectedCorridor = useMemo(
@@ -194,6 +205,60 @@ export default function ConsumerSendScreen() {
     setErrorMessage(null);
     setCurrentStep(4);
   }
+
+  useEffect(() => {
+    if (transfer?.status !== "COMPLETED") {
+      return;
+    }
+
+    setAmount("250");
+    setFirstName("");
+    setLastName("");
+    setManualCountry("Philippines");
+    setSelectedBank("");
+    setManualSortCode("");
+    setManualAccountNumber("");
+    setFundingMethod("CARD");
+    setFundingReference("Visa **** 4242");
+    setSelectedRouteId(null);
+    setCurrentStep(1);
+    setRouteAiSummary(null);
+    setErrorMessage(null);
+  }, [transfer?.status]);
+
+  useEffect(() => {
+    if (!routeAIEnabled || !selectedRoute || !recipient) {
+      setRouteAiSummary(null);
+      return;
+    }
+
+    let active = true;
+    setRouteAiLoading(true);
+
+    void explainRoute(
+      {
+        corridor: `${recipient.country} (${recipient.currency})`,
+        routeScore: selectedRoute.score,
+        liquidityScore: selectedRoute.liquidityScore ?? selectedRoute.score,
+        treasuryScore: selectedRoute.treasuryScore ?? selectedRoute.score,
+        settlementEstimate: selectedRoute.estimatedTime,
+      },
+      aiSettings?.sensitivity ?? "balanced",
+      {
+        timeoutMs: 6500,
+        maxRetries: 1,
+        _routeQuote: selectedRoute,
+      }
+    ).then((result) => {
+      if (!active) return;
+      setRouteAiSummary(result.data.bullets[0] ?? null);
+      setRouteAiLoading(false);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [aiSettings?.sensitivity, recipient, routeAIEnabled, selectedRoute]);
 
   function submitTransfer() {
     if (!recipient) {
@@ -463,6 +528,7 @@ export default function ConsumerSendScreen() {
         )}
       </ConsumerCard>
 
+      {currentStep >= 2 ? (
       <ConsumerCard>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
           <AppText color={consumerColors.text} style={{ fontWeight: "900", fontSize: 18 }}>
@@ -525,7 +591,9 @@ export default function ConsumerSendScreen() {
           </>
         )}
       </ConsumerCard>
+      ) : null}
 
+      {currentStep >= 3 ? (
       <ConsumerCard>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
           <AppText color={consumerColors.text} style={{ fontWeight: "900", fontSize: 18 }}>
@@ -585,11 +653,33 @@ export default function ConsumerSendScreen() {
                 </Pressable>
               );
             })}
+            {routeAIEnabled ? (
+              <View
+                style={{
+                  borderWidth: 1,
+                  borderColor: consumerColors.border,
+                  borderRadius: 8,
+                  padding: 12,
+                  backgroundColor: consumerColors.white,
+                }}
+              >
+                <AppText color={consumerColors.text} style={{ fontWeight: "900" }}>
+                  Nexus AI route insight
+                </AppText>
+                <AppText color={consumerColors.muted}>
+                  {routeAiLoading
+                    ? "Analysing route telemetry..."
+                    : routeAiSummary ?? "Select a route to view AI confidence commentary."}
+                </AppText>
+              </View>
+            ) : null}
             <ConsumerAction label="Continue to review" icon="arrow-right" onPress={continueToReview} />
           </>
         )}
       </ConsumerCard>
+      ) : null}
 
+      {currentStep >= 4 ? (
       <ConsumerCard accent>
         <AppText color={consumerColors.text} style={{ fontWeight: "900", fontSize: 18 }}>
           Review and send
@@ -606,35 +696,9 @@ export default function ConsumerSendScreen() {
             {errorMessage}
           </AppText>
         ) : null}
-        {currentStep === 4 ? (
-          <ConsumerAction label="Send" icon="arrow-right" onPress={submitTransfer} />
-        ) : (
-          <ConsumerAction
-            label="Go to review"
-            icon="arrow-right"
-            secondary
-            onPress={() => {
-              if (!recipientReady) {
-                setCurrentStep(1);
-                setErrorMessage("Complete recipient details before review.");
-                return;
-              }
-              if (!fundingReady) {
-                setCurrentStep(2);
-                setErrorMessage("Select funding before review.");
-                return;
-              }
-              if (!routeReady) {
-                setCurrentStep(3);
-                setErrorMessage("Select route before review.");
-                return;
-              }
-              setErrorMessage(null);
-              setCurrentStep(4);
-            }}
-          />
-        )}
+        <ConsumerAction label="Send" icon="arrow-right" onPress={submitTransfer} />
       </ConsumerCard>
+      ) : null}
     </ConsumerShell>
   );
 }
