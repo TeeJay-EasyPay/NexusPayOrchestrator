@@ -31,7 +31,9 @@ Startup V2 architecture, authentication, account-scope isolation, Supabase integ
 - Code-level review confirms Startup V2 routing now targets Multi-Account Preview without changing the Startup Coordinator.
 
 ## Android EAS Build
-Build URL: PENDING_EAS_BUILD_URL
+Build URL: https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/builds/8e3efb51-e526-40fb-b213-5e3a9753d1fa
+
+Build status at capture: in progress.
 
 ## Recommendation
 Proceed to Android EAS build and founder APK validation once build URL is available. Treat full TypeScript remediation as a separate technical debt sprint because the remaining failures are outside the persona correction scope.

@@ -24,7 +24,9 @@ npx eas build --platform android --profile preview --non-interactive
 ```
 
 ## Build URL
-Build URL: PENDING_EAS_BUILD_URL
+Build URL: https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/builds/8e3efb51-e526-40fb-b213-5e3a9753d1fa
+
+Build status at capture: in progress.
 
 ## APK Validation Checklist
 - Multi-Account Preview appears at unauthenticated startup.
