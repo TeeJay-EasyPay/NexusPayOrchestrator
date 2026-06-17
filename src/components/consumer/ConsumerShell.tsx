@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { usePathname, useRouter } from "expo-router";
 import { useState } from "react";
-import { Pressable, ScrollView, StatusBar, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, StatusBar, StyleSheet, useWindowDimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAccount } from "../../state/AccountContext";
@@ -23,11 +23,27 @@ export const consumerColors = {
   surface: "#F8FBFF",
 };
 
-const tabs = [
+const defaultTabs = [
   { label: "Home", route: "/consumer", icon: "home" },
   { label: "Send", route: "/consumer/send", icon: "send" },
   { label: "FX", route: "/consumer/fx", icon: "trending-up" },
   { label: "Track", route: "/consumer/track", icon: "clock" },
+  { label: "Profile", route: "/consumer/profile", icon: "user" },
+] as const;
+
+const participantTabs = [
+  { label: "Home", route: "/consumer", icon: "home" },
+  { label: "Send", route: "/consumer/send", icon: "send" },
+  { label: "Alerts", route: "/participant-notifications", icon: "bell" },
+  { label: "Received", route: "/received-transfers", icon: "download" },
+  { label: "Profile", route: "/consumer/profile", icon: "user" },
+] as const;
+
+const corporateTabs = [
+  { label: "Home", route: "/consumer", icon: "home" },
+  { label: "Payouts", route: "/corporate-payouts", icon: "briefcase" },
+  { label: "Alerts", route: "/participant-notifications", icon: "bell" },
+  { label: "Received", route: "/received-transfers", icon: "download" },
   { label: "Profile", route: "/consumer/profile", icon: "user" },
 ] as const;
 
@@ -48,6 +64,14 @@ export function ConsumerShell({
   const { clearAccountScope } = useAccount();
   const { selectedPersona } = usePersona();
   const [menuOpen, setMenuOpen] = useState(false);
+  const { height } = useWindowDimensions();
+  const dropdownMaxHeight = Math.max(280, height - 190);
+  const tabs =
+    selectedPersona.id === "corporate-demo"
+      ? corporateTabs
+      : selectedPersona.kind === "PARTICIPANT"
+        ? participantTabs
+        : defaultTabs;
 
   async function handleSignOut() {
     setMenuOpen(false);
@@ -108,48 +132,50 @@ export function ConsumerShell({
             </View>
 
             {menuOpen ? (
-              <View style={styles.dropdown}>
-                <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer" as never); }} style={styles.dropdownItem}>
-                  <AppText style={styles.dropdownTitle}>Home</AppText>
-                </Pressable>
-                <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/send" as never); }} style={styles.dropdownItem}>
-                  <AppText style={styles.dropdownTitle}>Send</AppText>
-                </Pressable>
-                <Pressable onPress={() => { setMenuOpen(false); router.push("/routes" as never); }} style={styles.dropdownItem}>
-                  <AppText style={styles.dropdownTitle}>Routes</AppText>
-                </Pressable>
-                <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/fx" as never); }} style={styles.dropdownItem}>
-                  <AppText style={styles.dropdownTitle}>FX rates</AppText>
-                </Pressable>
-                <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/transfers" as never); }} style={styles.dropdownItem}>
-                  <AppText style={styles.dropdownTitle}>Transfers</AppText>
-                </Pressable>
-                <Pressable onPress={() => { setMenuOpen(false); router.push("/participant-notifications" as never); }} style={styles.dropdownItem}>
-                  <AppText style={styles.dropdownTitle}>Notifications</AppText>
-                </Pressable>
-                <Pressable onPress={() => { setMenuOpen(false); router.push("/received-transfers" as never); }} style={styles.dropdownItem}>
-                  <AppText style={styles.dropdownTitle}>Received Transfers</AppText>
-                </Pressable>
-                {selectedPersona.id === "corporate-demo" ? (
-                  <Pressable onPress={() => { setMenuOpen(false); router.push("/corporate-payouts" as never); }} style={styles.dropdownItem}>
-                    <AppText style={styles.dropdownTitle}>Corporate Payouts</AppText>
+              <View style={[styles.dropdown, { maxHeight: dropdownMaxHeight }]}>
+                <ScrollView nestedScrollEnabled showsVerticalScrollIndicator>
+                  <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer" as never); }} style={styles.dropdownItem}>
+                    <AppText style={styles.dropdownTitle}>Home</AppText>
                   </Pressable>
-                ) : null}
-                <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/nexus-ai" as never); }} style={styles.dropdownItem}>
-                  <AppText style={styles.dropdownTitle}>Nexus AI</AppText>
-                </Pressable>
-                <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/profile" as never); }} style={styles.dropdownItem}>
-                  <AppText style={styles.dropdownTitle}>Profile</AppText>
-                </Pressable>
-                <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/settings" as never); }} style={styles.dropdownItem}>
-                  <AppText style={styles.dropdownTitle}>Settings</AppText>
-                </Pressable>
-                <Pressable onPress={() => { setMenuOpen(false); router.push("/multi-account-preview" as never); }} style={styles.dropdownItem}>
-                  <AppText style={styles.dropdownTitle}>Account and persona switcher</AppText>
-                </Pressable>
-                <Pressable onPress={handleSignOut} style={[styles.dropdownItem, styles.signOutItem]}>
-                  <AppText style={styles.signOutText}>Sign out</AppText>
-                </Pressable>
+                  <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/send" as never); }} style={styles.dropdownItem}>
+                    <AppText style={styles.dropdownTitle}>Send</AppText>
+                  </Pressable>
+                  <Pressable onPress={() => { setMenuOpen(false); router.push("/routes" as never); }} style={styles.dropdownItem}>
+                    <AppText style={styles.dropdownTitle}>Routes</AppText>
+                  </Pressable>
+                  <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/fx" as never); }} style={styles.dropdownItem}>
+                    <AppText style={styles.dropdownTitle}>FX rates</AppText>
+                  </Pressable>
+                  <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/transfers" as never); }} style={styles.dropdownItem}>
+                    <AppText style={styles.dropdownTitle}>Transfers</AppText>
+                  </Pressable>
+                  <Pressable onPress={() => { setMenuOpen(false); router.push("/participant-notifications" as never); }} style={styles.dropdownItem}>
+                    <AppText style={styles.dropdownTitle}>Alerts</AppText>
+                  </Pressable>
+                  <Pressable onPress={() => { setMenuOpen(false); router.push("/received-transfers" as never); }} style={styles.dropdownItem}>
+                    <AppText style={styles.dropdownTitle}>Received Transfers</AppText>
+                  </Pressable>
+                  {selectedPersona.id === "corporate-demo" ? (
+                    <Pressable onPress={() => { setMenuOpen(false); router.push("/corporate-payouts" as never); }} style={styles.dropdownItem}>
+                      <AppText style={styles.dropdownTitle}>Corporate Payouts</AppText>
+                    </Pressable>
+                  ) : null}
+                  <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/nexus-ai" as never); }} style={styles.dropdownItem}>
+                    <AppText style={styles.dropdownTitle}>Nexus AI</AppText>
+                  </Pressable>
+                  <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/profile" as never); }} style={styles.dropdownItem}>
+                    <AppText style={styles.dropdownTitle}>Profile</AppText>
+                  </Pressable>
+                  <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/settings" as never); }} style={styles.dropdownItem}>
+                    <AppText style={styles.dropdownTitle}>Settings</AppText>
+                  </Pressable>
+                  <Pressable onPress={() => { setMenuOpen(false); router.push("/multi-account-preview" as never); }} style={styles.dropdownItem}>
+                    <AppText style={styles.dropdownTitle}>Account and persona switcher</AppText>
+                  </Pressable>
+                  <Pressable onPress={handleSignOut} style={[styles.dropdownItem, styles.signOutItem]}>
+                    <AppText style={styles.signOutText}>Sign out</AppText>
+                  </Pressable>
+                </ScrollView>
               </View>
             ) : null}
           </View>
@@ -158,6 +184,7 @@ export function ConsumerShell({
         </ScrollView>
 
         <View style={styles.nav}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.navScroll}>
           {tabs.map((tab) => {
             const active = tab.route === "/consumer" ? pathname === tab.route : pathname.startsWith(tab.route);
 
@@ -184,6 +211,7 @@ export function ConsumerShell({
               </Pressable>
             );
           })}
+          </ScrollView>
         </View>
       </View>
     </SafeAreaView>
@@ -399,10 +427,15 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   navItem: {
-    flex: 1,
+    minWidth: 72,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 8,
+    gap: 4,
+    paddingHorizontal: 8,
+  },
+  navScroll: {
+    flexGrow: 1,
     gap: 4,
   },
   navItemActive: {

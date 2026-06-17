@@ -1,6 +1,6 @@
 import { usePathname, useRouter } from "expo-router";
 import { useState } from "react";
-import { Alert, Pressable, View } from "react-native";
+import { Alert, Pressable, ScrollView, useWindowDimensions, View } from "react-native";
 
 import { useAuth } from "../../state/AuthContext";
 import { useDeviceUnlock } from "../../state/DeviceUnlockContext";
@@ -67,9 +67,11 @@ export function AppDropdownMenu() {
   const { lockApp } = useDeviceUnlock();
   const { selectedPersona } = usePersona();
   const [isOpen, setIsOpen] = useState(false);
+  const { height } = useWindowDimensions();
 
   const isCorporatePersona = selectedPersona.id === "corporate-demo";
-  const isRecipientPersona = selectedPersona.kind === "PARTICIPANT" && !isCorporatePersona;
+  const isParticipantPersona = selectedPersona.kind === "PARTICIPANT";
+  const menuMaxHeight = Math.max(280, height - 132);
 
   const menuItems = [
     ...MENU_ITEMS,
@@ -83,11 +85,11 @@ export function AppDropdownMenu() {
           },
         ]
       : []),
-    ...(isRecipientPersona
+    ...(isParticipantPersona
       ? [
           {
             label: "Notifications",
-            description: "Recipient notifications and read status",
+            description: "Active workspace alerts and read status",
             route: "/participant-notifications",
             match: "/participant-notifications",
           },
@@ -191,81 +193,88 @@ export function AppDropdownMenu() {
             shadowRadius: 18,
             shadowOffset: { width: 0, height: 8 },
             elevation: 8,
+            maxHeight: menuMaxHeight,
           }}
         >
-          {menuItems.map((item) => {
-            const isActive =
-              item.match === "/"
-                ? pathname === "/"
-                : pathname.startsWith(item.match);
-
-            return (
-              <Pressable
-                key={item.route}
-                onPress={() => handleNavigate(item.route)}
-                style={{
-                  padding: 13,
-                  borderRadius: 18,
-                  backgroundColor: isActive ? "#0B3F4A" : "#F8FAFC",
-                  borderWidth: 1,
-                  borderColor: isActive ? "#0B3F4A" : "#E2E8F0",
-                  gap: 3,
-                }}
-              >
-                <AppText
-                  variant="body"
-                  style={{
-                    color: isActive
-                      ? colors.gold
-                      : colors.textDarkPrimary,
-                    fontWeight: "900",
-                  }}
-                >
-                  {item.label}
-                </AppText>
-
-                <AppText
-                  variant="caption"
-                  style={{
-                    color: isActive
-                      ? "#BFEAF1"
-                      : colors.textDarkSecondary,
-                  }}
-                >
-                  {item.description}
-                </AppText>
-              </Pressable>
-            );
-          })}
-
-          <Pressable
-            onPress={handleSignOut}
-            style={{
-              padding: 13,
-              borderRadius: 18,
-              backgroundColor: "#FFF1F2",
-              borderWidth: 1,
-              borderColor: "#FECDD3",
-              gap: 3,
-            }}
+          <ScrollView
+            nestedScrollEnabled
+            showsVerticalScrollIndicator
+            contentContainerStyle={{ gap: 8, paddingBottom: 2 }}
           >
-            <AppText
-              variant="body"
+            {menuItems.map((item) => {
+              const isActive =
+                item.match === "/"
+                  ? pathname === "/"
+                  : pathname.startsWith(item.match);
+
+              return (
+                <Pressable
+                  key={item.route}
+                  onPress={() => handleNavigate(item.route)}
+                  style={{
+                    padding: 13,
+                    borderRadius: 18,
+                    backgroundColor: isActive ? "#0B3F4A" : "#F8FAFC",
+                    borderWidth: 1,
+                    borderColor: isActive ? "#0B3F4A" : "#E2E8F0",
+                    gap: 3,
+                  }}
+                >
+                  <AppText
+                    variant="body"
+                    style={{
+                      color: isActive
+                        ? colors.gold
+                        : colors.textDarkPrimary,
+                      fontWeight: "900",
+                    }}
+                  >
+                    {item.label}
+                  </AppText>
+
+                  <AppText
+                    variant="caption"
+                    style={{
+                      color: isActive
+                        ? "#BFEAF1"
+                        : colors.textDarkSecondary,
+                    }}
+                  >
+                    {item.description}
+                  </AppText>
+                </Pressable>
+              );
+            })}
+
+            <Pressable
+              onPress={handleSignOut}
               style={{
-                color: "#BE123C",
-                fontWeight: "900",
+                padding: 13,
+                borderRadius: 18,
+                backgroundColor: "#FFF1F2",
+                borderWidth: 1,
+                borderColor: "#FECDD3",
+                gap: 3,
               }}
             >
-              Sign out
-            </AppText>
+              <AppText
+                variant="body"
+                style={{
+                  color: "#BE123C",
+                  fontWeight: "900",
+                }}
+              >
+                Sign out
+              </AppText>
 
-            <AppText
-              variant="caption"
-              style={{ color: "#9F1239" }}
-            >
-              End this NexusPay session
-            </AppText>
-          </Pressable>
+              <AppText
+                variant="caption"
+                style={{ color: "#9F1239" }}
+              >
+                End this NexusPay session
+              </AppText>
+            </Pressable>
+          </ScrollView>
         </View>
       ) : null}
     </View>
