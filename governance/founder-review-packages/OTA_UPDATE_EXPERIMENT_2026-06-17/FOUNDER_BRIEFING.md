@@ -76,16 +76,23 @@ Manual/code-path validation:
 
 ## 6. Git Commit ID
 Code commit: `bdf5868` (`Fix workspace drawer and alerts navigation`)
-Report/OTA commit: PENDING_REPORT_COMMIT_ID
+Report/OTA source commit: `e6dcaa5f9209c4cc684e0a7b0c91893f1854465c`
 
 ## 7. OTA Update ID
-OTA Update ID: PENDING_OTA_UPDATE_ID
+OTA update group ID: `f23d975c-169c-4918-8bb1-8903b7061131`
+Android update ID: `019ed7cc-da2d-7245-980b-09579332f59d`
+iOS update ID: `019ed7cc-da2d-70bb-ad18-fd77b9a8d7f4`
+EAS dashboard: https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/f23d975c-169c-4918-8bb1-8903b7061131
 
 ## 8. OTA Publication Status
-Status: PENDING_OTA_PUBLICATION
+Status: Published to EAS Update branch `preview`.
+
+Runtime version: `1.0.0`
+Platforms published: Android, iOS
+Message: `Workspace drawer and alerts navigation remediation`
 
 ## 9. Whether A Full APK Build Was Avoided
-Full APK build avoided: PENDING_OTA_RESULT
+Full APK build avoided: Yes.
 
 No native dependencies, native configuration, Android project files, or EAS build profile changes were introduced. This remediation is JavaScript/TypeScript only and is suitable for OTA publication.
 
