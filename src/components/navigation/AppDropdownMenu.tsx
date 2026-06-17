@@ -1,6 +1,6 @@
 import { usePathname, useRouter } from "expo-router";
 import { useState } from "react";
-import { Alert, Pressable, ScrollView, useWindowDimensions, View } from "react-native";
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
 
 import { useAuth } from "../../state/AuthContext";
 import { useDeviceUnlock } from "../../state/DeviceUnlockContext";
@@ -71,7 +71,7 @@ export function AppDropdownMenu() {
 
   const isCorporatePersona = selectedPersona.id === "corporate-demo";
   const isParticipantPersona = selectedPersona.kind === "PARTICIPANT";
-  const menuMaxHeight = Math.max(280, height - 132);
+  const menuMaxHeight = Math.max(240, height - 118);
 
   const menuItems = [
     ...MENU_ITEMS,
@@ -175,13 +175,18 @@ export function AppDropdownMenu() {
         <UserAccountBadge />
       </View>
 
-      {isOpen ? (
+      <Modal
+        animationType="fade"
+        transparent
+        visible={isOpen}
+        onRequestClose={() => setIsOpen(false)}
+      >
+        <View style={styles.menuOverlay}>
+          <Pressable style={styles.menuBackdrop} onPress={() => setIsOpen(false)} />
         <View
           style={{
-            position: "absolute",
-            top: 54,
-            left: 0,
-            right: 0,
+            marginTop: 62,
+            marginHorizontal: 16,
             padding: 12,
             borderRadius: 24,
             backgroundColor: "rgba(255,255,255,0.98)",
@@ -276,7 +281,18 @@ export function AppDropdownMenu() {
             </Pressable>
           </ScrollView>
         </View>
-      ) : null}
+        </View>
+      </Modal>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(2,19,35,0.22)",
+  },
+  menuBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+});

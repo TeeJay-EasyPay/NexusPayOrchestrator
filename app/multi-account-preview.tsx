@@ -39,17 +39,23 @@ export default function MultiAccountPreviewScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState(selectedPersona.id);
 
+  const personaOptions = useMemo(
+    () => personas.filter((persona) => persona.kind === "PARTICIPANT" && persona.id !== "corporate-demo"),
+    [personas],
+  );
+
   useEffect(() => {
-    setSelectedId(selectedPersona.id);
-  }, [selectedPersona.id]);
+    const selectedIsPersonaOption = personaOptions.some((persona) => persona.id === selectedPersona.id);
+    setSelectedId(selectedIsPersonaOption ? selectedPersona.id : personaOptions[0]?.id ?? selectedPersona.id);
+  }, [personaOptions, selectedPersona.id]);
 
   useEffect(() => {
     void seedDemoParticipantsIfMissing();
   }, []);
 
   const selectedOption = useMemo(
-    () => personas.find((persona) => persona.id === selectedId) ?? personas[0],
-    [personas, selectedId],
+    () => personaOptions.find((persona) => persona.id === selectedId) ?? personaOptions[0],
+    [personaOptions, selectedId],
   );
 
   async function requireUnlock() {
@@ -174,15 +180,17 @@ export default function MultiAccountPreviewScreen() {
                 Optional persona selection
               </AppText>
               <AppText variant="subheading" color={colors.textDarkPrimary} style={{ fontWeight: "800" }}>
-                Continue as {selectedOption.label}
+                Continue as {selectedOption?.label ?? "a persona"}
               </AppText>
-              <AppText variant="caption" color={colors.textDarkSecondary}>
-                {personaMeta(selectedOption)}
-              </AppText>
+              {selectedOption ? (
+                <AppText variant="caption" color={colors.textDarkSecondary}>
+                  {personaMeta(selectedOption)}
+                </AppText>
+              ) : null}
             </View>
 
             <View style={{ gap: 8 }}>
-              {personas.map((persona) => {
+              {personaOptions.map((persona) => {
                 const active = selectedId === persona.id;
 
                 return (
@@ -210,8 +218,8 @@ export default function MultiAccountPreviewScreen() {
 
             <AppButton
               title={busy ? "Opening..." : "Continue"}
-              onPress={() => openPersonalWorkspace(selectedOption)}
-              disabled={busy}
+              onPress={() => selectedOption && openPersonalWorkspace(selectedOption)}
+              disabled={busy || !selectedOption}
             />
 
             {errorMessage ? (

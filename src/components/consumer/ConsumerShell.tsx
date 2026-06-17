@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { usePathname, useRouter } from "expo-router";
 import { useState } from "react";
-import { Pressable, ScrollView, StatusBar, StyleSheet, useWindowDimensions, View } from "react-native";
+import { Modal, Pressable, ScrollView, StatusBar, StyleSheet, useWindowDimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAccount } from "../../state/AccountContext";
@@ -65,9 +65,11 @@ export function ConsumerShell({
   const { selectedPersona } = usePersona();
   const [menuOpen, setMenuOpen] = useState(false);
   const { height } = useWindowDimensions();
-  const dropdownMaxHeight = Math.max(280, height - 190);
+  const dropdownMaxHeight = Math.max(240, height - 128);
+  const isCorporatePersona = selectedPersona.id === "corporate-demo";
+  const workspaceLabel = isCorporatePersona ? "Corporate Workspace" : "Personal Account";
   const tabs =
-    selectedPersona.id === "corporate-demo"
+    isCorporatePersona
       ? corporateTabs
       : selectedPersona.kind === "PARTICIPANT"
         ? participantTabs
@@ -94,7 +96,7 @@ export function ConsumerShell({
               </View>
               <View style={{ flex: 1 }}>
                 <AppText variant="caption" color={consumerColors.blue}>
-                  Personal Account
+                  {workspaceLabel}
                 </AppText>
                 <AppText color={consumerColors.text} style={styles.accountName}>
                   {selectedPersona.label}
@@ -131,9 +133,16 @@ export function ConsumerShell({
               </AppText>
             </View>
 
-            {menuOpen ? (
-              <View style={[styles.dropdown, { maxHeight: dropdownMaxHeight }]}>
-                <ScrollView nestedScrollEnabled showsVerticalScrollIndicator>
+            <Modal
+              animationType="fade"
+              transparent
+              visible={menuOpen}
+              onRequestClose={() => setMenuOpen(false)}
+            >
+              <View style={styles.dropdownOverlay}>
+                <Pressable style={styles.dropdownBackdrop} onPress={() => setMenuOpen(false)} />
+                <View style={[styles.dropdown, { maxHeight: dropdownMaxHeight }]}>
+                  <ScrollView nestedScrollEnabled showsVerticalScrollIndicator contentContainerStyle={styles.dropdownScroll}>
                   <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer" as never); }} style={styles.dropdownItem}>
                     <AppText style={styles.dropdownTitle}>Home</AppText>
                   </Pressable>
@@ -175,9 +184,10 @@ export function ConsumerShell({
                   <Pressable onPress={handleSignOut} style={[styles.dropdownItem, styles.signOutItem]}>
                     <AppText style={styles.signOutText}>Sign out</AppText>
                   </Pressable>
-                </ScrollView>
+                  </ScrollView>
+                </View>
               </View>
-            ) : null}
+            </Modal>
           </View>
 
           <View style={styles.content}>{children}</View>
@@ -319,12 +329,23 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   dropdown: {
-    marginTop: 12,
+    marginHorizontal: 16,
+    marginTop: 72,
     backgroundColor: consumerColors.white,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: consumerColors.border,
     overflow: "hidden",
+  },
+  dropdownOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15,34,57,0.18)",
+  },
+  dropdownBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  dropdownScroll: {
+    paddingBottom: 2,
   },
   dropdownItem: {
     paddingHorizontal: 14,
