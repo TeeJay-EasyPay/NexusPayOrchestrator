@@ -75,7 +75,7 @@ Manual/code-path validation:
 - No Alerts route depends on stored previous persona selection.
 
 ## 6. Git Commit ID
-Code commit: PENDING_CODE_COMMIT_ID
+Code commit: `bdf5868` (`Fix workspace drawer and alerts navigation`)
 Report/OTA commit: PENDING_REPORT_COMMIT_ID
 
 ## 7. OTA Update ID
