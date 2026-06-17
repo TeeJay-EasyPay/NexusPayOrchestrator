@@ -12,8 +12,8 @@ import {
 import { AppText } from "../../src/components/ui/AppText";
 import { corridors } from "../../src/data/corridors";
 import { useNexusAIScreenSetting } from "../../src/hooks/useNexusAISettings";
-import { explainRoute } from "../../src/services/nexusAIService";
 import { buildOrchestratedRouteQuotes } from "../../src/lib/settlementOrchestrator";
+import { explainRoute } from "../../src/services/nexusAIService";
 import { useTransfer } from "../../src/state/TransferContext";
 import { useWallet } from "../../src/state/WalletContext";
 import { Currency, FundingMethod, Recipient, RouteQuote } from "../../src/types/transfer";

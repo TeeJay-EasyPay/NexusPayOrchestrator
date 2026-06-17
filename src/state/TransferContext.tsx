@@ -12,6 +12,7 @@ import {
     Transfer,
 } from "../types/transfer";
 import { useAccount } from "./AccountContext";
+import { usePersona } from "./PersonaContext";
 
 interface TransferContextType {
   transfer: Transfer | null;
@@ -46,6 +47,7 @@ const TransferContext = createContext<TransferContextType | undefined>(
 
 export function TransferProvider({ children }: { children: React.ReactNode }) {
   const { accountScope } = useAccount();
+  const { selectedPersona } = usePersona();
   const [transfer, setTransfer] = useState<Transfer | null>(null);
   const [completedTransfers, setCompletedTransfers] = useState<Transfer[]>([]);
   const [isLoadingTransfers, setIsLoadingTransfers] = useState(false);
@@ -108,6 +110,7 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
           : "CREATED",
       createdAt: Date.now(),
       accountScope,
+      personaId: selectedPersona.id,
     };
 
     setTransfer(newTransfer);
@@ -120,6 +123,7 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
       metadata: {
         sender_currency: newTransfer.senderCurrency,
         sender_amount: newTransfer.senderAmount,
+        persona_id: newTransfer.personaId,
       },
     });
 

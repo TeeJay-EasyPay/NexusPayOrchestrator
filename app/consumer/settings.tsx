@@ -9,12 +9,12 @@ import {
     consumerColors,
 } from "../../src/components/consumer/ConsumerShell";
 import { AppText } from "../../src/components/ui/AppText";
+import { useNexusAISettings } from "../../src/hooks/useNexusAISettings";
 import {
     ConsumerPreferences,
     loadConsumerSettings,
     updateConsumerPreferences,
 } from "../../src/services/consumerSettingsService";
-import { useNexusAISettings } from "../../src/hooks/useNexusAISettings";
 import { usePaymentMethods } from "../../src/state/PaymentMethodsContext";
 
 function ToggleRow({

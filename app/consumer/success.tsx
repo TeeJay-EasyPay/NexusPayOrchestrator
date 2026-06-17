@@ -3,11 +3,11 @@ import { useEffect, useMemo, useState } from "react";
 import { View } from "react-native";
 
 import {
-  ConsumerAction,
-  ConsumerCard,
-  ConsumerPill,
-  ConsumerShell,
-  consumerColors,
+    ConsumerAction,
+    ConsumerCard,
+    consumerColors,
+    ConsumerPill,
+    ConsumerShell,
 } from "../../src/components/consumer/ConsumerShell";
 import { AppText } from "../../src/components/ui/AppText";
 import { useNexusAIScreenSetting } from "../../src/hooks/useNexusAISettings";

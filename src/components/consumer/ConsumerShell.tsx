@@ -6,6 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAccount } from "../../state/AccountContext";
 import { useAuth } from "../../state/AuthContext";
+import { usePersona } from "../../state/PersonaContext";
 import { AppText } from "../ui/AppText";
 
 export const consumerColors = {
@@ -45,6 +46,7 @@ export function ConsumerShell({
   const pathname = usePathname();
   const { signOut } = useAuth();
   const { clearAccountScope } = useAccount();
+  const { selectedPersona } = usePersona();
   const [menuOpen, setMenuOpen] = useState(false);
 
   async function handleSignOut() {
@@ -71,7 +73,12 @@ export function ConsumerShell({
                   Personal Account
                 </AppText>
                 <AppText color={consumerColors.text} style={styles.accountName}>
-                  NexusPay
+                  {selectedPersona.label}
+                </AppText>
+                <AppText variant="caption" color={consumerColors.muted}>
+                  {selectedPersona.kind === "PARTICIPANT"
+                    ? `${selectedPersona.bankName ?? "Bank"} ${selectedPersona.accountLast4 ? `****${selectedPersona.accountLast4}` : ""}`
+                    : "NexusPay"}
                 </AppText>
               </View>
               <View style={styles.headerActions}>
@@ -108,17 +115,37 @@ export function ConsumerShell({
                 <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/send" as never); }} style={styles.dropdownItem}>
                   <AppText style={styles.dropdownTitle}>Send</AppText>
                 </Pressable>
+                <Pressable onPress={() => { setMenuOpen(false); router.push("/routes" as never); }} style={styles.dropdownItem}>
+                  <AppText style={styles.dropdownTitle}>Routes</AppText>
+                </Pressable>
                 <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/fx" as never); }} style={styles.dropdownItem}>
                   <AppText style={styles.dropdownTitle}>FX rates</AppText>
                 </Pressable>
                 <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/transfers" as never); }} style={styles.dropdownItem}>
                   <AppText style={styles.dropdownTitle}>Transfers</AppText>
                 </Pressable>
+                <Pressable onPress={() => { setMenuOpen(false); router.push("/participant-notifications" as never); }} style={styles.dropdownItem}>
+                  <AppText style={styles.dropdownTitle}>Notifications</AppText>
+                </Pressable>
+                <Pressable onPress={() => { setMenuOpen(false); router.push("/received-transfers" as never); }} style={styles.dropdownItem}>
+                  <AppText style={styles.dropdownTitle}>Received Transfers</AppText>
+                </Pressable>
+                {selectedPersona.id === "corporate-demo" ? (
+                  <Pressable onPress={() => { setMenuOpen(false); router.push("/corporate-payouts" as never); }} style={styles.dropdownItem}>
+                    <AppText style={styles.dropdownTitle}>Corporate Payouts</AppText>
+                  </Pressable>
+                ) : null}
+                <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/nexus-ai" as never); }} style={styles.dropdownItem}>
+                  <AppText style={styles.dropdownTitle}>Nexus AI</AppText>
+                </Pressable>
                 <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/profile" as never); }} style={styles.dropdownItem}>
                   <AppText style={styles.dropdownTitle}>Profile</AppText>
                 </Pressable>
                 <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/settings" as never); }} style={styles.dropdownItem}>
                   <AppText style={styles.dropdownTitle}>Settings</AppText>
+                </Pressable>
+                <Pressable onPress={() => { setMenuOpen(false); router.push("/multi-account-preview" as never); }} style={styles.dropdownItem}>
+                  <AppText style={styles.dropdownTitle}>Account and persona switcher</AppText>
                 </Pressable>
                 <Pressable onPress={handleSignOut} style={[styles.dropdownItem, styles.signOutItem]}>
                   <AppText style={styles.signOutText}>Sign out</AppText>

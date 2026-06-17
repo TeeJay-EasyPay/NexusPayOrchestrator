@@ -2,8 +2,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useContext, useMemo, useState } from "react";
 
 import {
-  mockPaymentMethods,
-  SavedPaymentMethod,
+    mockPaymentMethods,
+    SavedPaymentMethod,
 } from "../data/mockPaymentMethods";
 import { supabase } from "../lib/supabase";
 import { getStoredAccountScope } from "./AccountContext";

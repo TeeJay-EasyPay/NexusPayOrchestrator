@@ -4,6 +4,7 @@ import { Alert, Pressable, View } from "react-native";
 
 import { useAuth } from "../../state/AuthContext";
 import { useDeviceUnlock } from "../../state/DeviceUnlockContext";
+import { usePersona } from "../../state/PersonaContext";
 import { colors } from "../../theme";
 import { UserAccountBadge } from "../auth/UserAccountBadge";
 import { AppText } from "../ui/AppText";
@@ -64,7 +65,47 @@ export function AppDropdownMenu() {
   const pathname = usePathname();
   const { signOut } = useAuth();
   const { lockApp } = useDeviceUnlock();
+  const { selectedPersona } = usePersona();
   const [isOpen, setIsOpen] = useState(false);
+
+  const isCorporatePersona = selectedPersona.id === "corporate-demo";
+  const isRecipientPersona = selectedPersona.kind === "PARTICIPANT" && !isCorporatePersona;
+
+  const menuItems = [
+    ...MENU_ITEMS,
+    ...(isCorporatePersona
+      ? [
+          {
+            label: "Corporate Payouts",
+            description: "Execute multi-recipient payout batches",
+            route: "/corporate-payouts",
+            match: "/corporate-payouts",
+          },
+        ]
+      : []),
+    ...(isRecipientPersona
+      ? [
+          {
+            label: "Notifications",
+            description: "Recipient notifications and read status",
+            route: "/participant-notifications",
+            match: "/participant-notifications",
+          },
+          {
+            label: "Received Transfers",
+            description: "Recipient transfer history",
+            route: "/received-transfers",
+            match: "/received-transfers",
+          },
+        ]
+      : []),
+    {
+      label: "Account & Persona Switcher",
+      description: "Switch between personal, corporate, and recipient personas",
+      route: "/multi-account-preview",
+      match: "/multi-account-preview",
+    },
+  ] as const;
 
   const handleNavigate = (route: any) => {
   setIsOpen(false);
@@ -152,7 +193,7 @@ export function AppDropdownMenu() {
             elevation: 8,
           }}
         >
-          {MENU_ITEMS.map((item) => {
+          {menuItems.map((item) => {
             const isActive =
               item.match === "/"
                 ? pathname === "/"

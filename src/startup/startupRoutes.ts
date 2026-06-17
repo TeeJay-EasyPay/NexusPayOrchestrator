@@ -25,4 +25,3 @@ export function normalizeStartupPathname(pathname?: string | null): string {
 export function isPublicStartupRoute(pathname?: string | null): boolean {
   return PUBLIC_STARTUP_ROUTES.has(normalizeStartupPathname(pathname));
 }
-

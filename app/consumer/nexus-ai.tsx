@@ -1,10 +1,10 @@
 import { View } from "react-native";
 
 import {
-  ConsumerCard,
-  ConsumerPill,
-  ConsumerShell,
-  consumerColors,
+    ConsumerCard,
+    ConsumerPill,
+    ConsumerShell,
+    consumerColors,
 } from "../../src/components/consumer/ConsumerShell";
 import { AppText } from "../../src/components/ui/AppText";
 import { useNexusAISettings } from "../../src/hooks/useNexusAISettings";

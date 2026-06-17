@@ -708,6 +708,63 @@ Approved and Active
 
 ---
 
+## Decision ID
+D-013
+
+## Title
+Persona Flow Correction Sprint Implementation
+
+## Date
+2026-06-17
+
+## Decision Owner
+Chief Orchestrator
+
+## Participating Roles
+- Founder / CEO
+- Chief Orchestrator
+- Chief Technology Officer
+- Testing Director
+- Engineering Quality & Assurance Officer
+
+## Background
+The implemented persona flow routed participant personas into recipient-only screens, which conflicted with the multi-account architecture principle that active account/persona context should shape a complete platform experience.
+
+## Decision
+Correct persona flow so selected personas enter the full Personal Account application, while notifications, received transfers, profile information, bank details, and transfer history remain persona-specific. Preserve Demo Workspace and Corporate Workspace functionality.
+
+## Rationale
+Personas are complete platform users, not standalone recipient inboxes. The corrected model keeps one authentication model, preserves Startup V2, and applies persona-specific data inside the existing account-scoped app.
+
+## Alternatives Considered
+- Keep standalone Persona Selector and recipient-only routing.
+- Build a separate recipient-only application shell.
+- Modify Startup V2 coordinator logic to branch by persona.
+
+## Risks
+- Medium: Existing historical personal transfers without `personaId` remain associated with the default personal persona.
+- Medium: Persona-specific transfer filtering depends on persisted `selected_route.personaId` for new transfer rows.
+- Low: Corporate Payouts must remain discoverable when corporate persona is active.
+
+## Expected Outcome
+All selected personas can access Home, Send, Routes, Track, Transfers, Profile, Settings, Nexus AI, Notifications, and Received Transfers from the Personal Account application, with persona-specific data boundaries preserved.
+
+## Status
+Implemented pending Android EAS build validation
+
+## Follow-up Actions
+1. Trigger Android EAS build and record build URL.
+2. Complete APK walkthrough across personal, corporate, and recipient personas.
+3. Plan a separate technical debt sprint for unrelated TypeScript blockers.
+
+## Reference Documents
+- [../founder-review-packages/PERSONA_FLOW_CORRECTION_SPRINT_2026-06-17/FOUNDER_BRIEFING.md](../founder-review-packages/PERSONA_FLOW_CORRECTION_SPRINT_2026-06-17/FOUNDER_BRIEFING.md)
+- [../founder-review-packages/PERSONA_FLOW_CORRECTION_SPRINT_2026-06-17/TECHNICAL_DESIGN_REPORT.md](../founder-review-packages/PERSONA_FLOW_CORRECTION_SPRINT_2026-06-17/TECHNICAL_DESIGN_REPORT.md)
+- [../founder-review-packages/PERSONA_FLOW_CORRECTION_SPRINT_2026-06-17/PERSONA_FLOW_VALIDATION_REPORT.md](../founder-review-packages/PERSONA_FLOW_CORRECTION_SPRINT_2026-06-17/PERSONA_FLOW_VALIDATION_REPORT.md)
+- [../founder-review-packages/PERSONA_FLOW_CORRECTION_SPRINT_2026-06-17/APK_READINESS_REPORT.md](../founder-review-packages/PERSONA_FLOW_CORRECTION_SPRINT_2026-06-17/APK_READINESS_REPORT.md)
+
+---
+
 ## Register Maintenance Guidance
 
 1. Add new decisions in ascending ID order.

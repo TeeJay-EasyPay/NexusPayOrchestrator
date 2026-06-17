@@ -1023,7 +1023,7 @@ export default function HomeScreen() {
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, justifyContent: "space-between" }}>
             <QuickTile icon="map-pin" label="Route Intelligence" onPress={() => router.push("/routes")} />
             <QuickTile icon="radio" label="Live Intelligence" onPress={() => router.push("/live-intelligence-feeds")} />
-            <QuickTile icon="briefcase" label="Operations Centre" onPress={() => router.push("/operations")} />
+            <QuickTile icon="briefcase" label="Operations Centre" onPress={() => router.push("/operations-v2")} />
             <QuickTile icon="cpu" label="Nexus AI" onPress={() => router.push("/nexus-ai" as never)} />
           </View>
 

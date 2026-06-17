@@ -167,6 +167,7 @@ export interface RouteQuote {
   failoverRecommended?: boolean;
   failoverRouteId?: string;
   accountScope?: AccountScope;
+  personaId?: string;
 
   steps: string[];
 }
@@ -185,4 +186,5 @@ export interface Transfer {
   status: TransferStatus;
   createdAt: number;
   accountScope?: AccountScope;
+  personaId?: string;
 }

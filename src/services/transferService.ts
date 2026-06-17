@@ -1,5 +1,6 @@
 import { supabase } from "../lib/supabase";
 import { getStoredAccountScope } from "../state/AccountContext";
+import { getStoredPersonaId } from "../state/PersonaContext";
 import { Currency, PayoutMethod, Recipient, RouteQuote, Transfer } from "../types/transfer";
 
 function toNumber(value: unknown, fallback = 0) {
@@ -117,6 +118,7 @@ function buildSelectedRoutePayload(transfer: Transfer) {
   return {
     ...transfer.selectedRoute,
     accountScope: transfer.accountScope,
+    personaId: transfer.personaId,
     recipientSnapshot: transfer.recipient,
   };
 }
@@ -131,9 +133,10 @@ export async function saveTransferProgress(transfer: Transfer) {
   }
 
   const accountScope = transfer.accountScope ?? (await getStoredAccountScope());
+  const personaId = transfer.personaId ?? (await getStoredPersonaId());
 
   const recipient = transfer.recipient ?? ({} as Recipient);
-  const routePayload = buildSelectedRoutePayload({ ...transfer, accountScope });
+  const routePayload = buildSelectedRoutePayload({ ...transfer, accountScope, personaId });
   const now = new Date().toISOString();
 
   const { error } = await supabase.from("transfers").upsert({
@@ -174,6 +177,7 @@ export async function loadCompletedTransfers(): Promise<Transfer[]> {
   }
 
   const accountScope = await getStoredAccountScope();
+  const activePersonaId = await getStoredPersonaId();
 
   const { data, error } = await supabase
     .from("transfers")
@@ -191,8 +195,13 @@ export async function loadCompletedTransfers(): Promise<Transfer[]> {
     .map((row: any) => {
     const selectedRoute = row.selected_route as RouteQuote | undefined;
     const rowScope = (selectedRoute?.accountScope as "demo" | "personal" | undefined) ?? "demo";
+    const rowPersonaId = selectedRoute?.personaId ?? "personal-user";
 
     if (rowScope !== accountScope) {
+      return null;
+    }
+
+    if (accountScope === "personal" && rowPersonaId !== activePersonaId) {
       return null;
     }
 
@@ -206,6 +215,7 @@ export async function loadCompletedTransfers(): Promise<Transfer[]> {
       status: row.status ?? "COMPLETED",
       createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
       accountScope: rowScope,
+      personaId: rowPersonaId,
     } as Transfer;
   })
     .filter((item): item is Transfer => Boolean(item));

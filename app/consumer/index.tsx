@@ -12,8 +12,8 @@ import {
 } from "../../src/components/consumer/ConsumerShell";
 import { AppText } from "../../src/components/ui/AppText";
 import { loadSavedRecipients } from "../../src/services/recipientService";
-import { SavedRecipient } from "../../src/types/recipient";
 import { useTransfer } from "../../src/state/TransferContext";
+import { SavedRecipient } from "../../src/types/recipient";
 
 function formatGbp(value: number) {
   return `GBP ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;

@@ -12,8 +12,8 @@ import {
 } from "../../src/components/consumer/ConsumerShell";
 import { AppText } from "../../src/components/ui/AppText";
 import {
-  loadSavedRecipients,
-  toggleRecipientFavorite,
+    loadSavedRecipients,
+    toggleRecipientFavorite,
 } from "../../src/services/recipientService";
 import { useTransfer } from "../../src/state/TransferContext";
 import { SavedRecipient } from "../../src/types/recipient";

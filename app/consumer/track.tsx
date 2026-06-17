@@ -3,18 +3,18 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { View } from "react-native";
 
 import {
-  analyseTransfer,
-  TransferAnalysisResult,
-} from "../../src/services/nexusAIService";
-import { useNexusAIScreenSetting } from "../../src/hooks/useNexusAISettings";
-import {
     ConsumerAction,
     ConsumerCard,
+    consumerColors,
     ConsumerPill,
     ConsumerShell,
-    consumerColors,
 } from "../../src/components/consumer/ConsumerShell";
 import { AppText } from "../../src/components/ui/AppText";
+import { useNexusAIScreenSetting } from "../../src/hooks/useNexusAISettings";
+import {
+    analyseTransfer,
+    TransferAnalysisResult,
+} from "../../src/services/nexusAIService";
 import { loadTransactionAuditLogs } from "../../src/services/transactionAuditService";
 import { useTransfer } from "../../src/state/TransferContext";
 
