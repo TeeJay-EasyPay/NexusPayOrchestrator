@@ -97,8 +97,8 @@ Full APK build avoided: Yes.
 No native dependencies, native configuration, Android project files, or EAS build profile changes were introduced. This remediation is JavaScript/TypeScript only and is suitable for OTA publication.
 
 ## 10. Recommended Next Actions
-1. Publish EAS OTA update to preview.
-2. Validate on a standard phone and foldable viewport that hamburger menu items are reachable.
-3. Validate corporate persona Alerts from bottom navigation and drawer.
-4. Validate recipient persona Alerts and Received Transfers still use persona-specific data.
+1. Validate the published preview OTA on a standard phone and foldable viewport.
+2. Confirm hamburger drawer menu items remain reachable at small viewport heights.
+3. Confirm corporate persona Alerts from bottom navigation and drawer remain in the active workspace.
+4. Confirm recipient persona Alerts and Received Transfers still use persona-specific data.
 5. Plan a separate technical debt sprint for existing TypeScript blockers.
