@@ -14,6 +14,9 @@ export const consumerColors = {
   blue: "#0A3D78",
   blueDark: "#062D5A",
   blueSoft: "#DCEBFF",
+  teal: "#087C89",
+  tealDark: "#064E57",
+  tealSoft: "#DDF4F2",
   white: "#FFFFFF",
   text: "#0F2239",
   muted: "#5F728A",
@@ -85,14 +88,32 @@ export function ConsumerShell({
         headerBackground: "#07111F",
         heroBackground: "#0B3F4A",
         heroBorder: "rgba(255,255,255,0.14)",
+        accent: "#D6A84F",
+        heroTitle: consumerColors.white,
+        heroSubtitle: "#D7E4F1",
       }
-    : {
+    : isBusinessPersona
+      ? {
+          active: consumerColors.teal,
+          inactive: consumerColors.muted,
+          navBackground: consumerColors.white,
+          headerBackground: consumerColors.white,
+          heroBackground: consumerColors.tealSoft,
+          heroBorder: "#D7E7E5",
+          accent: consumerColors.teal,
+          heroTitle: consumerColors.tealDark,
+          heroSubtitle: consumerColors.muted,
+        }
+      : {
         active: consumerColors.blue,
         inactive: consumerColors.muted,
         navBackground: consumerColors.white,
         headerBackground: consumerColors.white,
         heroBackground: consumerColors.blueSoft,
         heroBorder: consumerColors.border,
+        accent: consumerColors.blue,
+        heroTitle: consumerColors.blueDark,
+        heroSubtitle: consumerColors.muted,
       };
   const workspaceLabel = isCorporatePersona
     ? "Corporate Workspace"
@@ -128,7 +149,7 @@ export function ConsumerShell({
                 </AppText>
               </View>
               <View style={{ flex: 1 }}>
-                <AppText variant="caption" color={isCorporatePersona ? "#D6A84F" : consumerColors.blue}>
+                <AppText variant="caption" color={shellTint.accent}>
                   {workspaceLabel}
                 </AppText>
                 <AppText color={isCorporatePersona ? consumerColors.white : consumerColors.text} style={styles.accountName}>
@@ -145,11 +166,11 @@ export function ConsumerShell({
                   onPress={() => router.push("/multi-account-preview" as never)}
                   style={[styles.operatorLink, isCorporatePersona && styles.corporateOperatorLink]}
                 >
-                  <Feather name="repeat" size={15} color={isCorporatePersona ? "#D6A84F" : consumerColors.blue} />
+                  <Feather name="repeat" size={15} color={shellTint.accent} />
                 </Pressable>
 
                 <Pressable onPress={() => setMenuOpen((open) => !open)} style={[styles.operatorLink, isCorporatePersona && styles.corporateOperatorLink]}>
-                  <Feather name="menu" size={16} color={isCorporatePersona ? "#D6A84F" : consumerColors.blue} />
+                  <Feather name="menu" size={16} color={shellTint.accent} />
                 </Pressable>
               </View>
             </View>
@@ -163,13 +184,13 @@ export function ConsumerShell({
                 },
               ]}
             >
-              <AppText variant="caption" color={isCorporatePersona ? "#D6A84F" : consumerColors.blue} style={styles.eyebrow}>
+              <AppText variant="caption" color={shellTint.accent} style={styles.eyebrow}>
                 {eyebrow}
               </AppText>
-              <AppText color={isCorporatePersona ? consumerColors.white : consumerColors.blueDark} style={styles.title}>
+              <AppText color={shellTint.heroTitle} style={styles.title}>
                 {title}
               </AppText>
-              <AppText color={isCorporatePersona ? "#D7E4F1" : consumerColors.muted} style={styles.subtitle}>
+              <AppText color={shellTint.heroSubtitle} style={styles.subtitle}>
                 {subtitle}
               </AppText>
             </View>

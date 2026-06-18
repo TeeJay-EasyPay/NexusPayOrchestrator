@@ -2,6 +2,34 @@
 
 Purpose: durable record of meaningful implementation work, security/context fixes, validation, commits, and OTA deployments. New code changes should append an entry here before commit when practical.
 
+## 2026-06-19 - Login Declutter And Business Teal Hero Fix
+
+Prompt / Objective:
+Make two minor visual refinements: declutter the NexusPay multi-account preview/login screen, and align business persona top hero cards with the teal business palette instead of the private blue palette.
+
+Files Changed:
+- `app/multi-account-preview.tsx`
+- `src/components/consumer/ConsumerShell.tsx`
+- `governance/implementation-log/IMPLEMENTATION_LOG.md`
+
+Summary:
+- Removed the long explanatory body copy under the multi-account preview title.
+- Removed the repeated selected persona heading and account details above the dropdown.
+- Kept the persona metadata only inside the dropdown selector and dropdown options.
+- Shortened the biometric helper copy.
+- Added business-specific teal shell tinting for the persona hero panel, header accents, and active business nav state.
+- Preserved all routing, account selection behavior, persona selection behavior, and unlock behavior.
+
+Validation:
+- Targeted ESLint passed for `app/multi-account-preview.tsx` and `src/components/consumer/ConsumerShell.tsx`.
+- `git diff --check` passed.
+
+Commit:
+- Pending.
+
+OTA:
+- Pending.
+
 ## 2026-06-18 - Persona Visual Polish Sprint
 
 Prompt / Objective:

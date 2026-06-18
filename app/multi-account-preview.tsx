@@ -26,7 +26,7 @@ function personaMeta(persona: PersonaOption): string {
     persona.bankName ? `${persona.bankName} ${maskLast4(persona.accountLast4)}` : null,
   ]
     .filter(Boolean)
-    .join(" · ");
+    .join(" - ");
 }
 
 export default function MultiAccountPreviewScreen() {
@@ -134,15 +134,11 @@ export default function MultiAccountPreviewScreen() {
       <ScrollView contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 28 }}>
         <View style={{ gap: 8 }}>
           <AppText variant="caption" color={colors.gold}>
-            Startup validation and account selection
+            Account selection
           </AppText>
 
           <AppText variant="title" color={colors.textPrimary}>
             NexusPay Multi-Account Preview
-          </AppText>
-
-          <AppText variant="body" color={colors.textSecondary}>
-            Open a workspace directly or select a persona to experience the full NexusPay personal app with persona-specific data.
           </AppText>
         </View>
 
@@ -172,26 +168,16 @@ export default function MultiAccountPreviewScreen() {
             </View>
 
             <AppText variant="caption" color={colors.textDarkMuted}>
-              Biometric unlock is required before opening any workspace.
+              Biometric unlock required.
             </AppText>
           </View>
         </AppCard>
 
         <AppCard>
           <View style={{ gap: 10 }}>
-            <View>
-              <AppText variant="caption" color={colors.textDarkMuted}>
-                Optional persona selection
-              </AppText>
-              <AppText variant="subheading" color={colors.textDarkPrimary} style={{ fontWeight: "800" }}>
-                Continue as {selectedOption?.label ?? "a persona"}
-              </AppText>
-              {selectedOption ? (
-                <AppText variant="caption" color={colors.textDarkSecondary}>
-                  {personaMeta(selectedOption)}
-                </AppText>
-              ) : null}
-            </View>
+            <AppText variant="subheading" color={colors.textDarkPrimary} style={{ fontWeight: "800" }}>
+              Select persona
+            </AppText>
 
             <View style={{ gap: 8 }}>
               <Pressable
