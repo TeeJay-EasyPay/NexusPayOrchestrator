@@ -134,8 +134,7 @@ CREATE TABLE IF NOT EXISTS route_certifications (
                              )),
   founder_approved_at      TIMESTAMPTZ,
   created_at               TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at               TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE (corridor, collection_provider, payout_provider, COALESCE(fx_provider, 'NONE'))
+  updated_at               TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS route_certifications_corridor_idx
@@ -143,6 +142,14 @@ CREATE INDEX IF NOT EXISTS route_certifications_corridor_idx
 
 CREATE INDEX IF NOT EXISTS route_certifications_status_idx
   ON route_certifications (status);
+
+CREATE UNIQUE INDEX IF NOT EXISTS route_certifications_route_unique_idx
+  ON route_certifications (
+    corridor,
+    collection_provider,
+    payout_provider,
+    COALESCE(fx_provider, 'NONE')
+  );
 
 ALTER TABLE route_certifications ENABLE ROW LEVEL SECURITY;
 
