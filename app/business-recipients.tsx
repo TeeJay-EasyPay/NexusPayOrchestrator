@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 
 import {
   ConsumerAction,
@@ -10,6 +10,7 @@ import {
   ConsumerShell,
 } from "../src/components/consumer/ConsumerShell";
 import { AppText } from "../src/components/ui/AppText";
+import { Screen } from "../src/components/ui/Screen";
 import { BusinessRecipient, loadBusinessRecipients } from "../src/services/businessPersonaService";
 import { usePersona } from "../src/state/PersonaContext";
 
@@ -56,12 +57,24 @@ export default function BusinessRecipientsScreen() {
     };
   }, [selectedPersona.participantId]);
 
-  return (
-    <ConsumerShell
-      eyebrow="RECIPIENTS"
-      title={isCorporatePersona ? "Corporate recipients" : "Business recipients"}
-      subtitle={isCorporatePersona ? "Corporate payees available for multi-recipient orchestration." : "Trusted payees, corridors, and recent payment context."}
-    >
+  const content = (
+      <View style={{ gap: 12 }}>
+        {isCorporatePersona ? (
+          <ConsumerCard>
+            <View style={{ gap: 4 }}>
+              <AppText variant="caption" color={businessColors.gold} style={{ fontWeight: "900" }}>
+                RECIPIENTS
+              </AppText>
+              <AppText color={businessColors.text} style={styles.title}>
+                Corporate recipients
+              </AppText>
+              <AppText color={businessColors.muted}>
+                Corporate payees available for multi-recipient orchestration.
+              </AppText>
+            </View>
+          </ConsumerCard>
+        ) : null}
+
       <ConsumerCard>
         <View style={styles.headerRow}>
           <View style={styles.iconBox}>
@@ -137,6 +150,26 @@ export default function BusinessRecipientsScreen() {
           </View>
         </ConsumerCard>
       ))}
+      </View>
+  );
+
+  if (isCorporatePersona) {
+    return (
+      <Screen>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 40 }}>
+          {content}
+        </ScrollView>
+      </Screen>
+    );
+  }
+
+  return (
+    <ConsumerShell
+      eyebrow="RECIPIENTS"
+      title="Business recipients"
+      subtitle="Trusted payees, corridors, and recent payment context."
+    >
+      {content}
     </ConsumerShell>
   );
 }

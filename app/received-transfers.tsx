@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { View } from "react-native";
+import { ScrollView, View } from "react-native";
 
 import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
+import { Screen } from "../src/components/ui/Screen";
 import { loadReceivedTransfers } from "../src/services/multiEntityOrchestrationService";
 import { usePersona } from "../src/state/PersonaContext";
 import { ConsumerShell, consumerColors } from "../src/components/consumer/ConsumerShell";
@@ -62,12 +63,24 @@ export default function ReceivedTransfersScreen() {
     };
   }, [participantId]);
 
-  return (
-    <ConsumerShell
-      eyebrow={isCorporatePersona ? "CORPORATE RECEIVED" : isBusinessPersona ? "BUSINESS RECEIVABLES" : "RECEIVED"}
-      title={isCorporatePersona ? "Corporate received transfers" : isBusinessPersona ? "Received payments" : "Received transfers"}
-      subtitle={isCorporatePersona ? "Incoming value movements relevant to the corporate workspace." : isBusinessPersona ? "Incoming business payments from batch activity." : "Persona-specific incoming transfers from corporate payout batches."}
-    >
+  const content = (
+      <View style={{ gap: 12 }}>
+        {isCorporatePersona ? (
+          <AppCard>
+            <View style={{ gap: 4 }}>
+              <AppText variant="caption" color="#D6A84F" style={{ fontWeight: "900" }}>
+                CORPORATE RECEIVED
+              </AppText>
+              <AppText variant="heading" color={consumerColors.text}>
+                Corporate received transfers
+              </AppText>
+              <AppText variant="body" color={consumerColors.muted}>
+                Incoming value movements relevant to the corporate workspace.
+              </AppText>
+            </View>
+          </AppCard>
+        ) : null}
+
         <AppCard>
           <View style={{ gap: 4 }}>
             <AppText variant="caption" color={consumerColors.muted}>{isCorporatePersona ? "Workspace details" : "Persona details"}</AppText>
@@ -146,7 +159,26 @@ export default function ReceivedTransfersScreen() {
             </AppCard>
           ))
         )}
+      </View>
+  );
 
+  if (isCorporatePersona) {
+    return (
+      <Screen>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 40 }}>
+          {content}
+        </ScrollView>
+      </Screen>
+    );
+  }
+
+  return (
+    <ConsumerShell
+      eyebrow={isBusinessPersona ? "BUSINESS RECEIVABLES" : "RECEIVED"}
+      title={isBusinessPersona ? "Received payments" : "Received transfers"}
+      subtitle={isBusinessPersona ? "Incoming business payments from batch activity." : "Persona-specific incoming transfers from corporate payout batches."}
+    >
+      {content}
     </ConsumerShell>
   );
 }

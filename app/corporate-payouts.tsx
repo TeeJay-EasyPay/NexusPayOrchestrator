@@ -1,10 +1,11 @@
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
-import { Pressable, TextInput, View } from "react-native";
+import { Pressable, ScrollView, TextInput, View } from "react-native";
 
 import { AppButton } from "../src/components/ui/AppButton";
 import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
+import { Screen } from "../src/components/ui/Screen";
 import { ConsumerShell, consumerColors } from "../src/components/consumer/ConsumerShell";
 import { executePayoutBatch } from "../src/services/multiEntityOrchestrationService";
 import { loadBusinessRecipients } from "../src/services/businessPersonaService";
@@ -130,12 +131,7 @@ export default function CorporatePayoutsScreen() {
     }
   }
 
-  return (
-    <ConsumerShell
-      eyebrow={isBusinessPersona ? "BATCH PAYMENT" : "CORPORATE WORKSPACE"}
-      title={isBusinessPersona ? "Batch payments" : "Corporate Batch Payments"}
-      subtitle={`${senderName} payment preparation and multi-recipient execution.`}
-    >
+  const content = (
       <View style={{ gap: 12 }}>
         <AppCard>
           <View style={{ gap: 4 }}>
@@ -319,6 +315,25 @@ export default function CorporatePayoutsScreen() {
           </AppText>
         </Pressable>
       </View>
+  );
+
+  if (isCorporatePersona) {
+    return (
+      <Screen>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 40 }}>
+          {content}
+        </ScrollView>
+      </Screen>
+    );
+  }
+
+  return (
+    <ConsumerShell
+      eyebrow="BATCH PAYMENT"
+      title="Batch payments"
+      subtitle={`${senderName} payment preparation and multi-recipient execution.`}
+    >
+      {content}
     </ConsumerShell>
   );
 }

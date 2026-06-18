@@ -1,10 +1,11 @@
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { View } from "react-native";
+import { ScrollView, View } from "react-native";
 
 import { AppButton } from "../src/components/ui/AppButton";
 import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
+import { Screen } from "../src/components/ui/Screen";
 import { usePersonaNotifications } from "../src/hooks/usePersonaNotifications";
 import { loadNotifications, markAllNotificationsRead } from "../src/services/notificationService";
 import { seedDemoParticipantsIfMissing } from "../src/services/participantService";
@@ -73,12 +74,24 @@ export default function ParticipantNotificationsScreen() {
     setBusy(false);
   }
 
-  return (
-    <ConsumerShell
-      eyebrow={isCorporatePersona ? "CORPORATE ALERTS" : isBusinessPersona ? "BUSINESS NOTIFICATIONS" : "NOTIFICATIONS"}
-      title={isCorporatePersona ? "Corporate alerts" : isBusinessPersona ? "Business notifications" : "Notifications"}
-      subtitle={isCorporatePersona ? "Corporate workspace payment, batch, approval, and system messages." : isBusinessPersona ? "Payment updates, batch activity, approvals, and system messages." : "Persona-specific transfer updates and received-payment messages."}
-    >
+  const content = (
+      <View style={{ gap: 12 }}>
+        {isCorporatePersona ? (
+          <AppCard>
+            <View style={{ gap: 4 }}>
+              <AppText variant="caption" color="#D6A84F" style={{ fontWeight: "900" }}>
+                CORPORATE ALERTS
+              </AppText>
+              <AppText variant="heading" color={consumerColors.text}>
+                Corporate alerts
+              </AppText>
+              <AppText variant="body" color={consumerColors.muted}>
+                Corporate workspace payment, batch, approval, and system messages.
+              </AppText>
+            </View>
+          </AppCard>
+        ) : null}
+
         <AppCard>
           <View style={{ gap: 4, marginBottom: 10 }}>
             <AppText variant="caption" color={consumerColors.muted}>{isCorporatePersona ? "Workspace details" : "Persona details"}</AppText>
@@ -198,6 +211,26 @@ export default function ParticipantNotificationsScreen() {
           icon="download"
           onPress={() => router.push("/received-transfers" as never)}
         />
+      </View>
+  );
+
+  if (isCorporatePersona) {
+    return (
+      <Screen>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 40 }}>
+          {content}
+        </ScrollView>
+      </Screen>
+    );
+  }
+
+  return (
+    <ConsumerShell
+      eyebrow={isBusinessPersona ? "BUSINESS NOTIFICATIONS" : "NOTIFICATIONS"}
+      title={isBusinessPersona ? "Business notifications" : "Notifications"}
+      subtitle={isBusinessPersona ? "Payment updates, batch activity, approvals, and system messages." : "Persona-specific transfer updates and received-payment messages."}
+    >
+      {content}
     </ConsumerShell>
   );
 }
