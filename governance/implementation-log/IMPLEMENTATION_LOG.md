@@ -25,10 +25,16 @@ Validation:
 - `git diff --check` passed.
 
 Commit:
-- Pending.
+- `6399edf05149bf59716dfb00ac7b26d821f75a17`
 
 OTA:
-- Pending.
+- Update group: `4f10ad0a-e14e-4088-9ff0-1b87c3b930f0`
+- Android update: `019edd13-4334-7308-8c5b-8d5a08036988`
+- iOS update: `019edd13-4334-7eb7-8313-35158bc20e19`
+- Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/4f10ad0a-e14e-4088-9ff0-1b87c3b930f0`
+
+Known Warnings:
+- Expo publish continued to show the existing `@noble/hashes/crypto.js` export warning. It did not block OTA.
 
 ## 2026-06-18 - Persona Visual Polish Sprint
 
