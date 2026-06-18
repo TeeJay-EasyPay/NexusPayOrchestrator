@@ -31,10 +31,16 @@ Validation:
 - Full `npx tsc --noEmit` remains blocked by pre-existing unrelated errors in operations/intelligence/Supabase function files.
 
 Commit:
-- Pending.
+- `14708df4830f9c312f4aa9a451a7cfb9a669c7d6`
 
 OTA:
-- Pending.
+- Update group: `1a723877-94fa-419f-addb-e680ba98b44c`
+- Android update: `019edcea-4750-75f4-88cc-74fd9643deb4`
+- iOS update: `019edcea-4750-78e2-8b6a-65cf968758f0`
+- Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/1a723877-94fa-419f-addb-e680ba98b44c`
+
+Known Warnings:
+- Expo publish continued to show the existing `@noble/hashes/crypto.js` export warning. It did not block OTA.
 
 ## 2026-06-18 - Queued UX Recommendation: Private and Business Persona Declutter
 
