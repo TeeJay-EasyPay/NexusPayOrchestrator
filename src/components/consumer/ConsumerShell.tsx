@@ -76,6 +76,7 @@ export function ConsumerShell({
   const dropdownMaxHeight = Math.max(240, height - 128);
   const isCorporatePersona = selectedPersona.id === "corporate-demo";
   const isBusinessPersona = selectedPersona.participantType === "BUSINESS";
+  const isParticipantPersona = selectedPersona.kind === "PARTICIPANT";
   const shellTint = isCorporatePersona
     ? {
         active: "#D6A84F",
@@ -191,9 +192,6 @@ export function ConsumerShell({
                   </Pressable>
                   {!isCorporatePersona ? (
                     <>
-                      <Pressable onPress={() => { setMenuOpen(false); router.push("/routes" as never); }} style={styles.dropdownItem}>
-                        <AppText style={styles.dropdownTitle}>Routes</AppText>
-                      </Pressable>
                       <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/fx" as never); }} style={styles.dropdownItem}>
                         <AppText style={styles.dropdownTitle}>FX rates</AppText>
                       </Pressable>
@@ -202,18 +200,22 @@ export function ConsumerShell({
                       </Pressable>
                     </>
                   ) : null}
-                  <Pressable onPress={() => { setMenuOpen(false); router.push("/participant-notifications" as never); }} style={styles.dropdownItem}>
-                    <AppText style={styles.dropdownTitle}>Alerts</AppText>
-                  </Pressable>
-                  <Pressable onPress={() => { setMenuOpen(false); router.push("/received-transfers" as never); }} style={styles.dropdownItem}>
-                    <AppText style={styles.dropdownTitle}>Received Transfers</AppText>
-                  </Pressable>
-                  {selectedPersona.id === "corporate-demo" || isBusinessPersona ? (
+                  {isParticipantPersona ? (
+                    <>
+                      <Pressable onPress={() => { setMenuOpen(false); router.push("/participant-notifications" as never); }} style={styles.dropdownItem}>
+                        <AppText style={styles.dropdownTitle}>Alerts</AppText>
+                      </Pressable>
+                      <Pressable onPress={() => { setMenuOpen(false); router.push("/received-transfers" as never); }} style={styles.dropdownItem}>
+                        <AppText style={styles.dropdownTitle}>Received Transfers</AppText>
+                      </Pressable>
+                    </>
+                  ) : null}
+                  {isBusinessPersona ? (
                     <Pressable onPress={() => { setMenuOpen(false); router.push("/corporate-payouts" as never); }} style={styles.dropdownItem}>
                       <AppText style={styles.dropdownTitle}>Batch Payments</AppText>
                     </Pressable>
                   ) : null}
-                  {selectedPersona.id === "corporate-demo" || isBusinessPersona ? (
+                  {isBusinessPersona ? (
                     <Pressable onPress={() => { setMenuOpen(false); router.push("/business-recipients" as never); }} style={styles.dropdownItem}>
                       <AppText style={styles.dropdownTitle}>Recipients</AppText>
                     </Pressable>

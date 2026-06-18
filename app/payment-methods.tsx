@@ -5,7 +5,9 @@ import { AppButton } from "../src/components/ui/AppButton";
 import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
 import { Screen } from "../src/components/ui/Screen";
+import { ConsumerShell, consumerColors } from "../src/components/consumer/ConsumerShell";
 import { SavedPaymentMethod } from "../src/data/mockPaymentMethods";
+import { usePersona } from "../src/state/PersonaContext";
 import { usePaymentMethods } from "../src/state/PaymentMethodsContext";
 import { colors } from "../src/theme";
 
@@ -162,27 +164,27 @@ function PaymentMethodManagementCard({
 }
 
 export default function PaymentMethodsScreen() {
+  const { selectedPersona } = usePersona();
   const {
     paymentMethods,
     primaryMethodId,
     primaryMethod,
     setPrimaryMethod,
   } = usePaymentMethods();
+  const isCorporatePersona = selectedPersona.id === "corporate-demo";
 
-  return (
-    <Screen>
-      <ScrollView showsVerticalScrollIndicator={false}>
+  const content = (
         <View style={{ gap: 18, paddingBottom: 40 }}>
           <View style={{ gap: 6 }}>
             <AppText variant="caption" color={colors.gold}>
               Funding profile
             </AppText>
 
-            <AppText variant="title" color={colors.textPrimary}>
+            <AppText variant="title" color={isCorporatePersona ? colors.textPrimary : consumerColors.text}>
               Payment Methods
             </AppText>
 
-            <AppText variant="body" color={colors.textSecondary}>
+            <AppText variant="body" color={isCorporatePersona ? colors.textSecondary : consumerColors.muted}>
               Manage saved cards and connected bank accounts used to fund NexusPay transfers.
             </AppText>
           </View>
@@ -258,9 +260,31 @@ export default function PaymentMethodsScreen() {
             ))}
           </View>
 
-          <AppButton title="Back to account" variant="secondary" onPress={() => router.push("/account")} />
+          <AppButton
+            title="Back to account"
+            variant="secondary"
+            onPress={() => router.push(isCorporatePersona ? "/account" : "/consumer/settings")}
+          />
         </View>
-      </ScrollView>
-    </Screen>
+  );
+
+  if (isCorporatePersona) {
+    return (
+      <Screen>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {content}
+        </ScrollView>
+      </Screen>
+    );
+  }
+
+  return (
+    <ConsumerShell
+      eyebrow="PAYMENT METHODS"
+      title="Funding sources"
+      subtitle="Manage the cards and connected bank accounts available to this persona."
+    >
+      {content}
+    </ConsumerShell>
   );
 }
