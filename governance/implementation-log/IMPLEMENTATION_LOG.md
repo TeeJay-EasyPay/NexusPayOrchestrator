@@ -2,6 +2,40 @@
 
 Purpose: durable record of meaningful implementation work, security/context fixes, validation, commits, and OTA deployments. New code changes should append an entry here before commit when practical.
 
+## 2026-06-18 - Persona Visual Polish Sprint
+
+Prompt / Objective:
+Implement a visual-only declutter and beautification sprint for private and business personas while preserving the existing color scheme, routes, data structures, and functional behavior.
+
+Files Changed:
+- `app/consumer/index.tsx`
+- `app/consumer/transfers.tsx`
+- `app/business-recipients.tsx`
+- `app/participant-notifications.tsx`
+- `app/received-transfers.tsx`
+- `src/components/business/BusinessHome.tsx`
+- `src/components/consumer/ConsumerShell.tsx`
+- `governance/founder-briefings/briefings/FOUNDER_BRIEFING_PERSONA_VISUAL_POLISH_SPRINT_2026-06-18.md`
+- `governance/implementation-log/IMPLEMENTATION_LOG.md`
+
+Summary:
+- Refined shared persona cards with cleaner white surfaces, softer borders, tighter spacing, and subtler elevation.
+- Redesigned the private home into a cleaner personal transfer dashboard with compact stats, shorter copy, and preserved actions.
+- Reduced text density across private transfers, business home, business recipients, notifications, and received transfers.
+- Replaced heavier generic cards on notifications and received transfers with persona card styling for consistency.
+- Preserved current NexusPay colors, routing, database usage, persona boundaries, and existing actions.
+
+Validation:
+- Targeted ESLint passed for all modified app/component files.
+- `git diff --check` passed.
+- Full `npx tsc --noEmit` remains blocked by pre-existing unrelated errors in operations/intelligence/Supabase function files.
+
+Commit:
+- Pending.
+
+OTA:
+- Pending.
+
 ## 2026-06-18 - Queued UX Recommendation: Private and Business Persona Declutter
 
 Prompt / Objective:

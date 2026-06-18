@@ -68,8 +68,8 @@ export default function BusinessRecipientsScreen() {
               <AppText color={businessColors.text} style={styles.title}>
                 Corporate recipients
               </AppText>
-              <AppText color={businessColors.muted}>
-                Corporate payees available for multi-recipient orchestration.
+              <AppText color={businessColors.muted} style={styles.compactCopy}>
+                Corporate payees ready for batch payment flows.
               </AppText>
             </View>
           </ConsumerCard>
@@ -82,10 +82,10 @@ export default function BusinessRecipientsScreen() {
           </View>
           <View style={{ flex: 1 }}>
             <AppText color={businessColors.text} style={styles.title}>
-              Recipient network
+              Recipients
             </AppText>
-            <AppText color={businessColors.muted}>
-              {selectedPersona.label} can pay participants already available in NexusPay.
+            <AppText color={businessColors.muted} style={styles.compactCopy}>
+              Saved payees for {selectedPersona.label}.
             </AppText>
           </View>
           <ConsumerPill label={`${recipients.length}`} tone="blue" />
@@ -100,7 +100,7 @@ export default function BusinessRecipientsScreen() {
 
       {!loading && recipients.length === 0 ? (
         <ConsumerCard>
-          <AppText color={businessColors.muted}>No recipients are available yet.</AppText>
+          <AppText color={businessColors.muted}>No recipients yet.</AppText>
         </ConsumerCard>
       ) : null}
 
@@ -116,7 +116,7 @@ export default function BusinessRecipientsScreen() {
               <AppText color={businessColors.text} style={styles.recipientName}>
                 {recipient.name}
               </AppText>
-              <AppText color={businessColors.muted}>
+              <AppText color={businessColors.muted} numberOfLines={1}>
                 {recipient.participantType === "BUSINESS" ? "Business" : recipient.participantType === "CORPORATE" ? "Corporate" : "Individual"} - {recipient.bankName} - ****{recipient.accountLast4}
               </AppText>
             </View>
@@ -167,7 +167,7 @@ export default function BusinessRecipientsScreen() {
     <ConsumerShell
       eyebrow="RECIPIENTS"
       title="Business recipients"
-      subtitle="Trusted payees, corridors, and recent payment context."
+      subtitle="Trusted payees and recent payment context."
     >
       {content}
     </ConsumerShell>
@@ -204,6 +204,9 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 19,
     fontWeight: "900",
+  },
+  compactCopy: {
+    lineHeight: 20,
   },
   recipientRow: {
     flexDirection: "row",

@@ -1,16 +1,16 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 
-import {
-    ConsumerAction,
-    ConsumerCard,
-    ConsumerPill,
-    ConsumerShell,
-    consumerColors,
-} from "../../src/components/consumer/ConsumerShell";
 import { BusinessHome } from "../../src/components/business/BusinessHome";
+import {
+  ConsumerAction,
+  ConsumerCard,
+  ConsumerPill,
+  ConsumerShell,
+  consumerColors,
+} from "../../src/components/consumer/ConsumerShell";
 import { AppText } from "../../src/components/ui/AppText";
 import { loadSavedRecipients } from "../../src/services/recipientService";
 import { usePersona } from "../../src/state/PersonaContext";
@@ -110,47 +110,46 @@ export default function ConsumerHomeScreen() {
     <ConsumerShell
       eyebrow="HOME"
       title="Good afternoon"
-      subtitle="Your money movement is ready. Clear actions, trusted controls, and fast transfer visibility."
+      subtitle="Send, track, and repeat transfers from one personal workspace."
     >
       <ConsumerCard accent>
-        <AppText color={consumerColors.muted} variant="caption">
-          Orchestration mode
-        </AppText>
-        <AppText color={consumerColors.blueDark} style={{ fontSize: 40, fontWeight: "900" }}>
-          No stored wallet
-        </AppText>
-        <AppText color={consumerColors.muted}>
-          NexusPay orchestrates movement between selected funding sources and destination payout rails without holding customer balances.
-        </AppText>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-          <ConsumerAction label="Send money" icon="send" onPress={() => router.push("/consumer/send" as never)} />
-          <ConsumerAction label="Manage funding sources" icon="credit-card" secondary onPress={() => router.push("/payment-methods" as never)} />
-        </View>
-      </ConsumerCard>
-
-      <ConsumerCard accent>
-        <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
-          <Feather name="shield" size={22} color={consumerColors.blue} />
+        <View style={styles.heroRow}>
+          <View style={styles.heroIcon}>
+            <Feather name="send" size={22} color={consumerColors.white} />
+          </View>
           <View style={{ flex: 1 }}>
-            <AppText color={consumerColors.text} style={{ fontWeight: "900", fontSize: 18 }}>
-              Trust indicators
+            <AppText color={consumerColors.muted} variant="caption" style={styles.kicker}>
+              PERSONAL TRANSFERS
             </AppText>
-            <AppText color={consumerColors.muted} style={{ marginTop: 4, lineHeight: 21 }}>
-              Biometric-protected access, transparent route scoring, and timeline events on every transfer.
+            <AppText color={consumerColors.blueDark} style={styles.heroTitle}>
+              Ready to send
+            </AppText>
+            <AppText color={consumerColors.muted} style={styles.compactCopy}>
+              NexusPay moves money between your funding source and the recipient. No stored wallet.
             </AppText>
           </View>
         </View>
+        <View style={styles.actionWrap}>
+          <ConsumerAction label="Send money" icon="send" onPress={() => router.push("/consumer/send" as never)} />
+          <ConsumerAction label="Funding sources" icon="credit-card" secondary onPress={() => router.push("/payment-methods" as never)} />
+        </View>
       </ConsumerCard>
 
+      <View style={styles.summaryGrid}>
+        <MiniStat icon="shield" label="Security" value="Protected" />
+        <MiniStat icon="repeat" label="Saved recipients" value={String(favorites.length)} />
+        <MiniStat icon="trending-up" label="Sent" value={formatGbp(totalSent)} wide />
+      </View>
+
       <ConsumerCard>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
+        <View style={styles.cardHeader}>
           <View style={{ flex: 1 }}>
-            <AppText color={consumerColors.text} style={{ fontWeight: "900", fontSize: 18 }}>
-              Active transfer status
+            <AppText color={consumerColors.text} style={styles.sectionTitle}>
+              Active transfer
             </AppText>
-            <AppText color={consumerColors.muted} style={{ marginTop: 4 }}>
+            <AppText color={consumerColors.muted} style={styles.compactCopy}>
               {transfer
-                ? `${transfer.recipient?.name ?? "Recipient"} • ${transfer.status}`
+                ? `${transfer.recipient?.name ?? "Recipient"} - ${transfer.status}`
                 : "No active transfer"}
             </AppText>
           </View>
@@ -159,30 +158,14 @@ export default function ConsumerHomeScreen() {
         <ConsumerAction label="View transfer" icon="arrow-right" secondary onPress={() => router.push("/consumer/track" as never)} />
       </ConsumerCard>
 
-      <ConsumerCard accent>
-        <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
-          <Feather name="star" size={22} color={consumerColors.blue} />
-          <View style={{ flex: 1 }}>
-            <AppText color={consumerColors.text} style={{ fontWeight: "900", fontSize: 18 }}>
-              Helpful insight
-            </AppText>
-            <AppText color={consumerColors.muted} style={{ marginTop: 4, lineHeight: 21 }}>
-              {recent.length > 0
-                ? `You've sent ${formatGbp(totalSent)} across ${completedTransfers.length} transfers. Your most-used destination is ${recent[0].recipient?.country ?? "saved in history"}.`
-                : "Start your first transfer and NexusPay will build personalized route intelligence."}
-            </AppText>
-          </View>
-        </View>
-      </ConsumerCard>
-
       <ConsumerCard>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
+        <View style={styles.cardHeader}>
           <View style={{ flex: 1 }}>
-            <AppText color={consumerColors.text} style={{ fontWeight: "900", fontSize: 18 }}>
-              Profile and controls
+            <AppText color={consumerColors.text} style={styles.sectionTitle}>
+              Personal controls
             </AppText>
-            <AppText color={consumerColors.muted} style={{ marginTop: 4 }}>
-              Manage payment methods, notification settings, and Nexus AI assistance.
+            <AppText color={consumerColors.muted} style={styles.compactCopy}>
+              Payment methods, alerts, profile, and Nexus AI.
             </AppText>
           </View>
           <ConsumerPill label="Secure" tone="blue" />
@@ -191,40 +174,28 @@ export default function ConsumerHomeScreen() {
       </ConsumerCard>
 
       <ConsumerCard>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-          <AppText color={consumerColors.text} style={{ fontWeight: "900", fontSize: 18 }}>
+        <View style={styles.cardHeader}>
+          <AppText color={consumerColors.text} style={styles.sectionTitle}>
             Favorites
           </AppText>
           <ConsumerPill label={`${favorites.length}/10`} tone="blue" />
         </View>
         {favorites.length === 0 ? (
-          <AppText color={consumerColors.muted}>
-            Mark recipients as favorites in Transfers to enable one-tap resend.
+          <AppText color={consumerColors.muted} style={styles.compactCopy}>
+            Favorite recipients appear here for faster repeat payments.
           </AppText>
         ) : null}
         {favorites.map((item) => (
-          <View key={item.id} style={{ borderTopWidth: 1, borderTopColor: consumerColors.border, paddingTop: 10, flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+          <View key={item.id} style={styles.listRow}>
             <View style={{ flex: 1 }}>
               <AppText color={consumerColors.text} style={{ fontWeight: "900" }}>
                 {item.name}
               </AppText>
               <AppText color={consumerColors.muted}>
-                {item.country} • {item.currency}
+                {item.country} - {item.currency}
               </AppText>
             </View>
-            <Pressable
-              onPress={() => resendFromFavorite(item)}
-              style={{
-                width: 34,
-                height: 34,
-                borderRadius: 17,
-                alignItems: "center",
-                justifyContent: "center",
-                borderWidth: 1,
-                borderColor: consumerColors.border,
-                backgroundColor: consumerColors.white,
-              }}
-            >
+            <Pressable onPress={() => resendFromFavorite(item)} style={styles.iconButton}>
               <Feather name="repeat" size={15} color={consumerColors.blue} />
             </Pressable>
           </View>
@@ -232,38 +203,26 @@ export default function ConsumerHomeScreen() {
       </ConsumerCard>
 
       <ConsumerCard>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-          <AppText color={consumerColors.text} style={{ fontWeight: "900", fontSize: 18 }}>
+        <View style={styles.cardHeader}>
+          <AppText color={consumerColors.text} style={styles.sectionTitle}>
             Recent activity
           </AppText>
           <ConsumerPill label={recent.length > 0 ? "Updated" : "New"} tone="green" />
         </View>
         {recent.length === 0 ? (
-          <AppText color={consumerColors.muted}>No completed transfers yet.</AppText>
+          <AppText color={consumerColors.muted} style={styles.compactCopy}>No completed transfers yet.</AppText>
         ) : null}
         {recent.map((item) => (
-          <View key={item.id} style={{ borderTopWidth: 1, borderTopColor: consumerColors.border, paddingTop: 10, flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+          <View key={item.id} style={styles.listRow}>
             <View style={{ flex: 1 }}>
               <AppText color={consumerColors.text} style={{ fontWeight: "900" }}>
                 {item.recipient?.name ?? "Recipient"}
               </AppText>
               <AppText color={consumerColors.muted}>
-                {formatGbp(item.senderAmount)} sent to {item.recipient?.country ?? "Destination"} - {item.status}
+                {formatGbp(item.senderAmount)} - {item.recipient?.country ?? "Destination"} - {item.status}
               </AppText>
             </View>
-            <Pressable
-              onPress={() => resendFromTransfer(item)}
-              style={{
-                width: 34,
-                height: 34,
-                borderRadius: 17,
-                alignItems: "center",
-                justifyContent: "center",
-                borderWidth: 1,
-                borderColor: consumerColors.border,
-                backgroundColor: consumerColors.white,
-              }}
-            >
+            <Pressable onPress={() => resendFromTransfer(item)} style={styles.iconButton}>
               <Feather name="repeat" size={15} color={consumerColors.blue} />
             </Pressable>
           </View>
@@ -273,3 +232,120 @@ export default function ConsumerHomeScreen() {
     </ConsumerShell>
   );
 }
+
+function MiniStat({
+  icon,
+  label,
+  value,
+  wide = false,
+}: {
+  icon: keyof typeof Feather.glyphMap;
+  label: string;
+  value: string;
+  wide?: boolean;
+}) {
+  return (
+    <View style={[styles.miniStat, wide && styles.miniStatWide]}>
+      <View style={styles.miniIcon}>
+        <Feather name={icon} size={16} color={consumerColors.blue} />
+      </View>
+      <AppText variant="caption" color={consumerColors.muted}>
+        {label}
+      </AppText>
+      <AppText color={consumerColors.text} style={styles.miniValue} numberOfLines={1}>
+        {value}
+      </AppText>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  heroRow: {
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "flex-start",
+  },
+  heroIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: consumerColors.blue,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  kicker: {
+    fontWeight: "900",
+  },
+  heroTitle: {
+    fontSize: 28,
+    fontWeight: "900",
+  },
+  compactCopy: {
+    lineHeight: 20,
+  },
+  actionWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  summaryGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  miniStat: {
+    flexGrow: 1,
+    flexBasis: "47%",
+    minHeight: 104,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: consumerColors.border,
+    backgroundColor: consumerColors.white,
+    padding: 13,
+    gap: 6,
+  },
+  miniStatWide: {
+    flexBasis: "100%",
+  },
+  miniIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: consumerColors.blueSoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  miniValue: {
+    fontSize: 18,
+    fontWeight: "900",
+  },
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 10,
+  },
+  sectionTitle: {
+    fontWeight: "900",
+    fontSize: 18,
+  },
+  listRow: {
+    borderTopWidth: 1,
+    borderTopColor: consumerColors.border,
+    paddingTop: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 8,
+  },
+  iconButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: consumerColors.border,
+    backgroundColor: consumerColors.white,
+  },
+});

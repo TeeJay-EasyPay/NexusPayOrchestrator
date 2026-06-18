@@ -471,24 +471,24 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 16,
-    paddingTop: 16,
-    gap: 12,
+    paddingTop: 14,
+    gap: 10,
   },
   card: {
-    backgroundColor: consumerColors.surface,
-    borderRadius: 12,
+    backgroundColor: consumerColors.white,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: consumerColors.border,
-    padding: 16,
-    gap: 12,
+    padding: 15,
+    gap: 10,
     shadowColor: "#0F2239",
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
     elevation: 2,
   },
   cardAccent: {
-    backgroundColor: "#EEF5FF",
+    backgroundColor: "#F8FBFF",
   },
   pill: {
     alignSelf: "flex-start",
@@ -497,7 +497,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   action: {
-    minHeight: 46,
+    minHeight: 44,
     borderRadius: 10,
     backgroundColor: consumerColors.blue,
     alignItems: "center",
@@ -513,6 +513,8 @@ const styles = StyleSheet.create({
   },
   actionText: {
     fontWeight: "900",
+    flexShrink: 1,
+    textAlign: "center",
   },
   nav: {
     position: "absolute",

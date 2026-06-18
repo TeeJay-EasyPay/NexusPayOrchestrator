@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { ScrollView, View } from "react-native";
 
-import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
 import { Screen } from "../src/components/ui/Screen";
 import { loadReceivedTransfers } from "../src/services/multiEntityOrchestrationService";
 import { usePersona } from "../src/state/PersonaContext";
-import { ConsumerShell, consumerColors } from "../src/components/consumer/ConsumerShell";
+import { ConsumerCard, ConsumerShell, consumerColors } from "../src/components/consumer/ConsumerShell";
 
 function formatDate(ts: string): string {
   const d = new Date(ts);
@@ -66,7 +65,7 @@ export default function ReceivedTransfersScreen() {
   const content = (
       <View style={{ gap: 12 }}>
         {isCorporatePersona ? (
-          <AppCard>
+          <ConsumerCard>
             <View style={{ gap: 4 }}>
               <AppText variant="caption" color="#D6A84F" style={{ fontWeight: "900" }}>
                 CORPORATE RECEIVED
@@ -75,13 +74,13 @@ export default function ReceivedTransfersScreen() {
                 Corporate received transfers
               </AppText>
               <AppText variant="body" color={consumerColors.muted}>
-                Incoming value movements relevant to the corporate workspace.
+                Incoming movements for the corporate workspace.
               </AppText>
             </View>
-          </AppCard>
+          </ConsumerCard>
         ) : null}
 
-        <AppCard>
+        <ConsumerCard>
           <View style={{ gap: 4 }}>
             <AppText variant="caption" color={consumerColors.muted}>{isCorporatePersona ? "Workspace details" : "Persona details"}</AppText>
             <AppText variant="caption" color={consumerColors.text}>
@@ -93,29 +92,28 @@ export default function ReceivedTransfersScreen() {
               {selectedPersona.country ?? "Personal account"}
             </AppText>
           </View>
-        </AppCard>
+        </ConsumerCard>
 
         {loading ? (
-          <AppCard>
+          <ConsumerCard>
             <AppText variant="body" color={consumerColors.text}>Loading transfer history...</AppText>
-          </AppCard>
+          </ConsumerCard>
         ) : !participantId ? (
-          <AppCard>
+          <ConsumerCard>
             <AppText variant="body" color={consumerColors.text}>
-              No persona-specific received-transfer ledger is linked to this account.
+              No received-transfer ledger is linked to this persona.
             </AppText>
-          </AppCard>
+          </ConsumerCard>
         ) : rows.length === 0 ? (
-          <AppCard>
+          <ConsumerCard>
             <AppText variant="body" color={consumerColors.text}>No received transfers yet.</AppText>
-          </AppCard>
+          </ConsumerCard>
         ) : (
           rows.map((item) => (
-            <AppCard key={item.id}>
+            <ConsumerCard key={item.id}>
               <View style={{ gap: 12 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
                   <View style={{ flex: 1 }}>
-                    <AppText variant="caption" color={businessColors.muted}>Sender</AppText>
                     <AppText variant="subheading" color={businessColors.text} style={{ fontWeight: "900" }}>
                       {item.senderName}
                     </AppText>
@@ -156,7 +154,7 @@ export default function ReceivedTransfersScreen() {
                   </View>
                 </View>
               </View>
-            </AppCard>
+            </ConsumerCard>
           ))
         )}
       </View>
@@ -176,7 +174,7 @@ export default function ReceivedTransfersScreen() {
     <ConsumerShell
       eyebrow={isBusinessPersona ? "BUSINESS RECEIVABLES" : "RECEIVED"}
       title={isBusinessPersona ? "Received payments" : "Received transfers"}
-      subtitle={isBusinessPersona ? "Incoming business payments from batch activity." : "Persona-specific incoming transfers from corporate payout batches."}
+      subtitle={isBusinessPersona ? "Incoming business payments from batch activity." : "Incoming transfers from payout batches."}
     >
       {content}
     </ConsumerShell>

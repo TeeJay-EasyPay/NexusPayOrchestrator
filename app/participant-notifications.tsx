@@ -3,7 +3,6 @@ import React, { useEffect, useState } from "react";
 import { ScrollView, View } from "react-native";
 
 import { AppButton } from "../src/components/ui/AppButton";
-import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
 import { Screen } from "../src/components/ui/Screen";
 import { usePersonaNotifications } from "../src/hooks/usePersonaNotifications";
@@ -11,7 +10,7 @@ import { loadNotifications, markAllNotificationsRead } from "../src/services/not
 import { seedDemoParticipantsIfMissing } from "../src/services/participantService";
 import { usePersona } from "../src/state/PersonaContext";
 import { NotificationRecord } from "../src/types/multiEntity";
-import { ConsumerAction, ConsumerShell, consumerColors } from "../src/components/consumer/ConsumerShell";
+import { ConsumerAction, ConsumerCard, ConsumerShell, consumerColors } from "../src/components/consumer/ConsumerShell";
 
 type NotificationGroup = "Payments" | "Batch Payments" | "Approvals" | "System Events";
 
@@ -77,7 +76,7 @@ export default function ParticipantNotificationsScreen() {
   const content = (
       <View style={{ gap: 12 }}>
         {isCorporatePersona ? (
-          <AppCard>
+          <ConsumerCard>
             <View style={{ gap: 4 }}>
               <AppText variant="caption" color="#D6A84F" style={{ fontWeight: "900" }}>
                 CORPORATE ALERTS
@@ -86,13 +85,13 @@ export default function ParticipantNotificationsScreen() {
                 Corporate alerts
               </AppText>
               <AppText variant="body" color={consumerColors.muted}>
-                Corporate workspace payment, batch, approval, and system messages.
+                Payment, batch, approval, and system messages.
               </AppText>
             </View>
-          </AppCard>
+          </ConsumerCard>
         ) : null}
 
-        <AppCard>
+        <ConsumerCard>
           <View style={{ gap: 4, marginBottom: 10 }}>
             <AppText variant="caption" color={consumerColors.muted}>{isCorporatePersona ? "Workspace details" : "Persona details"}</AppText>
             <AppText variant="caption" color={consumerColors.text}>
@@ -110,32 +109,32 @@ export default function ParticipantNotificationsScreen() {
               {badgeCount}
             </AppText>
             <AppText variant="caption" color={consumerColors.muted}>
-              Unread notifications
+              Unread
             </AppText>
           </View>
-        </AppCard>
+        </ConsumerCard>
 
         {loading ? (
-          <AppCard>
+          <ConsumerCard>
             <AppText variant="body" color={consumerColors.text}>Loading notifications...</AppText>
-          </AppCard>
+          </ConsumerCard>
         ) : !participantId ? (
-          <AppCard>
+          <ConsumerCard>
             <AppText variant="body" color={consumerColors.text}>
-              No persona-specific notification inbox is linked to this account.
+              No notification inbox is linked to this persona.
             </AppText>
-          </AppCard>
+          </ConsumerCard>
         ) : items.length === 0 ? (
-          <AppCard>
+          <ConsumerCard>
             <AppText variant="body" color={consumerColors.text}>No notifications yet.</AppText>
-          </AppCard>
+          </ConsumerCard>
         ) : (
           groups.map((group) => {
             const groupItems = items.filter((item) => getNotificationGroup(item) === group);
             if (groupItems.length === 0) return null;
 
             return (
-              <AppCard key={group}>
+              <ConsumerCard key={group}>
                 <View style={{ gap: 12 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
                     <View style={{ flex: 1 }}>
@@ -185,8 +184,8 @@ export default function ParticipantNotificationsScreen() {
                         <AppText variant="body" color={consumerColors.text} style={{ fontWeight: "900" }}>
                           {item.title}
                         </AppText>
-                        <AppText variant="body" color={consumerColors.muted}>{item.message}</AppText>
-                        <AppText variant="caption" color={consumerColors.muted}>Date: {formatDate(item.createdAt)}</AppText>
+                        <AppText variant="body" color={consumerColors.muted} numberOfLines={2}>{item.message}</AppText>
+                        <AppText variant="caption" color={consumerColors.muted}>{formatDate(item.createdAt)}</AppText>
                       </View>
                       <AppText variant="caption" color={item.read ? consumerColors.success : "#B45309"} style={{ fontWeight: "900" }}>
                         {item.read ? "Read" : "Unread"}
@@ -194,7 +193,7 @@ export default function ParticipantNotificationsScreen() {
                     </View>
                   ))}
                 </View>
-              </AppCard>
+              </ConsumerCard>
             );
           })
         )}
@@ -228,7 +227,7 @@ export default function ParticipantNotificationsScreen() {
     <ConsumerShell
       eyebrow={isBusinessPersona ? "BUSINESS NOTIFICATIONS" : "NOTIFICATIONS"}
       title={isBusinessPersona ? "Business notifications" : "Notifications"}
-      subtitle={isBusinessPersona ? "Payment updates, batch activity, approvals, and system messages." : "Persona-specific transfer updates and received-payment messages."}
+      subtitle={isBusinessPersona ? "Payments, batches, approvals, and system messages." : "Transfer updates and received-payment messages."}
     >
       {content}
     </ConsumerShell>

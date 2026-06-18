@@ -131,12 +131,12 @@ export default function ConsumerTransfersScreen() {
   return (
     <ConsumerShell
       eyebrow="TRANSFERS"
-      title="Real transfer history"
-      subtitle="User-scoped history with filtering, search, transfer detail drill-down and repeat preparation."
+      title="Transfers"
+      subtitle="Search, repeat, and review personal transfer history."
     >
       <ConsumerCard>
         <AppText color={consumerColors.text} style={{ fontWeight: "900", fontSize: 18 }}>
-          Search and filters
+          Find a transfer
         </AppText>
         <TextInput
           value={search}
@@ -176,14 +176,14 @@ export default function ConsumerTransfersScreen() {
                 {transfer.recipient?.name ?? "Recipient"}
               </AppText>
               <AppText color={consumerColors.muted}>
-                {formatAmount(transfer.senderAmount)} to {transfer.recipient?.country ?? "Destination"}
+                {formatAmount(transfer.senderAmount)} - {transfer.recipient?.country ?? "Destination"}
               </AppText>
-              <AppText color={consumerColors.muted}>{transfer.id}</AppText>
+              <AppText variant="caption" color={consumerColors.muted}>{transfer.id}</AppText>
             </View>
             <ConsumerPill label={transfer.status} tone={transfer.status === "COMPLETED" ? "green" : "gold"} />
           </View>
           <AppText color={consumerColors.text} style={{ fontWeight: "900" }}>
-            Amount received: {transfer.selectedRoute?.receiveAmount?.toFixed(2) ?? "-"} {transfer.recipient?.currency ?? ""}
+            Received: {transfer.selectedRoute?.receiveAmount?.toFixed(2) ?? "-"} {transfer.recipient?.currency ?? ""}
           </AppText>
 
           <View style={{ flexDirection: "row", gap: 8 }}>
@@ -285,7 +285,7 @@ export default function ConsumerTransfersScreen() {
       {!isLoadingTransfers && filteredTransfers.length === 0 ? (
         <ConsumerCard accent>
           <AppText color={consumerColors.muted}>
-            No transfers match your filters yet. Create a transfer from Send to build history.
+            No transfers match your filters.
           </AppText>
         </ConsumerCard>
       ) : null}

@@ -178,7 +178,7 @@ export function BusinessHome() {
     <ConsumerShell
       eyebrow={isCorporatePersona ? "CORPORATE WORKSPACE" : "BUSINESS BANKING"}
       title={businessName}
-      subtitle={isCorporatePersona ? "Batch payments, recipients, alerts, and received transfers in one workspace." : "Cash position, payments, and business activity at a glance."}
+      subtitle={isCorporatePersona ? "Batch payments, recipients, alerts, and received transfers." : "Payments, recipients, and monthly movement at a glance."}
     >
       <ConsumerCard>
         <View style={styles.identityTop}>
@@ -189,7 +189,7 @@ export function BusinessHome() {
             <AppText color={businessColors.tealDark} style={styles.businessName}>
               {businessName}
             </AppText>
-            <AppText color={businessColors.muted}>
+            <AppText color={businessColors.muted} style={styles.compactCopy}>
               {isCorporatePersona ? "Corporate Workspace" : "Business Account"}
             </AppText>
           </View>
@@ -202,23 +202,26 @@ export function BusinessHome() {
           </AppText>
         </View>
 
+        <View style={styles.orchestrationRow}>
+          <Feather name="shield" size={16} color={businessColors.teal} />
+          <AppText color={businessColors.tealDark} style={styles.orchestrationText}>
+            Payment orchestration only
+          </AppText>
+        </View>
         <AppText variant="caption" color={businessColors.muted}>
-          NexusPay does not hold funds
-        </AppText>
-        <AppText color={businessColors.tealDark} style={styles.orchestrationText}>
-          Orchestration only
+          NexusPay does not hold funds.
         </AppText>
       </ConsumerCard>
 
       <View style={styles.grid}>
-        <MetricCard label="Month Net Flow" value={formatMoney(currentMonthNetFlow, currency)} icon="activity" tone="teal" />
-        <MetricCard label="Pending Transfers" value={String(pendingTransfers)} icon="clock" tone="gold" />
+        <MetricCard label={`${currentMonthLabel} net`} value={formatMoney(currentMonthNetFlow, currency)} icon="activity" tone="teal" />
+        <MetricCard label="Pending" value={String(pendingTransfers)} icon="clock" tone="gold" />
         <MetricCard label="Notifications" value={String(unreadNotifications)} icon="bell" tone="teal" />
-        <MetricCard label="Recent Activity" value={String(activity.length)} icon="activity" tone="green" />
+        <MetricCard label="Activity" value={String(activity.length)} icon="activity" tone="green" />
       </View>
 
       <ConsumerCard>
-        <SectionHeader title={`Cash Flow - ${currentMonthLabel}`} detail="Incoming, outgoing, and net movement for the current month." />
+        <SectionHeader title={`${currentMonthLabel} movement`} detail="Incoming, outgoing, and net activity." />
         <View style={styles.flowRow}>
           <FlowItem label="Incoming" value={formatMoney(currentMonthIncoming, currency)} positive />
           <FlowItem label="Outgoing" value={formatMoney(currentMonthOutgoing, currency)} />
@@ -227,7 +230,7 @@ export function BusinessHome() {
       </ConsumerCard>
 
       <ConsumerCard>
-        <SectionHeader title="Quick Actions" detail={isCorporatePersona ? "Manage corporate payments without leaving the workspace." : "Move money and manage business payment activity."} />
+        <SectionHeader title="Quick actions" detail="Common payment tasks." />
         <View style={styles.actionsGrid}>
           <ActionTile label="Send Payment" icon="send" onPress={() => router.push("/consumer/send" as never)} />
           <ActionTile label="Batch Payment" icon="layers" onPress={() => router.push("/corporate-payouts" as never)} />
@@ -238,7 +241,7 @@ export function BusinessHome() {
       </ConsumerCard>
 
       <ConsumerCard>
-        <SectionHeader title={isCorporatePersona ? "Corporate Activity" : "Business Activity"} detail="Recent payments, batch transfers, and notification events." />
+        <SectionHeader title={isCorporatePersona ? "Corporate activity" : "Business activity"} detail="Latest payment events." />
         {activity.length === 0 ? (
           <AppText color={businessColors.muted}>
             No business activity yet. Send or receive a payment to build your activity feed.
@@ -366,6 +369,9 @@ const styles = StyleSheet.create({
     fontSize: 21,
     fontWeight: "900",
   },
+  compactCopy: {
+    lineHeight: 20,
+  },
   accountLine: {
     borderRadius: 10,
     borderWidth: 1,
@@ -377,9 +383,21 @@ const styles = StyleSheet.create({
   accountLineText: {
     fontWeight: "800",
   },
+  orchestrationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderRadius: 10,
+    backgroundColor: "#F7FBFA",
+    borderWidth: 1,
+    borderColor: businessColors.border,
+    paddingHorizontal: 11,
+    paddingVertical: 10,
+  },
   orchestrationText: {
-    fontSize: 28,
+    fontSize: 18,
     fontWeight: "900",
+    flexShrink: 1,
   },
   grid: {
     flexDirection: "row",
@@ -390,8 +408,8 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     flexBasis: "47%",
     minWidth: 146,
-    minHeight: 116,
-    borderRadius: 12,
+    minHeight: 108,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: businessColors.border,
     backgroundColor: businessColors.white,
