@@ -69,7 +69,7 @@ export const DEMO_PERSONAS: PersonaOption[] = [
     kind: "PARTICIPANT",
     participantId: "nexus-manufacturing-ltd",
     participantType: "CORPORATE",
-    label: "Corporate Demo",
+    label: "Corporate User",
     description: "Nexus Manufacturing Ltd",
     country: "United Kingdom",
     bankName: "Nexus Treasury Bank",

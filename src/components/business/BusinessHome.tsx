@@ -126,6 +126,7 @@ export function BusinessHome() {
   }, [participantId]);
 
   const participant = data?.participant;
+  const isCorporatePersona = selectedPersona.id === "corporate-demo";
   const currency = participant?.currency ?? selectedPersona.currency ?? "GBP";
   const businessName = participant?.name ?? selectedPersona.label;
   const currentMonthLabel = getCurrentMonthLabel();
@@ -158,7 +159,7 @@ export function BusinessHome() {
       ...(data?.outgoingBatchTransfers ?? []),
     ].map((item) => batchActivity(item, participantId ?? "", currency));
 
-    const transferItems = (data?.appTransfers ?? []).slice(0, 4).map(appTransferActivity);
+    const transferItems = isCorporatePersona ? [] : (data?.appTransfers ?? []).slice(0, 4).map(appTransferActivity);
 
     const notificationItems = (data?.notifications ?? []).slice(0, 4).map((item) => ({
       id: `notification-${item.id}`,
@@ -171,13 +172,13 @@ export function BusinessHome() {
     return [...batchItems, ...transferItems, ...notificationItems]
       .sort((a, b) => b.id.localeCompare(a.id))
       .slice(0, 6);
-  }, [currency, data?.appTransfers, data?.incomingBatchTransfers, data?.notifications, data?.outgoingBatchTransfers, participantId]);
+  }, [currency, data?.appTransfers, data?.incomingBatchTransfers, data?.notifications, data?.outgoingBatchTransfers, isCorporatePersona, participantId]);
 
   return (
     <ConsumerShell
-      eyebrow="BUSINESS BANKING"
+      eyebrow={isCorporatePersona ? "CORPORATE WORKSPACE" : "BUSINESS BANKING"}
       title={businessName}
-      subtitle="Cash position, payments, and business activity at a glance."
+      subtitle={isCorporatePersona ? "Batch payments, recipients, alerts, and received transfers in one workspace." : "Cash position, payments, and business activity at a glance."}
     >
       <ConsumerCard>
         <View style={styles.identityTop}>
@@ -189,7 +190,7 @@ export function BusinessHome() {
               {businessName}
             </AppText>
             <AppText color={businessColors.muted}>
-              Business Account
+              {isCorporatePersona ? "Corporate Workspace" : "Business Account"}
             </AppText>
           </View>
           <ConsumerPill label={loading ? "Syncing" : "Live"} tone={loading ? "blue" : "green"} />
@@ -226,7 +227,7 @@ export function BusinessHome() {
       </ConsumerCard>
 
       <ConsumerCard>
-        <SectionHeader title="Quick Actions" detail="Move money and manage business payment activity." />
+        <SectionHeader title="Quick Actions" detail={isCorporatePersona ? "Manage corporate payments without leaving the workspace." : "Move money and manage business payment activity."} />
         <View style={styles.actionsGrid}>
           <ActionTile label="Send Payment" icon="send" onPress={() => router.push("/consumer/send" as never)} />
           <ActionTile label="Batch Payment" icon="layers" onPress={() => router.push("/corporate-payouts" as never)} />
@@ -237,7 +238,7 @@ export function BusinessHome() {
       </ConsumerCard>
 
       <ConsumerCard>
-        <SectionHeader title="Business Activity" detail="Recent payments, batch transfers, and notification events." />
+        <SectionHeader title={isCorporatePersona ? "Corporate Activity" : "Business Activity"} detail="Recent payments, batch transfers, and notification events." />
         {activity.length === 0 ? (
           <AppText color={businessColors.muted}>
             No business activity yet. Send or receive a payment to build your activity feed.

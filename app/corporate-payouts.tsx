@@ -132,14 +132,14 @@ export default function CorporatePayoutsScreen() {
 
   return (
     <ConsumerShell
-      eyebrow={isBusinessPersona ? "BATCH PAYMENT" : "CORPORATE DEMO"}
-      title={isBusinessPersona ? "Batch payments" : "Corporate Payouts"}
+      eyebrow={isBusinessPersona ? "BATCH PAYMENT" : "CORPORATE WORKSPACE"}
+      title={isBusinessPersona ? "Batch payments" : "Corporate Batch Payments"}
       subtitle={`${senderName} payment preparation and multi-recipient execution.`}
     >
       <View style={{ gap: 12 }}>
         <View>
           <AppText variant="caption" color={isBusinessPersona ? "#087C89" : colors.gold}>
-            {isBusinessPersona ? "Business banking" : "Corporate Demo"}
+            {isBusinessPersona ? "Business banking" : "Corporate workspace"}
           </AppText>
           <AppText variant="heading" color={consumerColors.text} style={{ marginTop: 2 }}>
             Batch Payments

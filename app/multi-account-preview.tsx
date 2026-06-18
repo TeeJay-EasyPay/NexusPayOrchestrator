@@ -82,6 +82,7 @@ export default function MultiAccountPreviewScreen() {
         return;
       }
 
+      await selectPersona("corporate-demo");
       await setAccountScope("demo");
       const error = await enableDemoAccess();
 
@@ -151,7 +152,7 @@ export default function MultiAccountPreviewScreen() {
             <View style={{ flexDirection: "row", gap: 10, flexWrap: "wrap" }}>
               <View style={{ flex: 1, minWidth: 150 }}>
                 <AppButton
-                  title={busy ? "Opening..." : "Demo Workspace"}
+                  title={busy ? "Opening..." : "Corporate Workspace"}
                   onPress={openDemoWorkspace}
                   disabled={busy}
                 />

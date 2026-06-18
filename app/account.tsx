@@ -12,7 +12,7 @@ import { colors } from "../src/theme";
 
 function getInitials(email?: string | null) {
   if (!email) return "?";
-  if (email.toLowerCase() === "demo@nexuspay.app") return "DU";
+  if (email.toLowerCase() === "demo@nexuspay.app") return "CU";
 
   const namePart = email.includes("@") ? email.split("@")[0] : email;
   const cleaned = namePart.replace(/[._-]+/g, " ").trim();
@@ -29,7 +29,7 @@ function getInitials(email?: string | null) {
 
 function getDisplayName(email?: string | null) {
   if (!email) return "Not signed in";
-  if (email.toLowerCase() === "demo@nexuspay.app") return "Demo User";
+  if (email.toLowerCase() === "demo@nexuspay.app") return "Corporate User";
 
   const namePart = email.includes("@") ? email.split("@")[0] : email;
   const cleaned = namePart.replace(/[._-]+/g, " ").trim();
@@ -269,7 +269,7 @@ export default function AccountScreen() {
             </View>
 
             <View style={{ flexDirection: "row", gap: 8 }}>
-              <ProfileMetric label="Access mode" value={isDemo ? "Demo" : "User"} />
+              <ProfileMetric label="Access mode" value={isDemo ? "Corporate" : "User"} />
               <ProfileMetric label="Auth status" value={session ? "Active" : "Signed out"} />
             </View>
 
@@ -287,7 +287,7 @@ export default function AccountScreen() {
 
               <AppText variant="body" color="#FFFFFF" style={{ fontWeight: "900" }}>
                 {isDemo
-                  ? "Demo platform access enabled • Real-money transfers disabled"
+                  ? "Corporate access enabled • Real-money transfers disabled"
                   : "Supabase user session active • Compliance verification required before live transfers"}
               </AppText>
             </View>
@@ -315,7 +315,7 @@ export default function AccountScreen() {
               <SettingRow
                 title="Email identity"
                 description={email}
-                status={user?.email_confirmed_at ? "Confirmed" : isDemo ? "Demo" : "Unconfirmed"}
+                status={user?.email_confirmed_at ? "Confirmed" : isDemo ? "Corporate" : "Unconfirmed"}
                 tone={user?.email_confirmed_at || isDemo ? "green" : "gold"}
               />
 
@@ -350,7 +350,7 @@ export default function AccountScreen() {
               <SettingRow
                 title="Identity verification"
                 description="Passport, driving licence or national ID verification will be handled by a KYC provider."
-                status={isDemo ? "Demo" : "Not started"}
+                status={isDemo ? "Corporate" : "Not started"}
                 tone="gold"
               />
 
@@ -364,7 +364,7 @@ export default function AccountScreen() {
               <SettingRow
                 title="Transfer eligibility"
                 description="Transfers remain in simulation mode until verification and compliance checks pass."
-                status="Demo mode"
+                status="Corporate mode"
                 tone="blue"
               />
             </View>
@@ -455,14 +455,14 @@ export default function AccountScreen() {
               </View>
 
               <View style={{ flexDirection: "row", gap: 8 }}>
-                <LimitCard label="Daily limit" value={isDemo ? "Demo only" : "£500"} />
-                <LimitCard label="Monthly limit" value={isDemo ? "Demo only" : "£2,500"} />
+                <LimitCard label="Daily limit" value={isDemo ? "Corporate only" : "£500"} />
+                <LimitCard label="Monthly limit" value={isDemo ? "Corporate only" : "£2,500"} />
               </View>
 
               <SettingRow
                 title="Risk tier"
                 description="Risk tier will be calculated from identity, geography, transaction behaviour and provider checks."
-                status={isDemo ? "Demo" : "Tier 1"}
+                status={isDemo ? "Corporate" : "Tier 1"}
                 tone="blue"
               />
             </View>

@@ -30,6 +30,7 @@ export default function BusinessRecipientsScreen() {
   const { selectedPersona } = usePersona();
   const [recipients, setRecipients] = useState<BusinessRecipient[]>([]);
   const [loading, setLoading] = useState(true);
+  const isCorporatePersona = selectedPersona.id === "corporate-demo";
 
   useEffect(() => {
     let mounted = true;
@@ -58,8 +59,8 @@ export default function BusinessRecipientsScreen() {
   return (
     <ConsumerShell
       eyebrow="RECIPIENTS"
-      title="Business recipients"
-      subtitle="Trusted payees, corridors, and recent payment context."
+      title={isCorporatePersona ? "Corporate recipients" : "Business recipients"}
+      subtitle={isCorporatePersona ? "Corporate payees available for multi-recipient orchestration." : "Trusted payees, corridors, and recent payment context."}
     >
       <ConsumerCard>
         <View style={styles.headerRow}>

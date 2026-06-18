@@ -201,7 +201,7 @@ export default function AuthScreen() {
       }
     } catch (e) {
       console.error("[AUTH-OP] handleDemoAccess caught unexpected error:", e);
-      setErrorMessage("Demo access failed unexpectedly. Please try again.");
+      setErrorMessage("Corporate access failed unexpectedly. Please try again.");
     } finally {
       setBusy(false);
       console.log("[AUTH-OP] handleDemoAccess finally done");
@@ -409,7 +409,7 @@ export default function AuthScreen() {
                 />
 
                 <AppButton
-                  title="Enter Demo Workspace"
+                  title="Enter Corporate Workspace"
                   variant="secondary"
                   onPress={handleDemoAccess}
                   disabled={busy}

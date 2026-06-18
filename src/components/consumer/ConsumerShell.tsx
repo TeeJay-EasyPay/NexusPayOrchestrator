@@ -49,10 +49,10 @@ const businessTabs = [
 
 const corporateTabs = [
   { label: "Home", route: "/consumer", icon: "home" },
+  { label: "Send", route: "/consumer/send", icon: "send" },
   { label: "Batch", route: "/corporate-payouts", icon: "layers" },
+  { label: "Recipients", route: "/business-recipients", icon: "users" },
   { label: "Alerts", route: "/participant-notifications", icon: "bell" },
-  { label: "Received", route: "/received-transfers", icon: "download" },
-  { label: "Profile", route: "/consumer/profile", icon: "user" },
 ] as const;
 
 export function ConsumerShell({
@@ -164,15 +164,19 @@ export function ConsumerShell({
                   <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/send" as never); }} style={styles.dropdownItem}>
                     <AppText style={styles.dropdownTitle}>Send</AppText>
                   </Pressable>
-                  <Pressable onPress={() => { setMenuOpen(false); router.push("/routes" as never); }} style={styles.dropdownItem}>
-                    <AppText style={styles.dropdownTitle}>Routes</AppText>
-                  </Pressable>
-                  <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/fx" as never); }} style={styles.dropdownItem}>
-                    <AppText style={styles.dropdownTitle}>FX rates</AppText>
-                  </Pressable>
-                  <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/transfers" as never); }} style={styles.dropdownItem}>
-                    <AppText style={styles.dropdownTitle}>Transfers</AppText>
-                  </Pressable>
+                  {!isCorporatePersona ? (
+                    <>
+                      <Pressable onPress={() => { setMenuOpen(false); router.push("/routes" as never); }} style={styles.dropdownItem}>
+                        <AppText style={styles.dropdownTitle}>Routes</AppText>
+                      </Pressable>
+                      <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/fx" as never); }} style={styles.dropdownItem}>
+                        <AppText style={styles.dropdownTitle}>FX rates</AppText>
+                      </Pressable>
+                      <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/transfers" as never); }} style={styles.dropdownItem}>
+                        <AppText style={styles.dropdownTitle}>Transfers</AppText>
+                      </Pressable>
+                    </>
+                  ) : null}
                   <Pressable onPress={() => { setMenuOpen(false); router.push("/participant-notifications" as never); }} style={styles.dropdownItem}>
                     <AppText style={styles.dropdownTitle}>Alerts</AppText>
                   </Pressable>
@@ -184,17 +188,21 @@ export function ConsumerShell({
                       <AppText style={styles.dropdownTitle}>Batch Payments</AppText>
                     </Pressable>
                   ) : null}
-                  {isBusinessPersona ? (
+                  {selectedPersona.id === "corporate-demo" || isBusinessPersona ? (
                     <Pressable onPress={() => { setMenuOpen(false); router.push("/business-recipients" as never); }} style={styles.dropdownItem}>
                       <AppText style={styles.dropdownTitle}>Recipients</AppText>
                     </Pressable>
                   ) : null}
-                  <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/nexus-ai" as never); }} style={styles.dropdownItem}>
-                    <AppText style={styles.dropdownTitle}>Nexus AI</AppText>
-                  </Pressable>
-                  <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/profile" as never); }} style={styles.dropdownItem}>
-                    <AppText style={styles.dropdownTitle}>Profile</AppText>
-                  </Pressable>
+                  {!isCorporatePersona ? (
+                    <>
+                      <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/nexus-ai" as never); }} style={styles.dropdownItem}>
+                        <AppText style={styles.dropdownTitle}>Nexus AI</AppText>
+                      </Pressable>
+                      <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/profile" as never); }} style={styles.dropdownItem}>
+                        <AppText style={styles.dropdownTitle}>Profile</AppText>
+                      </Pressable>
+                    </>
+                  ) : null}
                   <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/settings" as never); }} style={styles.dropdownItem}>
                     <AppText style={styles.dropdownTitle}>Settings</AppText>
                   </Pressable>

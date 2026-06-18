@@ -472,7 +472,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function enableDemoAccess() {
     if (!DEMO_EMAIL || !DEMO_PASSWORD) {
-      return "Demo access is not configured. Add EXPO_PUBLIC_DEMO_EMAIL and EXPO_PUBLIC_DEMO_PASSWORD to your .env file.";
+      return "Corporate access is not configured. Add EXPO_PUBLIC_DEMO_EMAIL and EXPO_PUBLIC_DEMO_PASSWORD to your .env file.";
     }
 
     const error = await signIn(DEMO_EMAIL, DEMO_PASSWORD);

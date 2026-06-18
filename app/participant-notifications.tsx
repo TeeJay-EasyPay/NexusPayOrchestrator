@@ -60,6 +60,7 @@ export default function ParticipantNotificationsScreen() {
   const fallbackUnreadCount = items.filter((n) => !n.read).length;
   const badgeCount = unreadCount || fallbackUnreadCount;
   const groups: NotificationGroup[] = ["Payments", "Batch Payments", "Approvals", "System Events"];
+  const isCorporatePersona = selectedPersona.id === "corporate-demo";
   const isBusinessPersona = selectedPersona.participantType === "BUSINESS";
 
   async function markRead() {
@@ -74,13 +75,13 @@ export default function ParticipantNotificationsScreen() {
 
   return (
     <ConsumerShell
-      eyebrow={isBusinessPersona ? "BUSINESS NOTIFICATIONS" : "NOTIFICATIONS"}
-      title={isBusinessPersona ? "Business notifications" : "Notifications"}
-      subtitle={isBusinessPersona ? "Payment updates, batch activity, approvals, and system messages." : "Persona-specific transfer updates and received-payment messages."}
+      eyebrow={isCorporatePersona ? "CORPORATE ALERTS" : isBusinessPersona ? "BUSINESS NOTIFICATIONS" : "NOTIFICATIONS"}
+      title={isCorporatePersona ? "Corporate alerts" : isBusinessPersona ? "Business notifications" : "Notifications"}
+      subtitle={isCorporatePersona ? "Corporate workspace payment, batch, approval, and system messages." : isBusinessPersona ? "Payment updates, batch activity, approvals, and system messages." : "Persona-specific transfer updates and received-payment messages."}
     >
         <AppCard>
           <View style={{ gap: 4, marginBottom: 10 }}>
-            <AppText variant="caption" color={consumerColors.muted}>Persona details</AppText>
+            <AppText variant="caption" color={consumerColors.muted}>{isCorporatePersona ? "Workspace details" : "Persona details"}</AppText>
             <AppText variant="caption" color={consumerColors.text}>
               {selectedPersona.bankName
                 ? `${selectedPersona.bankName} ****${selectedPersona.accountLast4 ?? ""}`

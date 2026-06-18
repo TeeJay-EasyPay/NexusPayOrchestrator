@@ -40,6 +40,7 @@ export default function ReceivedTransfersScreen() {
     status: string;
   }[]>([]);
   const [loading, setLoading] = useState(true);
+  const isCorporatePersona = selectedPersona.id === "corporate-demo";
   const isBusinessPersona = selectedPersona.participantType === "BUSINESS";
 
   useEffect(() => {
@@ -63,13 +64,13 @@ export default function ReceivedTransfersScreen() {
 
   return (
     <ConsumerShell
-      eyebrow={isBusinessPersona ? "BUSINESS RECEIVABLES" : "RECEIVED"}
-      title={isBusinessPersona ? "Received payments" : "Received transfers"}
-      subtitle={isBusinessPersona ? "Incoming business payments from batch activity." : "Persona-specific incoming transfers from corporate payout batches."}
+      eyebrow={isCorporatePersona ? "CORPORATE RECEIVED" : isBusinessPersona ? "BUSINESS RECEIVABLES" : "RECEIVED"}
+      title={isCorporatePersona ? "Corporate received transfers" : isBusinessPersona ? "Received payments" : "Received transfers"}
+      subtitle={isCorporatePersona ? "Incoming value movements relevant to the corporate workspace." : isBusinessPersona ? "Incoming business payments from batch activity." : "Persona-specific incoming transfers from corporate payout batches."}
     >
         <AppCard>
           <View style={{ gap: 4 }}>
-            <AppText variant="caption" color={consumerColors.muted}>Persona details</AppText>
+            <AppText variant="caption" color={consumerColors.muted}>{isCorporatePersona ? "Workspace details" : "Persona details"}</AppText>
             <AppText variant="caption" color={consumerColors.text}>
               {selectedPersona.bankName
                 ? `${selectedPersona.bankName} ****${selectedPersona.accountLast4 ?? ""}`

@@ -18,7 +18,7 @@ function buildBadgeUser(email?: string | null): BadgeUser {
   const isDemo = safeEmail.toLowerCase() === "demo@nexuspay.app";
 
   if (isDemo) {
-    return { email: safeEmail, displayName: "Demo User", initials: "DU", isDemo: true };
+    return { email: safeEmail, displayName: "Corporate User", initials: "CU", isDemo: true };
   }
 
   const namePart = safeEmail.includes("@") ? safeEmail.split("@")[0] : safeEmail;
@@ -123,7 +123,7 @@ export function UserAccountBadge() {
             color={badgeUser.isDemo ? colors.gold : colors.textDarkMuted}
             numberOfLines={1}
           >
-            {badgeUser.isDemo ? "Demo access" : "Signed in"}
+            {badgeUser.isDemo ? "Corporate access" : "Signed in"}
           </AppText>
         </View>
       ) : null}

@@ -102,7 +102,7 @@ export default function ConsumerHomeScreen() {
     [completedTransfers]
   );
 
-  if (selectedPersona.participantType === "BUSINESS") {
+  if (selectedPersona.id === "corporate-demo" || selectedPersona.participantType === "BUSINESS") {
     return <BusinessHome />;
   }
 
