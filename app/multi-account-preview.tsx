@@ -35,9 +35,11 @@ export default function MultiAccountPreviewScreen() {
   const { setAccountScope } = useAccount();
   const { unlock, unlockWithPassword, biometricAvailable, lockApp } = useDeviceUnlock();
   const { personas, selectedPersona, selectPersona } = usePersona();
-  const [busy, setBusy] = useState(false);
+  const [busyTarget, setBusyTarget] = useState<"corporate" | "personal" | "persona" | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState(selectedPersona.id);
+  const [selectorOpen, setSelectorOpen] = useState(false);
+  const busy = busyTarget !== null;
 
   const personaOptions = useMemo(
     () => personas.filter((persona) => persona.kind === "PARTICIPANT" && persona.id !== "corporate-demo"),
@@ -72,7 +74,7 @@ export default function MultiAccountPreviewScreen() {
   async function openDemoWorkspace() {
     if (busy) return;
 
-    setBusy(true);
+    setBusyTarget("corporate");
     setErrorMessage(null);
 
     try {
@@ -93,15 +95,16 @@ export default function MultiAccountPreviewScreen() {
 
       router.replace("/" as never);
     } finally {
-      setBusy(false);
+      setBusyTarget(null);
     }
   }
 
-  async function openPersonalWorkspace(persona: PersonaOption = personas[0]) {
+  async function openPersonalWorkspace(persona: PersonaOption = personas[0], target: "personal" | "persona" = "persona") {
     if (busy) return;
 
-    setBusy(true);
+    setBusyTarget(target);
     setErrorMessage(null);
+    setSelectorOpen(false);
 
     try {
       const unlocked = await requireUnlock();
@@ -122,7 +125,7 @@ export default function MultiAccountPreviewScreen() {
 
       router.replace("/consumer" as never);
     } finally {
-      setBusy(false);
+      setBusyTarget(null);
     }
   }
 
@@ -152,7 +155,7 @@ export default function MultiAccountPreviewScreen() {
             <View style={{ flexDirection: "row", gap: 10, flexWrap: "wrap" }}>
               <View style={{ flex: 1, minWidth: 150 }}>
                 <AppButton
-                  title={busy ? "Opening..." : "Corporate Workspace"}
+                  title={busyTarget === "corporate" ? "Opening..." : "Corporate Workspace"}
                   onPress={openDemoWorkspace}
                   disabled={busy}
                 />
@@ -160,8 +163,8 @@ export default function MultiAccountPreviewScreen() {
 
               <View style={{ flex: 1, minWidth: 150 }}>
                 <AppButton
-                  title={busy ? "Opening..." : "Personal Account"}
-                  onPress={() => openPersonalWorkspace(personas[0])}
+                  title={busyTarget === "personal" ? "Opening..." : "Personal Account"}
+                  onPress={() => openPersonalWorkspace(personas[0], "personal")}
                   disabled={busy}
                   variant="secondary"
                 />
@@ -191,35 +194,81 @@ export default function MultiAccountPreviewScreen() {
             </View>
 
             <View style={{ gap: 8 }}>
-              {personaOptions.map((persona) => {
-                const active = selectedId === persona.id;
-
-                return (
-                  <Pressable
-                    key={persona.id}
-                    onPress={() => setSelectedId(persona.id)}
-                    style={{
-                      borderRadius: 10,
-                      borderWidth: 1,
-                      borderColor: active ? colors.gold : "#CBD5E1",
-                      backgroundColor: active ? "#FFF7E6" : "#F8FAFC",
-                      padding: 11,
-                    }}
-                  >
-                    <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "800" }}>
-                      {persona.label}
-                    </AppText>
+              <Pressable
+                onPress={() => setSelectorOpen((open) => !open)}
+                disabled={busy || personaOptions.length === 0}
+                style={{
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: selectorOpen ? colors.gold : "#CBD5E1",
+                  backgroundColor: "#F8FAFC",
+                  paddingHorizontal: 12,
+                  paddingVertical: 12,
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: 10,
+                }}
+              >
+                <View style={{ flex: 1 }}>
+                  <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
+                    {selectedOption?.label ?? "Select a persona"}
+                  </AppText>
+                  {selectedOption ? (
                     <AppText variant="caption" color={colors.textDarkSecondary}>
-                      {personaMeta(persona)}
+                      {personaMeta(selectedOption)}
                     </AppText>
-                  </Pressable>
-                );
-              })}
+                  ) : null}
+                </View>
+                <AppText variant="subheading" color={colors.textDarkMuted} style={{ fontWeight: "900" }}>
+                  {selectorOpen ? "^" : "v"}
+                </AppText>
+              </Pressable>
+
+              {selectorOpen ? (
+                <View
+                  style={{
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: "#DDE6EE",
+                    backgroundColor: "#FFFFFF",
+                    overflow: "hidden",
+                  }}
+                >
+                  {personaOptions.map((persona) => {
+                    const active = selectedId === persona.id;
+
+                    return (
+                      <Pressable
+                        key={persona.id}
+                        onPress={() => {
+                          setSelectedId(persona.id);
+                          setSelectorOpen(false);
+                        }}
+                        style={{
+                          borderBottomWidth: 1,
+                          borderBottomColor: "#EEF2F6",
+                          backgroundColor: active ? "#FFF7E6" : "#FFFFFF",
+                          paddingHorizontal: 12,
+                          paddingVertical: 11,
+                        }}
+                      >
+                        <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "800" }}>
+                          {persona.label}
+                        </AppText>
+                        <AppText variant="caption" color={colors.textDarkSecondary}>
+                          {personaMeta(persona)}
+                        </AppText>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ) : null}
             </View>
 
             <AppButton
-              title={busy ? "Opening..." : "Continue"}
-              onPress={() => selectedOption && openPersonalWorkspace(selectedOption)}
+              title={busyTarget === "persona" ? "Opening..." : "Continue"}
+              onPress={() => selectedOption && openPersonalWorkspace(selectedOption, "persona")}
               disabled={busy || !selectedOption}
             />
 

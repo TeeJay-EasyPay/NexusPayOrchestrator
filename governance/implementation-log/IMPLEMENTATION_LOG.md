@@ -2,6 +2,48 @@
 
 Purpose: durable record of meaningful implementation work, security/context fixes, validation, commits, and OTA deployments. New code changes should append an entry here before commit when practical.
 
+## 2026-06-18 - Queued UX Recommendation: Private and Business Persona Declutter
+
+Prompt / Objective:
+The founder asked whether private and business persona screens can be decluttered because the current screens are visually strong but text-heavy.
+
+Recommendation Captured:
+- Reduce helper copy by roughly 35-50 percent.
+- Keep important compliance language such as `NexusPay does not hold funds`, but avoid repeating it in long paragraphs.
+- Replace explanatory copy with compact labels, values, status pills, and clear actions.
+- Prioritize decluttering private home, business home, business recipients, notifications, received transfers, settings, and profile.
+- Make screens feel more like a finished app and less like a guided prototype.
+
+Status:
+- Not implemented yet.
+- Captured for a future UX polish sprint.
+
+## 2026-06-18 - Multi-Account Preview Persona Selector Simplification
+
+Prompt / Objective:
+Simplify the login/account selection screen by replacing the long visible private/business persona card list with a compact dropdown-style selector. Also fix the loading state so only the selected button shows progress.
+
+Files Changed:
+- `app/multi-account-preview.tsx`
+- `governance/implementation-log/IMPLEMENTATION_LOG.md`
+
+Summary:
+- Replaced the full visible persona list with a compact selector field that expands only when tapped.
+- Preserved selected persona metadata inside the selector.
+- Added per-action busy state via `busyTarget` so Corporate Workspace, Personal Account, and Continue show `Opening...` independently.
+- Kept all actions disabled while an unlock/open action is in progress to prevent duplicate navigation.
+- Added this implementation log entry and captured the pending declutter recommendation above.
+
+Validation:
+- Targeted ESLint passed for `app/multi-account-preview.tsx`.
+- `git diff --check` passed.
+
+Commit:
+- Pending.
+
+OTA:
+- Pending.
+
 ## 2026-06-18 - Persona Menu Route Isolation Hardening
 
 Prompt / Objective:
@@ -200,4 +242,3 @@ OTA:
 
 Known Warnings:
 - Expo publish continued to show the existing `@noble/hashes/crypto.js` export warning. It did not block OTA.
-
