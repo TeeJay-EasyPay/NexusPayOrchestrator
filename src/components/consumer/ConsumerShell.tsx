@@ -76,6 +76,23 @@ export function ConsumerShell({
   const dropdownMaxHeight = Math.max(240, height - 128);
   const isCorporatePersona = selectedPersona.id === "corporate-demo";
   const isBusinessPersona = selectedPersona.participantType === "BUSINESS";
+  const shellTint = isCorporatePersona
+    ? {
+        active: "#D6A84F",
+        inactive: "#B7C7D8",
+        navBackground: "#061625",
+        headerBackground: "#07111F",
+        heroBackground: "#0B3F4A",
+        heroBorder: "rgba(255,255,255,0.14)",
+      }
+    : {
+        active: consumerColors.blue,
+        inactive: consumerColors.muted,
+        navBackground: consumerColors.white,
+        headerBackground: consumerColors.white,
+        heroBackground: consumerColors.blueSoft,
+        heroBorder: consumerColors.border,
+      };
   const workspaceLabel = isCorporatePersona
     ? "Corporate Workspace"
     : isBusinessPersona
@@ -98,25 +115,25 @@ export function ConsumerShell({
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor={consumerColors.white} />
-      <View style={styles.root}>
+    <SafeAreaView style={[styles.safe, isCorporatePersona && styles.corporateSafe]}>
+      <StatusBar barStyle={isCorporatePersona ? "light-content" : "dark-content"} backgroundColor={shellTint.headerBackground} />
+      <View style={[styles.root, isCorporatePersona && styles.corporateRoot]}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-          <View style={styles.header}>
+          <View style={[styles.header, isCorporatePersona && styles.corporateHeader]}>
             <View style={styles.identity}>
-              <View style={styles.avatar}>
+              <View style={[styles.avatar, isCorporatePersona && styles.corporateAvatar]}>
                 <AppText color={consumerColors.white} style={styles.avatarText}>
                   NP
                 </AppText>
               </View>
               <View style={{ flex: 1 }}>
-                <AppText variant="caption" color={consumerColors.blue}>
+                <AppText variant="caption" color={isCorporatePersona ? "#D6A84F" : consumerColors.blue}>
                   {workspaceLabel}
                 </AppText>
-                <AppText color={consumerColors.text} style={styles.accountName}>
+                <AppText color={isCorporatePersona ? consumerColors.white : consumerColors.text} style={styles.accountName}>
                   {selectedPersona.label}
                 </AppText>
-                <AppText variant="caption" color={consumerColors.muted}>
+                <AppText variant="caption" color={isCorporatePersona ? "#B7C7D8" : consumerColors.muted}>
                   {selectedPersona.kind === "PARTICIPANT"
                     ? `${selectedPersona.bankName ?? "Bank"} ${selectedPersona.accountLast4 ? `****${selectedPersona.accountLast4}` : ""}`
                     : "NexusPay"}
@@ -125,25 +142,33 @@ export function ConsumerShell({
               <View style={styles.headerActions}>
                 <Pressable
                   onPress={() => router.push("/multi-account-preview" as never)}
-                  style={styles.operatorLink}
+                  style={[styles.operatorLink, isCorporatePersona && styles.corporateOperatorLink]}
                 >
-                  <Feather name="repeat" size={15} color={consumerColors.blue} />
+                  <Feather name="repeat" size={15} color={isCorporatePersona ? "#D6A84F" : consumerColors.blue} />
                 </Pressable>
 
-                <Pressable onPress={() => setMenuOpen((open) => !open)} style={styles.operatorLink}>
-                  <Feather name="menu" size={16} color={consumerColors.blue} />
+                <Pressable onPress={() => setMenuOpen((open) => !open)} style={[styles.operatorLink, isCorporatePersona && styles.corporateOperatorLink]}>
+                  <Feather name="menu" size={16} color={isCorporatePersona ? "#D6A84F" : consumerColors.blue} />
                 </Pressable>
               </View>
             </View>
 
-            <View style={styles.heroPanel}>
-              <AppText variant="caption" color={consumerColors.blue} style={styles.eyebrow}>
+            <View
+              style={[
+                styles.heroPanel,
+                {
+                  backgroundColor: shellTint.heroBackground,
+                  borderColor: shellTint.heroBorder,
+                },
+              ]}
+            >
+              <AppText variant="caption" color={isCorporatePersona ? "#D6A84F" : consumerColors.blue} style={styles.eyebrow}>
                 {eyebrow}
               </AppText>
-              <AppText color={consumerColors.blueDark} style={styles.title}>
+              <AppText color={isCorporatePersona ? consumerColors.white : consumerColors.blueDark} style={styles.title}>
                 {title}
               </AppText>
-              <AppText color={consumerColors.muted} style={styles.subtitle}>
+              <AppText color={isCorporatePersona ? "#D7E4F1" : consumerColors.muted} style={styles.subtitle}>
                 {subtitle}
               </AppText>
             </View>
@@ -221,7 +246,15 @@ export function ConsumerShell({
           <View style={styles.content}>{children}</View>
         </ScrollView>
 
-        <View style={styles.nav}>
+        <View
+          style={[
+            styles.nav,
+            {
+              backgroundColor: shellTint.navBackground,
+              borderColor: isCorporatePersona ? "rgba(255,255,255,0.14)" : consumerColors.border,
+            },
+          ]}
+        >
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.navScroll}>
           {tabs.map((tab) => {
             const active = tab.route === "/consumer" ? pathname === tab.route : pathname.startsWith(tab.route);
@@ -230,17 +263,17 @@ export function ConsumerShell({
               <Pressable
                 key={tab.route}
                 onPress={() => router.push(tab.route as never)}
-                style={[styles.navItem, active && styles.navItemActive]}
+                style={[styles.navItem, active && { backgroundColor: shellTint.active }]}
               >
                 <Feather
                   name={tab.icon}
                   size={17}
-                  color={active ? consumerColors.white : consumerColors.muted}
+                  color={active ? (isCorporatePersona ? "#061625" : consumerColors.white) : shellTint.inactive}
                 />
                 <AppText
                   variant="caption"
                   style={{
-                    color: active ? consumerColors.white : consumerColors.muted,
+                    color: active ? (isCorporatePersona ? "#061625" : consumerColors.white) : shellTint.inactive,
                     fontWeight: "900",
                   }}
                 >
@@ -302,9 +335,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: consumerColors.background,
   },
+  corporateSafe: {
+    backgroundColor: "#07111F",
+  },
   root: {
     flex: 1,
     backgroundColor: consumerColors.background,
+  },
+  corporateRoot: {
+    backgroundColor: "#07111F",
   },
   scroll: {
     paddingBottom: 108,
@@ -318,6 +357,10 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 22,
     borderBottomWidth: 1,
     borderBottomColor: consumerColors.border,
+  },
+  corporateHeader: {
+    backgroundColor: "#07111F",
+    borderBottomColor: "rgba(255,255,255,0.10)",
   },
   identity: {
     flexDirection: "row",
@@ -335,6 +378,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.28)",
   },
+  corporateAvatar: {
+    backgroundColor: "#0B3F4A",
+    borderColor: "rgba(214,168,79,0.42)",
+  },
   avatarText: {
     fontWeight: "900",
   },
@@ -351,6 +398,10 @@ const styles = StyleSheet.create({
     backgroundColor: consumerColors.white,
     borderWidth: 1,
     borderColor: consumerColors.border,
+  },
+  corporateOperatorLink: {
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderColor: "rgba(255,255,255,0.16)",
   },
   headerActions: {
     flexDirection: "row",
@@ -486,8 +537,5 @@ const styles = StyleSheet.create({
   navScroll: {
     flexGrow: 1,
     gap: 4,
-  },
-  navItemActive: {
-    backgroundColor: consumerColors.blue,
   },
 });

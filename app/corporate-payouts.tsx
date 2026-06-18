@@ -137,17 +137,19 @@ export default function CorporatePayoutsScreen() {
       subtitle={`${senderName} payment preparation and multi-recipient execution.`}
     >
       <View style={{ gap: 12 }}>
-        <View>
-          <AppText variant="caption" color={isBusinessPersona ? "#087C89" : colors.gold}>
-            {isBusinessPersona ? "Business banking" : "Corporate workspace"}
-          </AppText>
-          <AppText variant="heading" color={consumerColors.text} style={{ marginTop: 2 }}>
-            Batch Payments
-          </AppText>
-          <AppText variant="body" color={consumerColors.muted}>
-            {senderName} - multi-recipient payment run
-          </AppText>
-        </View>
+        <AppCard>
+          <View style={{ gap: 4 }}>
+            <AppText variant="caption" color={isBusinessPersona ? "#087C89" : colors.gold}>
+              {isBusinessPersona ? "Business banking" : "Corporate workspace"}
+            </AppText>
+            <AppText variant="heading" color={consumerColors.text} style={{ marginTop: 2 }}>
+              Batch Payments
+            </AppText>
+            <AppText variant="body" color={consumerColors.muted}>
+              {senderName} - multi-recipient payment run
+            </AppText>
+          </View>
+        </AppCard>
 
         <View style={{ flexDirection: "row", gap: 10, flexWrap: "wrap" }}>
           <View style={{ flex: 1, minWidth: 150 }}>
