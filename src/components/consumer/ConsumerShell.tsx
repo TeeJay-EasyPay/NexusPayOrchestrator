@@ -39,6 +39,14 @@ const participantTabs = [
   { label: "Profile", route: "/consumer/profile", icon: "user" },
 ] as const;
 
+const businessTabs = [
+  { label: "Home", route: "/consumer", icon: "home" },
+  { label: "Send", route: "/consumer/send", icon: "send" },
+  { label: "Batch", route: "/corporate-payouts", icon: "layers" },
+  { label: "Recipients", route: "/business-recipients", icon: "users" },
+  { label: "Alerts", route: "/participant-notifications", icon: "bell" },
+] as const;
+
 const corporateTabs = [
   { label: "Home", route: "/consumer", icon: "home" },
   { label: "Payouts", route: "/corporate-payouts", icon: "briefcase" },
@@ -67,11 +75,18 @@ export function ConsumerShell({
   const { height } = useWindowDimensions();
   const dropdownMaxHeight = Math.max(240, height - 128);
   const isCorporatePersona = selectedPersona.id === "corporate-demo";
-  const workspaceLabel = isCorporatePersona ? "Corporate Workspace" : "Personal Account";
+  const isBusinessPersona = selectedPersona.participantType === "BUSINESS";
+  const workspaceLabel = isCorporatePersona
+    ? "Corporate Workspace"
+    : isBusinessPersona
+      ? "Business Account"
+      : "Personal Account";
   const tabs =
     isCorporatePersona
       ? corporateTabs
-      : selectedPersona.kind === "PARTICIPANT"
+      : isBusinessPersona
+        ? businessTabs
+        : selectedPersona.kind === "PARTICIPANT"
         ? participantTabs
         : defaultTabs;
 
@@ -164,9 +179,14 @@ export function ConsumerShell({
                   <Pressable onPress={() => { setMenuOpen(false); router.push("/received-transfers" as never); }} style={styles.dropdownItem}>
                     <AppText style={styles.dropdownTitle}>Received Transfers</AppText>
                   </Pressable>
-                  {selectedPersona.id === "corporate-demo" ? (
+                  {selectedPersona.id === "corporate-demo" || isBusinessPersona ? (
                     <Pressable onPress={() => { setMenuOpen(false); router.push("/corporate-payouts" as never); }} style={styles.dropdownItem}>
-                      <AppText style={styles.dropdownTitle}>Corporate Payouts</AppText>
+                      <AppText style={styles.dropdownTitle}>{isBusinessPersona ? "Batch Payments" : "Corporate Payouts"}</AppText>
+                    </Pressable>
+                  ) : null}
+                  {isBusinessPersona ? (
+                    <Pressable onPress={() => { setMenuOpen(false); router.push("/business-recipients" as never); }} style={styles.dropdownItem}>
+                      <AppText style={styles.dropdownTitle}>Recipients</AppText>
                     </Pressable>
                   ) : null}
                   <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/nexus-ai" as never); }} style={styles.dropdownItem}>

@@ -19,6 +19,15 @@ function formatStatus(status: string): string {
   return "Created";
 }
 
+const businessColors = {
+  teal: "#087C89",
+  green: "#108A5F",
+  gold: "#B7791F",
+  border: "#D7E7E5",
+  text: "#0F2239",
+  muted: "#5F728A",
+};
+
 export default function ReceivedTransfersScreen() {
   const { selectedPersona } = usePersona();
   const participantId = selectedPersona.participantId;
@@ -31,6 +40,7 @@ export default function ReceivedTransfersScreen() {
     status: string;
   }[]>([]);
   const [loading, setLoading] = useState(true);
+  const isBusinessPersona = selectedPersona.participantType === "BUSINESS";
 
   useEffect(() => {
     let mounted = true;
@@ -53,9 +63,9 @@ export default function ReceivedTransfersScreen() {
 
   return (
     <ConsumerShell
-      eyebrow="RECEIVED"
-      title="Received transfers"
-      subtitle="Persona-specific incoming transfers from corporate payout batches."
+      eyebrow={isBusinessPersona ? "BUSINESS RECEIVABLES" : "RECEIVED"}
+      title={isBusinessPersona ? "Received payments" : "Received transfers"}
+      subtitle={isBusinessPersona ? "Incoming business payments from batch activity." : "Persona-specific incoming transfers from corporate payout batches."}
     >
         <AppCard>
           <View style={{ gap: 4 }}>
@@ -88,23 +98,49 @@ export default function ReceivedTransfersScreen() {
         ) : (
           rows.map((item) => (
             <AppCard key={item.id}>
-              <View style={{ gap: 6 }}>
-                <AppText variant="caption" color={consumerColors.muted}>{formatDate(item.createdAt)}</AppText>
+              <View style={{ gap: 12 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                  <View style={{ flex: 1 }}>
+                    <AppText variant="caption" color={businessColors.muted}>Sender</AppText>
+                    <AppText variant="subheading" color={businessColors.text} style={{ fontWeight: "900" }}>
+                      {item.senderName}
+                    </AppText>
+                  </View>
+                  <View style={{
+                    borderRadius: 999,
+                    backgroundColor: item.status === "DELIVERED" ? "#DFF7EC" : "#FFF4D6",
+                    paddingHorizontal: 10,
+                    paddingVertical: 6,
+                  }}>
+                    <AppText variant="caption" color={item.status === "DELIVERED" ? businessColors.green : businessColors.gold} style={{ fontWeight: "900" }}>
+                      {formatStatus(item.status)}
+                    </AppText>
+                  </View>
+                </View>
 
-                <AppText variant="caption" color={consumerColors.muted}>Sender:</AppText>
-                <AppText variant="body" color={consumerColors.text} style={{ fontWeight: "700" }}>
-                  {item.senderName}
-                </AppText>
-
-                <AppText variant="caption" color={consumerColors.muted}>Amount:</AppText>
-                <AppText variant="body" color={consumerColors.text} style={{ fontWeight: "700" }}>
-                  £{item.amount.toLocaleString()}
-                </AppText>
-
-                <AppText variant="caption" color={consumerColors.muted}>Status:</AppText>
-                <AppText variant="body" color={consumerColors.success} style={{ fontWeight: "700" }}>
-                  {formatStatus(item.status)}
-                </AppText>
+                <View style={{
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: businessColors.border,
+                  backgroundColor: "#F7FBFA",
+                  padding: 12,
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  gap: 12,
+                }}>
+                  <View style={{ flex: 1 }}>
+                    <AppText variant="caption" color={businessColors.muted}>Amount</AppText>
+                    <AppText variant="heading" color={businessColors.teal} style={{ fontWeight: "900" }}>
+                      {(selectedPersona.currency ?? "GBP")} {item.amount.toLocaleString()}
+                    </AppText>
+                  </View>
+                  <View style={{ alignItems: "flex-end", justifyContent: "center" }}>
+                    <AppText variant="caption" color={businessColors.muted}>Date</AppText>
+                    <AppText variant="body" color={businessColors.text} style={{ fontWeight: "900" }}>
+                      {formatDate(item.createdAt)}
+                    </AppText>
+                  </View>
+                </View>
               </View>
             </AppCard>
           ))
@@ -113,3 +149,4 @@ export default function ReceivedTransfersScreen() {
     </ConsumerShell>
   );
 }
+

@@ -10,8 +10,10 @@ import {
     ConsumerShell,
     consumerColors,
 } from "../../src/components/consumer/ConsumerShell";
+import { BusinessHome } from "../../src/components/business/BusinessHome";
 import { AppText } from "../../src/components/ui/AppText";
 import { loadSavedRecipients } from "../../src/services/recipientService";
+import { usePersona } from "../../src/state/PersonaContext";
 import { useTransfer } from "../../src/state/TransferContext";
 import { SavedRecipient } from "../../src/types/recipient";
 
@@ -21,6 +23,7 @@ function formatGbp(value: number) {
 
 export default function ConsumerHomeScreen() {
   const router = useRouter();
+  const { selectedPersona } = usePersona();
   const { transfer, completedTransfers, hydrateTransfers } = useTransfer();
   const [savedRecipients, setSavedRecipients] = useState<SavedRecipient[]>([]);
 
@@ -98,6 +101,10 @@ export default function ConsumerHomeScreen() {
     () => completedTransfers.reduce((sum, item) => sum + item.senderAmount, 0),
     [completedTransfers]
   );
+
+  if (selectedPersona.participantType === "BUSINESS") {
+    return <BusinessHome />;
+  }
 
   return (
     <ConsumerShell

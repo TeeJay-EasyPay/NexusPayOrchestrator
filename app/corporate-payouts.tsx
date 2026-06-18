@@ -1,12 +1,13 @@
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, TextInput, View } from "react-native";
+import { Pressable, TextInput, View } from "react-native";
 
 import { AppButton } from "../src/components/ui/AppButton";
 import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
-import { Screen } from "../src/components/ui/Screen";
+import { ConsumerShell, consumerColors } from "../src/components/consumer/ConsumerShell";
 import { executePayoutBatch } from "../src/services/multiEntityOrchestrationService";
+import { loadBusinessRecipients } from "../src/services/businessPersonaService";
 import {
   loadCorporateRecipients,
   seedDemoParticipantsIfMissing,
@@ -14,15 +15,6 @@ import {
 import { usePersona } from "../src/state/PersonaContext";
 import { ParticipantRecord } from "../src/types/multiEntity";
 import { colors } from "../src/theme";
-
-const INITIAL_AMOUNTS: Record<string, string> = {
-  "anne-santos": "123",
-  "james-rahman": "456",
-  "sarah-khan": "789",
-  "alpha-trading-llc": "1111",
-  "manila-services-inc": "2222",
-  "kuala-lumpur-logistics": "3333",
-};
 
 function participantTypeLabel(type: string): string {
   if (type === "CORPORATE") return "Corporate";
@@ -39,16 +31,20 @@ export default function CorporatePayoutsScreen() {
   const { selectedPersona } = usePersona();
 
   const [recipients, setRecipients] = useState<ParticipantRecord[]>([]);
-  const [amounts, setAmounts] = useState<Record<string, string>>(INITIAL_AMOUNTS);
+  const [amounts, setAmounts] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [executing, setExecuting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [selectedRecipientId, setSelectedRecipientId] = useState<string | null>(null);
 
   const isCorporatePersona = selectedPersona.id === "corporate-demo";
+  const isBusinessPersona = selectedPersona.participantType === "BUSINESS";
+  const canUseBatchPayments = isCorporatePersona || isBusinessPersona;
+  const senderParticipantId = selectedPersona.participantId ?? "nexus-manufacturing-ltd";
+  const senderName = selectedPersona.label;
 
   useEffect(() => {
-    if (!isCorporatePersona) {
+    if (!canUseBatchPayments) {
       router.replace("/multi-account-preview" as never);
       return;
     }
@@ -58,15 +54,18 @@ export default function CorporatePayoutsScreen() {
     async function loadData() {
       setLoading(true);
       await seedDemoParticipantsIfMissing();
-      const rows = await loadCorporateRecipients();
+      const rows = isBusinessPersona
+        ? await loadBusinessRecipients(senderParticipantId)
+        : await loadCorporateRecipients();
       if (mounted) {
-        setRecipients(rows);
-        setSelectedRecipientId((current) => current ?? rows[0]?.id ?? null);
+        const visibleRows = rows.filter((row) => row.id !== senderParticipantId);
+        setRecipients(visibleRows);
+        setSelectedRecipientId((current) => current ?? visibleRows[0]?.id ?? null);
 
         setAmounts((current) => {
           const next = { ...current };
-          for (const item of rows) {
-            if (!next[item.id]) next[item.id] = "0";
+          for (const item of visibleRows) {
+            if (!next[item.id]) next[item.id] = "";
           }
           return next;
         });
@@ -80,7 +79,7 @@ export default function CorporatePayoutsScreen() {
     return () => {
       mounted = false;
     };
-  }, [isCorporatePersona, router]);
+  }, [canUseBatchPayments, isBusinessPersona, router, senderParticipantId]);
 
   const recipientMap = useMemo(() => {
     const map: Record<string, ParticipantRecord> = {};
@@ -108,7 +107,7 @@ export default function CorporatePayoutsScreen() {
 
     try {
       const output = await executePayoutBatch({
-        senderParticipantId: "nexus-manufacturing-ltd",
+        senderParticipantId,
         transfers: recipients.map((recipient) => ({
           recipientParticipantId: recipient.id,
           amount: Number(amounts[recipient.id]) || 0,
@@ -132,17 +131,21 @@ export default function CorporatePayoutsScreen() {
   }
 
   return (
-    <Screen>
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 24 }}>
+    <ConsumerShell
+      eyebrow={isBusinessPersona ? "BATCH PAYMENT" : "CORPORATE DEMO"}
+      title={isBusinessPersona ? "Batch payments" : "Corporate Payouts"}
+      subtitle={`${senderName} payment preparation and multi-recipient execution.`}
+    >
+      <View style={{ gap: 12 }}>
         <View>
-          <AppText variant="caption" color={colors.gold}>
-            Corporate Demo
+          <AppText variant="caption" color={isBusinessPersona ? "#087C89" : colors.gold}>
+            {isBusinessPersona ? "Business banking" : "Corporate Demo"}
           </AppText>
-          <AppText variant="title" color={colors.textPrimary} style={{ marginTop: 2 }}>
-            Corporate Payouts
+          <AppText variant="heading" color={consumerColors.text} style={{ marginTop: 2 }}>
+            Batch Payments
           </AppText>
-          <AppText variant="body" color={colors.textSecondary}>
-            Nexus Manufacturing Ltd · Multi-recipient payout orchestration
+          <AppText variant="body" color={consumerColors.muted}>
+            {senderName} - multi-recipient payment run
           </AppText>
         </View>
 
@@ -260,7 +263,7 @@ export default function CorporatePayoutsScreen() {
 
                   <View>
                     <AppText variant="caption" color={colors.textDarkMuted}>
-                      Amount (GBP)
+                      Amount ({selectedRecipient.currency})
                     </AppText>
                     <TextInput
                       value={amounts[selectedRecipient.id] ?? "0"}
@@ -313,7 +316,8 @@ export default function CorporatePayoutsScreen() {
             Switch persona
           </AppText>
         </Pressable>
-      </ScrollView>
-    </Screen>
+      </View>
+    </ConsumerShell>
   );
 }
+
