@@ -39,10 +39,16 @@ Validation:
 - `git diff --check` passed.
 
 Commit:
-- Pending.
+- `ea7cc56979f3c405be292ac75207051faa5cfe17`
 
 OTA:
-- Pending.
+- Update group: `10d2124e-db52-4778-9829-6a9f88f8019d`
+- Android update: `019edcd8-3fa4-7776-bf61-df787b62af43`
+- iOS update: `019edcd8-3fa4-738f-a5ff-c0cbc98004d0`
+- Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/10d2124e-db52-4778-9829-6a9f88f8019d`
+
+Known Warnings:
+- Expo publish continued to show the existing `@noble/hashes/crypto.js` export warning. It did not block OTA.
 
 ## 2026-06-18 - Persona Menu Route Isolation Hardening
 
