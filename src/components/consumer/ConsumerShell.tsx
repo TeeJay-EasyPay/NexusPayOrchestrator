@@ -49,7 +49,7 @@ const businessTabs = [
 
 const corporateTabs = [
   { label: "Home", route: "/consumer", icon: "home" },
-  { label: "Payouts", route: "/corporate-payouts", icon: "briefcase" },
+  { label: "Batch", route: "/corporate-payouts", icon: "layers" },
   { label: "Alerts", route: "/participant-notifications", icon: "bell" },
   { label: "Received", route: "/received-transfers", icon: "download" },
   { label: "Profile", route: "/consumer/profile", icon: "user" },
@@ -181,7 +181,7 @@ export function ConsumerShell({
                   </Pressable>
                   {selectedPersona.id === "corporate-demo" || isBusinessPersona ? (
                     <Pressable onPress={() => { setMenuOpen(false); router.push("/corporate-payouts" as never); }} style={styles.dropdownItem}>
-                      <AppText style={styles.dropdownTitle}>{isBusinessPersona ? "Batch Payments" : "Corporate Payouts"}</AppText>
+                      <AppText style={styles.dropdownTitle}>Batch Payments</AppText>
                     </Pressable>
                   ) : null}
                   {isBusinessPersona ? (

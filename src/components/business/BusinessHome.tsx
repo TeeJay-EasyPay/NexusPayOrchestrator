@@ -43,6 +43,17 @@ function formatMoney(value: number, currency = "GBP"): string {
   })}`;
 }
 
+function getCurrentMonthLabel(): string {
+  return new Date().toLocaleDateString(undefined, { month: "long", year: "numeric" });
+}
+
+function isCurrentMonth(value: string): boolean {
+  const date = new Date(value);
+  const now = new Date();
+
+  return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
+}
+
 function statusLabel(status: string): string {
   if (status === "DELIVERED" || status === "COMPLETED") return "Settled";
   if (status === "IN_PROGRESS") return "In progress";
@@ -117,15 +128,20 @@ export function BusinessHome() {
   const participant = data?.participant;
   const currency = participant?.currency ?? selectedPersona.currency ?? "GBP";
   const businessName = participant?.name ?? selectedPersona.label;
-  const incomingTotal = useMemo(
-    () => (data?.incomingBatchTransfers ?? []).reduce((sum, item) => sum + item.amount, 0),
+  const currentMonthLabel = getCurrentMonthLabel();
+  const currentMonthIncoming = useMemo(
+    () => (data?.incomingBatchTransfers ?? [])
+      .filter((item) => isCurrentMonth(item.createdAt))
+      .reduce((sum, item) => sum + item.amount, 0),
     [data?.incomingBatchTransfers],
   );
-  const outgoingTotal = useMemo(
-    () => (data?.outgoingBatchTransfers ?? []).reduce((sum, item) => sum + item.amount, 0),
+  const currentMonthOutgoing = useMemo(
+    () => (data?.outgoingBatchTransfers ?? [])
+      .filter((item) => isCurrentMonth(item.createdAt))
+      .reduce((sum, item) => sum + item.amount, 0),
     [data?.outgoingBatchTransfers],
   );
-  const netFlow = incomingTotal - outgoingTotal;
+  const currentMonthNetFlow = currentMonthIncoming - currentMonthOutgoing;
   const pendingTransfers = useMemo(
     () => [...(data?.incomingBatchTransfers ?? []), ...(data?.outgoingBatchTransfers ?? [])]
       .filter((item) => item.status !== "DELIVERED").length,
@@ -186,26 +202,26 @@ export function BusinessHome() {
         </View>
 
         <AppText variant="caption" color={businessColors.muted}>
-          Balance
+          NexusPay does not hold funds
         </AppText>
-        <AppText color={businessColors.tealDark} style={styles.balance}>
-          {formatMoney(netFlow, currency)}
+        <AppText color={businessColors.tealDark} style={styles.orchestrationText}>
+          Orchestration only
         </AppText>
       </ConsumerCard>
 
       <View style={styles.grid}>
-        <MetricCard label="Available Balance" value={formatMoney(netFlow, currency)} icon="credit-card" tone="teal" />
+        <MetricCard label="Month Net Flow" value={formatMoney(currentMonthNetFlow, currency)} icon="activity" tone="teal" />
         <MetricCard label="Pending Transfers" value={String(pendingTransfers)} icon="clock" tone="gold" />
         <MetricCard label="Notifications" value={String(unreadNotifications)} icon="bell" tone="teal" />
         <MetricCard label="Recent Activity" value={String(activity.length)} icon="activity" tone="green" />
       </View>
 
       <ConsumerCard>
-        <SectionHeader title="Cash Flow" detail="Incoming, outgoing, and net movement from business activity." />
+        <SectionHeader title={`Cash Flow - ${currentMonthLabel}`} detail="Incoming, outgoing, and net movement for the current month." />
         <View style={styles.flowRow}>
-          <FlowItem label="Incoming" value={formatMoney(incomingTotal, currency)} positive />
-          <FlowItem label="Outgoing" value={formatMoney(outgoingTotal, currency)} />
-          <FlowItem label="Net Flow" value={formatMoney(netFlow, currency)} positive={netFlow >= 0} />
+          <FlowItem label="Incoming" value={formatMoney(currentMonthIncoming, currency)} positive />
+          <FlowItem label="Outgoing" value={formatMoney(currentMonthOutgoing, currency)} />
+          <FlowItem label="Net Flow" value={formatMoney(currentMonthNetFlow, currency)} positive={currentMonthNetFlow >= 0} />
         </View>
       </ConsumerCard>
 
@@ -360,8 +376,8 @@ const styles = StyleSheet.create({
   accountLineText: {
     fontWeight: "800",
   },
-  balance: {
-    fontSize: 34,
+  orchestrationText: {
+    fontSize: 28,
     fontWeight: "900",
   },
   grid: {
