@@ -171,6 +171,21 @@ Known lint warnings remain in unrelated legacy files:
 - Existing array-style warnings in older service/type files.
 - Existing import ordering warnings in mock provider index.
 
+# Deployment
+
+Remediation commit:
+- `e7bbfa8f24a904ffa6aec877ca594299a276b5ca`
+
+Preview OTA:
+- Branch: `preview`
+- Update group ID: `7c86242a-7d0b-416f-a4e0-f355c11daa05`
+- Android update ID: `019ee128-fdf8-78bc-93c2-8ad59866386d`
+- iOS update ID: `019ee128-fdf8-739e-8934-7a82ddd237b0`
+- Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/7c86242a-7d0b-416f-a4e0-f355c11daa05`
+
+Known publish warning:
+- Expo continued to warn that `@noble/hashes/crypto.js` is not listed in package exports and fell back to file-based resolution. The OTA publish completed successfully.
+
 # Recommendations
 
 Immediate:

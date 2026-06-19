@@ -84,8 +84,18 @@ Reports:
 - `governance/reports/OCC_HOME_CONSISTENCY_AUDIT.md`
 - `governance/reports/HEALTH_CONSISTENCY_REMEDIATION_REPORT.md`
 
-Pending Deployment:
-- Commit, push, and preview OTA publish to be completed after final diff review.
+Commit:
+- `e7bbfa8f24a904ffa6aec877ca594299a276b5ca`
+
+OTA:
+- Branch: `preview`
+- Update group: `7c86242a-7d0b-416f-a4e0-f355c11daa05`
+- Android update: `019ee128-fdf8-78bc-93c2-8ad59866386d`
+- iOS update: `019ee128-fdf8-739e-8934-7a82ddd237b0`
+- Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/7c86242a-7d0b-416f-a4e0-f355c11daa05`
+
+Known Warnings:
+- Expo publish continued to show the existing `@noble/hashes/crypto.js` export warning. It did not block OTA.
 
 ## 2026-06-19 - OCC KPI Accuracy and Data Provenance Remediation
 
