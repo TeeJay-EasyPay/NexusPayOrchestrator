@@ -43,3 +43,7 @@ export async function resetSimulatedRlusdBalance(): Promise<number> {
   await setSimulatedRlusdBalance(0);
   return 0;
 }
+
+export async function getWalletBalance(): Promise<number> {
+  return getSimulatedRlusdBalance();
+}

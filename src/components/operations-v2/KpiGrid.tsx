@@ -4,10 +4,12 @@ import { StyleSheet, View, useWindowDimensions } from "react-native";
 
 import { colors, spacing } from "../../theme";
 import type { OperationsKpiItem } from "../../utils/operationsCommandCentre";
+import { DataProvenanceBadge } from "./DataProvenanceBadge";
 import { AppText } from "../ui/AppText";
 
 type Props = {
   kpis: OperationsKpiItem[] | null | undefined;
+  showDataSources?: boolean;
 };
 
 function trendColor(trend: OperationsKpiItem["trend"]): string {
@@ -22,14 +24,17 @@ function trendIcon(trend: OperationsKpiItem["trend"]): React.ComponentProps<type
   return "minus";
 }
 
-function KpiCell({ item, cellWidth }: { item: OperationsKpiItem; cellWidth: number }) {
+function KpiCell({ item, cellWidth, showDataSources }: { item: OperationsKpiItem; cellWidth: number; showDataSources: boolean }) {
   const tc = trendColor(item.trend ?? "flat");
   const ti = trendIcon(item.trend ?? "flat");
 
   return (
     <View style={[styles.cell, { width: cellWidth }]}>
-      <View style={[styles.iconBubble, { backgroundColor: `${item.tint ?? colors.gold}15` }]}>
-        <Feather name={(item.icon as React.ComponentProps<typeof Feather>["name"]) ?? "activity"} size={16} color={item.tint ?? colors.gold} />
+      <View style={styles.cellTopRow}>
+        <View style={[styles.iconBubble, { backgroundColor: `${item.tint ?? colors.gold}15` }]}>
+          <Feather name={(item.icon as React.ComponentProps<typeof Feather>["name"]) ?? "activity"} size={16} color={item.tint ?? colors.gold} />
+        </View>
+        {showDataSources && <DataProvenanceBadge classification={item.provenance ?? "DERIVED"} />}
       </View>
 
       <AppText variant="caption" color={colors.textDarkMuted} style={styles.kpiLabel}>
@@ -50,7 +55,7 @@ function KpiCell({ item, cellWidth }: { item: OperationsKpiItem; cellWidth: numb
   );
 }
 
-export function KpiGrid({ kpis }: Props) {
+export function KpiGrid({ kpis, showDataSources = true }: Props) {
   const { width } = useWindowDimensions();
 
   const cols = width >= 768 ? 4 : width >= 480 ? 3 : 2;
@@ -69,7 +74,7 @@ export function KpiGrid({ kpis }: Props) {
 
       <View style={[styles.grid, { gap }]}>
         {safeKpis.map((item) => (
-          <KpiCell key={item.key ?? item.label} item={item} cellWidth={cellWidth} />
+          <KpiCell key={item.key ?? item.label} item={item} cellWidth={cellWidth} showDataSources={showDataSources} />
         ))}
         {safeKpis.length === 0 && (
           <View style={styles.empty}>
@@ -113,6 +118,12 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
     elevation: 4,
+  },
+  cellTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
   },
   iconBubble: {
     width: 34,

@@ -24,6 +24,7 @@ function formatUpdatedAt(iso: string): string {
 function connectivityTone(status: string): { color: string; label: string } {
   const s = (status ?? "").toLowerCase();
   if (s === "live" || s === "connected") return { color: "#16A34A", label: "Live" };
+  if (s === "diagnostic mode" || s === "realtime disabled") return { color: "#6B7280", label: "Diagnostic Mode" };
   if (s === "connecting") return { color: "#D97706", label: "Connecting" };
   if (s === "disconnected" || s === "offline") return { color: "#DC2626", label: "Offline" };
   return { color: "#2563EB", label: status ?? "Unknown" };
@@ -31,6 +32,10 @@ function connectivityTone(status: string): { color: string; label: string } {
 
 export function OperationsHeader({ realtimeStatus, lastUpdatedAt, refreshing, onRefresh }: Props) {
   const { color, label } = connectivityTone(realtimeStatus ?? "");
+  const subtitle =
+    label === "Diagnostic Mode"
+      ? "Mission Control - Realtime Disabled"
+      : "Mission Control - Real-time Intelligence";
 
   return (
     <View style={styles.container}>
@@ -47,7 +52,7 @@ export function OperationsHeader({ realtimeStatus, lastUpdatedAt, refreshing, on
         </AppText>
 
         <AppText variant="caption" style={styles.subtitle}>
-          Mission Control · Real-time Intelligence
+          {subtitle}
         </AppText>
       </View>
 

@@ -28,6 +28,7 @@ import {
 import { colors, spacing } from "../../theme";
 import { AppCard } from "../ui/AppCard";
 import { AppText } from "../ui/AppText";
+import { DataProvenanceBadge } from "./DataProvenanceBadge";
 
 // ─── Corridors available for mock test runs ───────────────────────────────────
 
@@ -185,7 +186,11 @@ function ResultSummary({ result }: { result: OrchestrationResult }) {
 
 // ─── Main Card ────────────────────────────────────────────────────────────────
 
-export function ProviderSandboxCard() {
+type Props = {
+  showDataSources?: boolean;
+};
+
+export function ProviderSandboxCard({ showDataSources = true }: Props) {
   const [selectedCorridor, setSelectedCorridor] = useState(0);
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<OrchestrationResult | null>(null);
@@ -238,11 +243,7 @@ export function ProviderSandboxCard() {
         <AppText variant="subheading" color={colors.textDarkPrimary} style={styles.title}>
           Provider Sandbox
         </AppText>
-        <View style={styles.mockBadge}>
-          <AppText variant="caption" color={colors.textDarkMuted} style={styles.mockBadgeText}>
-            MOCK
-          </AppText>
-        </View>
+        {showDataSources && <DataProvenanceBadge classification="MOCK" />}
       </View>
 
       <AppText variant="caption" color={colors.textDarkMuted} style={styles.description}>
@@ -330,20 +331,6 @@ const styles = StyleSheet.create({
   title: {
     fontWeight: "700",
     flex: 1,
-  },
-  mockBadge: {
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    backgroundColor: colors.cardSoft,
-  },
-  mockBadgeText: {
-    fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
   },
   description: {
     lineHeight: 18,

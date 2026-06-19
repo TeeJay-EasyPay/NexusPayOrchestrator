@@ -6,9 +6,11 @@ import { colors, spacing } from "../../theme";
 import type { OperationsServiceHealth } from "../../utils/operationsCommandCentre";
 import { AppCard } from "../ui/AppCard";
 import { AppText } from "../ui/AppText";
+import { DataProvenanceBadge } from "./DataProvenanceBadge";
 
 type Props = {
   serviceHealth: OperationsServiceHealth[] | null | undefined;
+  showDataSources?: boolean;
 };
 
 type ServiceStatus = OperationsServiceHealth["status"];
@@ -53,7 +55,7 @@ function overallHealth(services: OperationsServiceHealth[]): { color: string; la
   return { color: "#16A34A", label: "All Systems Operational" };
 }
 
-export function OperationalHealthCard({ serviceHealth }: Props) {
+export function OperationalHealthCard({ serviceHealth, showDataSources = true }: Props) {
   const services = Array.isArray(serviceHealth) ? serviceHealth : [];
   const { color, label } = overallHealth(services);
 
@@ -68,6 +70,7 @@ export function OperationalHealthCard({ serviceHealth }: Props) {
         <AppText variant="subheading" color={colors.textDarkPrimary} style={styles.title}>
           Operational Health
         </AppText>
+        {showDataSources && <DataProvenanceBadge classification="DERIVED" />}
         <View style={[styles.overallBadge, { backgroundColor: `${color}12`, borderColor: `${color}28` }]}>
           <AppText variant="caption" style={[styles.overallText, { color }]}>
             {label}

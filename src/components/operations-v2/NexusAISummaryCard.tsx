@@ -12,6 +12,7 @@ import type {
 } from "../../utils/operationsCommandCentre";
 import { AppCard } from "../ui/AppCard";
 import { AppText } from "../ui/AppText";
+import { DataProvenanceBadge } from "./DataProvenanceBadge";
 
 type Props = {
   missionSummary: IntelligenceReportResult | null | undefined;
@@ -26,6 +27,7 @@ type Props = {
   kpis?: OperationsKpiItem[] | null;
   alertCount?: number;
   criticalAlertCount?: number;
+  showDataSources?: boolean;
 };
 
 /**
@@ -142,6 +144,7 @@ export function NexusAISummaryCard({
   kpis,
   alertCount,
   criticalAlertCount,
+  showDataSources = true,
 }: Props) {
   if (nexusAILoading) {
     return (
@@ -164,6 +167,7 @@ export function NexusAISummaryCard({
           <AppText variant="subheading" color={colors.textDarkPrimary} style={styles.title}>
             Nexus AI Mission Summary
           </AppText>
+          {showDataSources && <DataProvenanceBadge classification="FALLBACK" />}
         </View>
         <View style={styles.disabledBlock}>
           <Feather name="toggle-left" size={22} color={colors.textDarkMuted} />
@@ -183,6 +187,7 @@ export function NexusAISummaryCard({
           <AppText variant="subheading" color={colors.textDarkPrimary} style={styles.title}>
             Nexus AI Mission Summary
           </AppText>
+          {showDataSources && <DataProvenanceBadge classification="FALLBACK" />}
         </View>
         <View style={styles.loadingCenter}>
           <ActivityIndicator size="small" color={colors.gold} />
@@ -235,6 +240,7 @@ export function NexusAISummaryCard({
         <AppText variant="subheading" color={colors.textDarkPrimary} style={styles.title}>
           Nexus AI Mission Summary
         </AppText>
+        {showDataSources && <DataProvenanceBadge classification={isFallback ? "FALLBACK" : "LIVE"} />}
         {missionSummaryLoading && (
           <ActivityIndicator size="small" color={colors.gold} style={{ marginLeft: 8 }} />
         )}

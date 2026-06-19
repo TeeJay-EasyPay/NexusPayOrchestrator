@@ -7,6 +7,7 @@ import { getQATestCentreSummary, QATestCentreSummary } from "../../testing/qaExe
 import { colors, spacing } from "../../theme";
 import { AppCard } from "../ui/AppCard";
 import { AppText } from "../ui/AppText";
+import { DataProvenanceBadge } from "./DataProvenanceBadge";
 
 function resultColor(result: "PASS" | "FAIL" | null): string {
   if (result === "PASS") return "#16A34A";
@@ -57,7 +58,11 @@ function MetricTile({
   );
 }
 
-export function QATestCentreCard() {
+type Props = {
+  showDataSources?: boolean;
+};
+
+export function QATestCentreCard({ showDataSources = true }: Props) {
   const [summary, setSummary] = useState<QATestCentreSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -95,6 +100,7 @@ export function QATestCentreCard() {
         <AppText variant="subheading" color={colors.textDarkPrimary} style={styles.title}>
           QA Test Centre
         </AppText>
+        {showDataSources && <DataProvenanceBadge classification="LIVE" />}
       </View>
 
       {loading ? (

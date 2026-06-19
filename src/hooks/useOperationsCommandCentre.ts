@@ -2,15 +2,13 @@ import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
+  loadRecentExecutionSessions,
   loadRecoverableExecutionSessions,
   PersistedExecutionSession,
 } from "../services/execution/executionPersistenceService";
 import { subscribeToRecentExecutionSessions } from "../services/execution/executionRealtimeService";
 import { getLiveIntelligenceFeeds, LiveIntelligenceFeeds } from "../services/liveIntelligenceFeedService";
-import {
-  generateIntelligenceReport,
-  IntelligenceReportResult,
-} from "../services/nexusAIService";
+import type { IntelligenceReportResult } from "../services/nexusAIService";
 import {
   loadRecentRouteOperationalEvents,
   RouteOperationalEventRow,
@@ -59,8 +57,6 @@ export type OperationsCommandCentreState = OperationsInsights & {
   debugStage: string;
 };
 
-const AI_MIN_REFRESH_INTERVAL_MS = 30_000;
-
 type OperationsAITelemetry = {
   live: string;
   transfers24h: string;
@@ -100,19 +96,16 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
   const [realtimeStatus, setRealtimeStatus] = useState("Connecting");
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string>(new Date().toISOString());
   const [feedsRefreshedAt, setFeedsRefreshedAt] = useState<string | null>(null);
-  const [missionSummary, setMissionSummary] = useState<IntelligenceReportResult | null>(null);
-  const [missionSummaryLoading, setMissionSummaryLoading] = useState(false);
-  const [missionSummaryStatus, setMissionSummaryStatus] = useState("Waiting for telemetry");
+  const [missionSummary] = useState<IntelligenceReportResult | null>(null);
+  const [missionSummaryLoading] = useState(false);
+  const [missionSummaryStatus] = useState("Waiting for telemetry");
   const [aiRefreshNonce, setAiRefreshNonce] = useState(0);
   const [severityFilter, setSeverityFilter] = useState<OperationsAlertFilter>("ALL");
   const [corridorFilter, setCorridorFilter] = useState("ALL");
   const [debugStage, setDebugStage] = useState("OPS_DEBUG: initializing");
   const isMountedRef = useRef(true);
   const aiInFlightRef = useRef(false);
-  const aiLastRunAtRef = useRef(0);
   const aiRequestIdRef = useRef(0);
-  const aiLastSignatureRef = useRef<string>("");
-  const aiLastManualNonceRef = useRef(0);
   const aiTelemetryRef = useRef<OperationsAITelemetry>({
     live: "Connecting",
     transfers24h: "0",
@@ -158,13 +151,18 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
     setDebugStage("OPS_DEBUG: telemetry loading start");
 
     try {
-      const [snapshotData, eventData, sessionData, transferData, feedData] = await Promise.all([
+      const [snapshotData, eventData, recoverableSessionData, recentSessionData, transferData, feedData] = await Promise.all([
         loadRecentTreasurySnapshots(60),
         loadRecentRouteOperationalEvents(60),
         loadRecoverableExecutionSessions(),
+        loadRecentExecutionSessions(60),
         loadCompletedTransfers(),
         getLiveIntelligenceFeeds(),
       ]);
+      const sessionData = [...recoverableSessionData, ...recentSessionData].reduce(
+        upsertSession,
+        [] as PersistedExecutionSession[]
+      );
 
       if (!isMountedRef.current) return;
 
@@ -211,13 +209,13 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
     }, [loadTelemetry])
   );
 
-  // TEMPORARY: realtime subscription disabled for crash diagnosis.
-  // To re-enable: restore the subscribeToRecentExecutionSessions call below and remove the stub.
-  void subscribeToRecentExecutionSessions; // keep import live — easy to restore
+  // Realtime subscription remains disabled until the diagnostic crash path is cleared.
+  // The OCC labels this explicitly instead of implying live monitoring.
+  void subscribeToRecentExecutionSessions; // keep import live for the restore path
   useEffect(() => {
     console.log("OPS_DEBUG: realtime subscription disabled (diagnostic mode)");
     setDebugStage("OPS_DEBUG: realtime subscription disabled");
-    setRealtimeStatus("Disabled (diagnostic)");
+    setRealtimeStatus("Diagnostic Mode");
   }, []);
 
   const insights = useMemo(() => {
@@ -341,147 +339,6 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
     console.log("OPS_DEBUG: mission summary calculation effect start");
     console.log("OPS_DEBUG: mission summary effect bypassed");
     setDebugStage("OPS_DEBUG: mission summary effect bypassed");
-    return;
-
-    async function generateMissionSummary() {
-      if (!operationsAIEnabled) {
-        console.log("OPS_DEBUG: mission summary skipped - AI disabled");
-        aiRequestIdRef.current += 1;
-        aiInFlightRef.current = false;
-        aiLastSignatureRef.current = "";
-
-        if (!isMountedRef.current) return;
-        setMissionSummary(null);
-        setMissionSummaryLoading(false);
-        setMissionSummaryStatus("Nexus AI disabled for this screen");
-        return;
-      }
-
-      if (!hasTelemetry) {
-        console.log("OPS_DEBUG: mission summary skipped - waiting for telemetry");
-        if (isMountedRef.current) {
-          setMissionSummaryStatus("Waiting for telemetry");
-        }
-        return;
-      }
-
-      const manualRefreshRequested = aiRefreshNonce !== aiLastManualNonceRef.current;
-      if (manualRefreshRequested) {
-        aiLastManualNonceRef.current = aiRefreshNonce;
-      }
-
-      const now = Date.now();
-      const throttled =
-        !manualRefreshRequested &&
-        now - aiLastRunAtRef.current < AI_MIN_REFRESH_INTERVAL_MS;
-
-      if (throttled || aiInFlightRef.current) {
-        console.log("OPS_DEBUG: mission summary skipped - throttled or in flight", {
-          throttled,
-          inFlight: aiInFlightRef.current,
-        });
-        if (isMountedRef.current) {
-          setMissionSummaryStatus("AI refresh throttled");
-        }
-        return;
-      }
-
-      if (!manualRefreshRequested && aiTelemetrySignature === aiLastSignatureRef.current) {
-        console.log("OPS_DEBUG: mission summary skipped - signature unchanged");
-        return;
-      }
-
-      aiInFlightRef.current = true;
-      aiLastRunAtRef.current = now;
-      aiLastSignatureRef.current = aiTelemetrySignature;
-      aiRequestIdRef.current += 1;
-      const requestId = aiRequestIdRef.current;
-
-      if (isMountedRef.current) {
-        setMissionSummaryLoading(true);
-        setMissionSummaryStatus("Waiting for telemetry");
-      }
-
-      try {
-        console.log("OPS_DEBUG: mission summary calculation start", {
-          requestId,
-          sensitivity: settings?.sensitivity ?? "balanced",
-        });
-        setDebugStage(`OPS_DEBUG: mission summary AI call start (req=${requestId})`);
-
-        const result = await generateIntelligenceReport(
-          {
-            reportType: "corridor_analysis",
-            focus: "Operations command centre mission health",
-            telemetry: aiTelemetryRef.current,
-          },
-          settings?.sensitivity ?? "balanced",
-          { timeoutMs: 7000, maxRetries: 1 }
-        );
-
-        if (!isMountedRef.current || requestId !== aiRequestIdRef.current || !operationsAIEnabled) {
-          return;
-        }
-
-        if (result.ok) {
-          console.log("OPS_DEBUG: mission summary calculation complete", {
-            requestId,
-            ok: true,
-          });
-          setDebugStage(`OPS_DEBUG: mission summary calculation complete (req=${requestId})`);
-          setMissionSummary(result.data);
-          setMissionSummaryStatus("Live Nexus AI interpretation");
-        } else {
-          console.warn("OPS_DEBUG: mission summary calculation unavailable", {
-            requestId,
-            ok: false,
-          });
-          setDebugStage(`OPS_DEBUG: mission summary unavailable (req=${requestId})`);
-          setMissionSummary(null);
-          setMissionSummaryStatus("Nexus AI temporarily unavailable");
-        }
-      } catch (error) {
-        if (!isMountedRef.current || requestId !== aiRequestIdRef.current || !operationsAIEnabled) {
-          return;
-        }
-
-        console.warn("OPS_DEBUG: mission summary calculation failed", {
-          requestId,
-          error,
-        });
-        setDebugStage(`OPS_DEBUG: mission summary failed - ${error instanceof Error ? error.message : String(error)}`);
-        console.warn("[Operations] Failed to generate mission summary", error);
-        setMissionSummary(null);
-        setMissionSummaryStatus("Nexus AI temporarily unavailable");
-      } finally {
-        console.log("OPS_DEBUG: mission summary calculation complete (finally)", {
-          requestId,
-        });
-        if (requestId === aiRequestIdRef.current) {
-          aiInFlightRef.current = false;
-        }
-
-        if (isMountedRef.current && requestId === aiRequestIdRef.current) {
-          setMissionSummaryLoading(false);
-        }
-      }
-    }
-
-    async function runMissionSummaryEffect() {
-      try {
-        await generateMissionSummary();
-        safeExitTimer = setTimeout(() => {
-          if (cancelled || !isMountedRef.current) return;
-          console.log("OPS_DEBUG: mission summary effect exited safely");
-          void 0;
-        }, 0);
-      } catch (error) {
-        console.warn(
-          `OPS_DEBUG: mission summary effect failed - ${error instanceof Error ? error.message : String(error)}`
-        );
-      }
-    }
-
   }, [
     aiRefreshNonce,
     aiTelemetrySignature,

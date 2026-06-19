@@ -8,11 +8,13 @@ import type { OperationsAlertFilter } from "../../utils/operationsCommandCentre"
 import { getAlertColor, mapEventToAlertFilter } from "../../utils/operationsCommandCentre";
 import { AppCard } from "../ui/AppCard";
 import { AppText } from "../ui/AppText";
+import { DataProvenanceBadge } from "./DataProvenanceBadge";
 
 type Props = {
   events: RouteOperationalEventRow[] | null | undefined;
   severityFilter: OperationsAlertFilter;
   setSeverityFilter: (filter: OperationsAlertFilter) => void;
+  showDataSources?: boolean;
 };
 
 const FILTERS: OperationsAlertFilter[] = ["ALL", "CRITICAL", "WARNING", "INFO"];
@@ -66,7 +68,7 @@ function AlertRow({ event }: { event: RouteOperationalEventRow }) {
   );
 }
 
-export function ActiveAlertsCard({ events, severityFilter, setSeverityFilter }: Props) {
+export function ActiveAlertsCard({ events, severityFilter, setSeverityFilter, showDataSources = true }: Props) {
   const safeEvents = Array.isArray(events) ? events : [];
 
   const filtered = safeEvents.filter((event) => {
@@ -83,6 +85,7 @@ export function ActiveAlertsCard({ events, severityFilter, setSeverityFilter }: 
         <AppText variant="subheading" color={colors.textDarkPrimary} style={styles.title}>
           Active Alerts
         </AppText>
+        {showDataSources && <DataProvenanceBadge classification="SIMULATED" />}
         {criticalCount > 0 && (
           <View style={styles.critBadge}>
             <AppText variant="caption" style={styles.critText}>{criticalCount} critical</AppText>

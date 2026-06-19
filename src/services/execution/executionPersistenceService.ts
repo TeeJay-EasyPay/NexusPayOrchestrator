@@ -122,3 +122,32 @@ export async function loadRecoverableExecutionSessions() {
     return [];
   }
 }
+
+export async function loadRecentExecutionSessions(limit = 60) {
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return [];
+    }
+
+    const { data, error } = await supabase
+      .from("execution_sessions")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.warn("Recent execution session load failed", error.message);
+      return [];
+    }
+
+    return (data ?? []) as PersistedExecutionSession[];
+  } catch (error) {
+    console.warn("Recent execution session load failed", error);
+    return [];
+  }
+}

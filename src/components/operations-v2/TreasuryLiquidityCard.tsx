@@ -7,10 +7,12 @@ import { colors, spacing } from "../../theme";
 import type { OperationsTreasurySummary } from "../../utils/operationsCommandCentre";
 import { AppCard } from "../ui/AppCard";
 import { AppText } from "../ui/AppText";
+import { DataProvenanceBadge } from "./DataProvenanceBadge";
 
 type Props = {
   treasurySummary: OperationsTreasurySummary | null | undefined;
   feedData: LiveIntelligenceFeeds | null | undefined;
+  showDataSources?: boolean;
 };
 
 function pressureColor(pressure: string): string {
@@ -29,20 +31,33 @@ function UtilisationBar({ value, color }: { value: number; color: string }) {
   );
 }
 
-function MetricRow({ label, value, color }: { label: string; value: string; color?: string }) {
+function MetricRow({
+  label,
+  value,
+  color,
+  provenance,
+}: {
+  label: string;
+  value: string;
+  color?: string;
+  provenance?: React.ComponentProps<typeof DataProvenanceBadge>["classification"];
+}) {
   return (
     <View style={styles.metricRow}>
       <AppText variant="caption" color={colors.textDarkMuted} style={styles.metricLabel}>
         {label}
       </AppText>
-      <AppText variant="caption" style={[styles.metricValue, color ? { color } : {}]}>
-        {value}
-      </AppText>
+      <View style={styles.metricValueRow}>
+        {provenance && <DataProvenanceBadge classification={provenance} />}
+        <AppText variant="caption" style={[styles.metricValue, color ? { color } : {}]}>
+          {value}
+        </AppText>
+      </View>
     </View>
   );
 }
 
-export function TreasuryLiquidityCard({ treasurySummary, feedData }: Props) {
+export function TreasuryLiquidityCard({ treasurySummary, feedData, showDataSources = true }: Props) {
   const utilization = treasurySummary?.utilization ?? 0;
   const available = treasurySummary?.availableCapacity ?? 0;
   const pressure = treasurySummary?.pressure ?? "LOW";
@@ -66,6 +81,7 @@ export function TreasuryLiquidityCard({ treasurySummary, feedData }: Props) {
         <AppText variant="subheading" color={colors.textDarkPrimary} style={styles.title}>
           Treasury & Liquidity
         </AppText>
+        {showDataSources && <DataProvenanceBadge classification="SIMULATED" />}
         <View style={[styles.pressureBadge, { backgroundColor: `${pc}12`, borderColor: `${pc}28` }]}>
           <AppText variant="caption" style={[styles.pressureText, { color: pc }]}>
             {pressure}
@@ -85,7 +101,7 @@ export function TreasuryLiquidityCard({ treasurySummary, feedData }: Props) {
 
       <View style={styles.metricsBlock}>
         <MetricRow label="Available Capacity" value={`${available}%`} color="#16A34A" />
-        <MetricRow label="FX Feed Status" value={feedLabel} color={feedColor} />
+        <MetricRow label="FX Feed Status" value={feedLabel} color={feedColor} provenance={showDataSources ? "LIVE" : undefined} />
         <MetricRow label="Pressure Level" value={pressure} color={pc} />
       </View>
 
@@ -189,6 +205,11 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: 13,
     color: colors.textDarkPrimary,
+  },
+  metricValueRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   distribution: {
     marginBottom: 14,

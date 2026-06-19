@@ -466,3 +466,18 @@ export function getTreasuryIntelligence(input: TreasuryInput): TreasuryIntellige
     decisionFactors,
   };
 }
+
+export async function getTreasurySignal(
+  corridor: string,
+  amount: number
+): Promise<TreasuryIntelligenceSignal> {
+  const currency = (corridor.split("→").pop()?.trim() || "PHP") as Currency;
+
+  return getTreasuryIntelligence({
+    amount,
+    currency,
+    provider: "Partner Liquidity Route",
+    rail: "FIAT",
+    simulatedRlusdBalance: 0,
+  });
+}

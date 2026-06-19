@@ -8,6 +8,7 @@ import { Transfer } from "../types/transfer";
 export type OperationsAlertFilter = "ALL" | "CRITICAL" | "WARNING" | "INFO";
 export type OperationsPressure = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 export type OperationsStatusTone = "healthy" | "warning" | "critical" | "neutral";
+export type DataProvenanceClassification = "LIVE" | "DERIVED" | "SIMULATED" | "MOCK" | "FALLBACK";
 
 export type OperationsKpiItem = {
   key: string;
@@ -17,6 +18,7 @@ export type OperationsKpiItem = {
   trend: "up" | "down" | "flat";
   tint: string;
   icon: "repeat" | "trending-up" | "clock" | "database" | "alert-triangle";
+  provenance: DataProvenanceClassification;
 };
 
 export type OperationsCorridorRow = {
@@ -302,10 +304,12 @@ export function buildKpis(params: {
       new Date(item.updated_at ?? 0).getTime() < currentStart
   );
 
-  const successCurrent = terminalCurrent.length
+  const hasCurrentTerminalData = terminalCurrent.length > 0;
+  const hasPreviousTerminalData = terminalPrevious.length > 0;
+  const successCurrent = hasCurrentTerminalData
     ? (terminalCurrent.filter((item) => item.state === "COMPLETED").length / terminalCurrent.length) * 100
     : 0;
-  const successPrevious = terminalPrevious.length
+  const successPrevious = hasPreviousTerminalData
     ? (terminalPrevious.filter((item) => item.state === "COMPLETED").length / terminalPrevious.length) * 100
     : 0;
 
@@ -325,6 +329,7 @@ export function buildKpis(params: {
 
   const settlementCurrent = settlementSeconds(completedCurrent);
   const settlementPrevious = settlementSeconds(completedPrevious);
+  const hasSettlementData = completedCurrent.length > 0;
 
   const latestSnapshots = [...params.snapshots]
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
@@ -363,7 +368,7 @@ export function buildKpis(params: {
 
   const completedTransferCount = params.sessions.filter((item) => item.state === "COMPLETED").length;
   const successRateAnomaly =
-    transfersCurrent.length > 0 && successCurrent === 0 && completedTransferCount > 0
+    hasCurrentTerminalData && transfersCurrent.length > 0 && successCurrent === 0 && completedTransferCount > 0
       ? "Transfer state mapping should be reviewed: 24h transfers exist while execution sessions report 0% success."
       : undefined;
 
@@ -377,24 +382,35 @@ export function buildKpis(params: {
         trend: trendFromDelta(transferDelta),
         tint: "#F59E0B",
         icon: "repeat",
+        provenance: "DERIVED",
       },
       {
         key: "success",
         label: "Success Rate",
-        value: `${successCurrent.toFixed(2)}%`,
-        delta: `${formatDelta(successDelta, "%")}`,
+        value: hasCurrentTerminalData ? `${successCurrent.toFixed(2)}%` : "Insufficient data",
+        delta: hasCurrentTerminalData
+          ? hasPreviousTerminalData
+            ? `${formatDelta(successDelta, "%")}`
+            : "No previous terminal data"
+          : "No terminal executions",
         trend: trendFromDelta(successDelta),
         tint: "#16A34A",
         icon: "trending-up",
+        provenance: "DERIVED",
       },
       {
         key: "settlement",
         label: "Settlement Time",
-        value: settlementCurrent > 0 ? `${settlementCurrent}s` : "--",
-        delta: `${formatDelta(settlementDelta, "s")}`,
+        value: hasSettlementData ? `${settlementCurrent}s` : "Insufficient data",
+        delta: hasSettlementData
+          ? completedPrevious.length > 0
+            ? `${formatDelta(settlementDelta, "s")}`
+            : "No previous completed data"
+          : "No completed executions",
         trend: trendFromDelta(settlementDelta),
         tint: "#2563EB",
         icon: "clock",
+        provenance: "DERIVED",
       },
       {
         key: "treasury",
@@ -404,6 +420,7 @@ export function buildKpis(params: {
         trend: trendFromDelta(capacityDelta),
         tint: "#7C3AED",
         icon: "database",
+        provenance: "SIMULATED",
       },
       {
         key: "alerts",
@@ -413,6 +430,7 @@ export function buildKpis(params: {
         trend: highestSeverity === "CRITICAL" ? "down" : highestSeverity === "WARNING" ? "flat" : "up",
         tint: getAlertColor(highestSeverity),
         icon: "alert-triangle",
+        provenance: "SIMULATED",
       },
     ],
     successRateAnomaly,

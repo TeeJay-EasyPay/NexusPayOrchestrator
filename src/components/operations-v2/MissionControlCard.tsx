@@ -6,9 +6,11 @@ import { colors, spacing } from "../../theme";
 import type { OperationsMissionStatus, OperationsStatusChip, OperationsStatusTone } from "../../utils/operationsCommandCentre";
 import { AppCard } from "../ui/AppCard";
 import { AppText } from "../ui/AppText";
+import { DataProvenanceBadge } from "./DataProvenanceBadge";
 
 type Props = {
   missionStatus: OperationsMissionStatus | null | undefined;
+  showDataSources?: boolean;
 };
 
 function toneColor(tone: OperationsStatusTone): string {
@@ -49,7 +51,7 @@ function StatusChip({ chip }: { chip: OperationsStatusChip }) {
   );
 }
 
-export function MissionControlCard({ missionStatus }: Props) {
+export function MissionControlCard({ missionStatus, showDataSources = true }: Props) {
   const chips = missionStatus?.chips ?? [];
   const attentionSummary = missionStatus?.attentionSummary ?? "Awaiting operational telemetry";
 
@@ -60,6 +62,7 @@ export function MissionControlCard({ missionStatus }: Props) {
         <AppText variant="subheading" color={colors.textDarkPrimary} style={styles.title}>
           Mission Control Status
         </AppText>
+        {showDataSources && <DataProvenanceBadge classification="DERIVED" />}
       </View>
 
       <View style={styles.chipsGrid}>
@@ -96,6 +99,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontWeight: "700",
+    flex: 1,
   },
   chipsGrid: {
     flexDirection: "row",

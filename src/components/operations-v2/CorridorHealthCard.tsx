@@ -6,9 +6,11 @@ import { colors, spacing } from "../../theme";
 import type { OperationsCorridorRow, OperationsPressure } from "../../utils/operationsCommandCentre";
 import { AppCard } from "../ui/AppCard";
 import { AppText } from "../ui/AppText";
+import { DataProvenanceBadge } from "./DataProvenanceBadge";
 
 type Props = {
   corridorRows: OperationsCorridorRow[] | null | undefined;
+  showDataSources?: boolean;
 };
 
 function statusColor(status: OperationsCorridorRow["status"]): string {
@@ -101,7 +103,7 @@ function CorridorRow({ row }: { row: OperationsCorridorRow }) {
   );
 }
 
-export function CorridorHealthCard({ corridorRows }: Props) {
+export function CorridorHealthCard({ corridorRows, showDataSources = true }: Props) {
   const rows = Array.isArray(corridorRows) ? corridorRows : [];
 
   return (
@@ -111,6 +113,7 @@ export function CorridorHealthCard({ corridorRows }: Props) {
         <AppText variant="subheading" color={colors.textDarkPrimary} style={styles.title}>
           Corridor Health
         </AppText>
+        {showDataSources && <DataProvenanceBadge classification="SIMULATED" />}
         <View style={styles.countBadge}>
           <AppText variant="caption" style={styles.countText}>{rows.length} corridors</AppText>
         </View>

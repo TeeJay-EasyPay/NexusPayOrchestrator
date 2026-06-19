@@ -39,8 +39,8 @@ export function subscribeToExecutionSession({
   let channel: RealtimeChannel | null = null;
 
   try {
-    channel = supabase
-      .channel(createChannelName("execution_session", transferId))
+    channel = (supabase
+      .channel(createChannelName("execution_session", transferId)) as any)
       .on(
         "postgres_changes",
         {
@@ -61,7 +61,7 @@ export function subscribeToExecutionSession({
           }
         }
       )
-      .subscribe((status) => {
+      .subscribe((status: string) => {
         if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
           onError?.(`Realtime execution subscription status: ${status}`);
         }
@@ -84,8 +84,8 @@ export function subscribeToRecentExecutionSessions({
   let channel: RealtimeChannel | null = null;
 
   try {
-    channel = supabase
-      .channel(createChannelName("execution_sessions"))
+    channel = (supabase
+      .channel(createChannelName("execution_sessions")) as any)
       .on(
         "postgres_changes",
         {
@@ -100,7 +100,7 @@ export function subscribeToRecentExecutionSessions({
           }
         }
       )
-      .subscribe((status) => {
+      .subscribe((status: string) => {
         if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
           onError?.(`Realtime execution feed status: ${status}`);
         }

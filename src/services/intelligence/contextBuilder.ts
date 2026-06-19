@@ -128,7 +128,7 @@ export async function buildDashboardExecutiveContext(
       primaryPair: fxFeed?.pair ?? "GBP/PHP",
       rate: fxFeed?.rate ?? 0,
       provider: fxFeed?.provider ?? "Frankfurter",
-      volatilityLevel: "STABLE",
+      volatilityLevel: "MODERATE",
       marketStatus: (marketFeed?.status ?? "CLOSED") as "OPEN" | "CLOSED",
       asOf: fxFeed?.asOf ?? now,
     },
@@ -194,7 +194,7 @@ export async function buildRouteIntelligenceContext(
 
     treasuryContext: {
       treasuryScore: route.treasuryScore ?? 0,
-      treasurePressurePenalty: route.treasurePressurePenalty ?? 0,
+      treasurePressurePenalty: route.treasuryPressurePenalty ?? 0,
       corridorLiquidityDepth:
         (route.treasuryCorridorLiquidityDepth as
           | "HIGH"
@@ -282,9 +282,6 @@ export async function buildTransferIntelligenceContext(
     selectedRoute?.treasuryCorridor ?? "GBP→PHP",
     transfer.senderAmount
   );
-
-  // Get live feeds
-  const feeds = await liveIntelligenceFeedsService.getLatest();
 
   // Get corridor operational events
   const allEvents = await loadRecentRouteOperationalEvents(50);

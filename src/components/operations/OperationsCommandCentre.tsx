@@ -12,9 +12,6 @@ import {
 } from "react-native";
 
 import {
-    formatDelta,
-    getAlertColor,
-    mapEventToAlertFilter,
     useOperationsCommandCentre,
 } from "../../hooks/useOperationsCommandCentre";
 import { colors } from "../../theme";
@@ -24,6 +21,11 @@ import type {
     OperationsKpiItem,
     OperationsServiceHealth,
     OperationsStatusChip,
+} from "../../utils/operationsCommandCentre";
+import {
+    formatDelta,
+    getAlertColor,
+    mapEventToAlertFilter,
 } from "../../utils/operationsCommandCentre";
 import { AppCard } from "../ui/AppCard";
 import { AppText } from "../ui/AppText";

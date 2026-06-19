@@ -341,3 +341,7 @@ export async function getLiveIntelligenceFeeds(): Promise<LiveIntelligenceFeeds>
     refreshedAt: new Date().toISOString(),
   };
 }
+
+export const liveIntelligenceFeedsService = {
+  getLatest: getLiveIntelligenceFeeds,
+};

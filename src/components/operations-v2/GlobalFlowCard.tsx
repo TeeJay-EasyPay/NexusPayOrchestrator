@@ -6,10 +6,12 @@ import { colors, spacing } from "../../theme";
 import type { OperationsCorridorRow, OperationsTransferRow } from "../../utils/operationsCommandCentre";
 import { AppCard } from "../ui/AppCard";
 import { AppText } from "../ui/AppText";
+import { DataProvenanceBadge } from "./DataProvenanceBadge";
 
 type Props = {
   activeTransfers: OperationsTransferRow[] | null | undefined;
   corridorRows: OperationsCorridorRow[] | null | undefined;
+  showDataSources?: boolean;
 };
 
 function progressColor(progress: number): string {
@@ -73,7 +75,7 @@ function CorridorSummaryRow({ row }: { row: OperationsCorridorRow }) {
   );
 }
 
-export function GlobalFlowCard({ activeTransfers, corridorRows }: Props) {
+export function GlobalFlowCard({ activeTransfers, corridorRows, showDataSources = true }: Props) {
   const safeTransfers = Array.isArray(activeTransfers) ? activeTransfers : [];
   const safeCorridors = Array.isArray(corridorRows) ? corridorRows : [];
 
@@ -84,6 +86,7 @@ export function GlobalFlowCard({ activeTransfers, corridorRows }: Props) {
         <AppText variant="subheading" color={colors.textDarkPrimary} style={styles.title}>
           Global Flow Overview
         </AppText>
+        {showDataSources && <DataProvenanceBadge classification="DERIVED" />}
         <View style={styles.activeBadge}>
           <AppText variant="caption" style={styles.activeText}>
             {safeTransfers.length} active
@@ -111,6 +114,11 @@ export function GlobalFlowCard({ activeTransfers, corridorRows }: Props) {
           <AppText variant="caption" color={colors.textDarkMuted} style={styles.subsectionLabel}>
             Corridor Activity
           </AppText>
+          {showDataSources && (
+            <View style={styles.subsectionBadge}>
+              <DataProvenanceBadge classification="SIMULATED" />
+            </View>
+          )}
           <View style={styles.corridorGrid}>
             {safeCorridors.slice(0, 6).map((row) => (
               <CorridorSummaryRow key={row.corridor} row={row} />
@@ -223,6 +231,10 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 0.6,
     textTransform: "uppercase",
+    marginBottom: 10,
+  },
+  subsectionBadge: {
+    alignSelf: "flex-start",
     marginBottom: 10,
   },
   corridorGrid: {

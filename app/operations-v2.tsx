@@ -4,6 +4,7 @@ import {
     RefreshControl,
     ScrollView,
     StyleSheet,
+    Switch,
     View,
 } from "react-native";
 
@@ -25,6 +26,7 @@ import { colors } from "../src/theme";
 
 export default function OperationsV2Screen() {
   const state = useOperationsCommandCentre();
+  const [showDataSources, setShowDataSources] = React.useState(true);
 
   const handleRefresh = async () => {
     state.setRefreshing(true);
@@ -66,33 +68,48 @@ export default function OperationsV2Screen() {
           onRefresh={handleRefresh}
         />
 
+        <View style={styles.sourceToggleRow}>
+          <AppText variant="caption" style={styles.sourceToggleLabel}>
+            Show Data Sources
+          </AppText>
+          <Switch
+            value={showDataSources}
+            onValueChange={setShowDataSources}
+            trackColor={{ false: colors.cardBorder, true: "rgba(214,168,79,0.35)" }}
+            thumbColor={showDataSources ? colors.gold : colors.textMuted}
+            accessibilityLabel="Show data provenance badges"
+          />
+        </View>
+
         <View style={styles.sectionGap} />
 
         <MissionControlCard
           missionStatus={state.missionStatus ?? null}
+          showDataSources={showDataSources}
         />
 
         <View style={styles.sectionGap} />
 
-        <KpiGrid kpis={state.kpis ?? []} />
+        <KpiGrid kpis={state.kpis ?? []} showDataSources={showDataSources} />
 
         <View style={styles.sectionGap} />
 
-        <QATestCentreCard />
+        <QATestCentreCard showDataSources={showDataSources} />
 
         <View style={styles.sectionGap} />
 
-        <ProviderSandboxCard />
+        <ProviderSandboxCard showDataSources={showDataSources} />
 
         <View style={styles.sectionGap} />
 
-        <CorridorHealthCard corridorRows={state.corridorRows ?? []} />
+        <CorridorHealthCard corridorRows={state.corridorRows ?? []} showDataSources={showDataSources} />
 
         <View style={styles.sectionGap} />
 
         <TreasuryLiquidityCard
           treasurySummary={state.treasurySummary ?? null}
           feedData={state.feedData ?? null}
+          showDataSources={showDataSources}
         />
 
         <View style={styles.sectionGap} />
@@ -101,6 +118,7 @@ export default function OperationsV2Screen() {
           events={state.events ?? []}
           severityFilter={state.severityFilter ?? "ALL"}
           setSeverityFilter={state.setSeverityFilter}
+          showDataSources={showDataSources}
         />
 
         <View style={styles.sectionGap} />
@@ -108,11 +126,12 @@ export default function OperationsV2Screen() {
         <GlobalFlowCard
           activeTransfers={state.activeTransfers ?? []}
           corridorRows={state.corridorRows ?? []}
+          showDataSources={showDataSources}
         />
 
         <View style={styles.sectionGap} />
 
-        <OperationalHealthCard serviceHealth={state.serviceHealth ?? []} />
+        <OperationalHealthCard serviceHealth={state.serviceHealth ?? []} showDataSources={showDataSources} />
 
         <View style={styles.sectionGap} />
 
@@ -130,6 +149,7 @@ export default function OperationsV2Screen() {
           criticalAlertCount={
             state.events?.filter((e) => e.severity === "FAILOVER" || e.severity === "DEGRADED").length ?? 0
           }
+          showDataSources={showDataSources}
         />
 
         <View style={styles.bottomPad} />
@@ -159,6 +179,26 @@ const styles = StyleSheet.create({
   },
   sectionGap: {
     height: 4,
+  },
+  sourceToggleRow: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  sourceToggleLabel: {
+    color: colors.textMuted,
+    fontWeight: "700",
+    fontSize: 11,
+    letterSpacing: 0.4,
+    textTransform: "uppercase",
   },
   bottomPad: {
     height: 24,

@@ -15,6 +15,7 @@
     "expo-env.d.ts"
   ],
   "exclude": [
-    "governance/startup-architecture-v2/rollback/**"
+    "governance/startup-architecture-v2/rollback/**",
+    "supabase/functions/**"
   ]
 }
