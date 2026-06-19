@@ -66,7 +66,7 @@ export function buildRouteOperationalEvent(
       message:
         `${route.provider} liquidity conditions degraded under elevated corridor pressure.`,
       recommendation:
-        "Reduce route priority and monitor treasury utilisation.",
+        "Reduce route priority and monitor route capacity utilisation.",
       degradationScore,
       failoverRecommended: true,
       preferredAction: "PROMOTE_BACKUP_ROUTE",
@@ -85,7 +85,7 @@ export function buildRouteOperationalEvent(
       severity: "WATCH",
       status: "SIMULATED",
       message:
-        `${route.provider} route operating normally with moderate treasury pressure.`,
+        `${route.provider} route operating normally with moderate corridor liquidity pressure.`,
       recommendation:
         "Continue monitoring liquidity and corridor conditions.",
       degradationScore,

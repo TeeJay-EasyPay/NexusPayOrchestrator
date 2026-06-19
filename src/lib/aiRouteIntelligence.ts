@@ -154,7 +154,7 @@ const CORRIDOR_HEALTH_PROFILES: Partial<Record<Currency, CorridorHealthProfile>>
     highValueHealthScore: 80,
     highValueThreshold: 850,
     normalInsight: "Saudi corridor is healthy with strong weekday operating windows.",
-    highValueInsight: "Saudi corridor remains available with elevated treasury sensitivity.",
+    highValueInsight: "Saudi corridor remains available with elevated route capacity sensitivity.",
   },
   QAR: {
     corridor: "GBP → QAR",
@@ -189,7 +189,7 @@ const CORRIDOR_HEALTH_PROFILES: Partial<Record<Currency, CorridorHealthProfile>>
     normalHealthScore: 82,
     highValueHealthScore: 77,
     highValueThreshold: 700,
-    normalInsight: "Bahrain corridor is operating with normal treasury oversight.",
+    normalInsight: "Bahrain corridor is operating with normal route capacity controls.",
     highValueInsight: "Bahrain corridor remains active with elevated liquidity monitoring.",
   },
   OMR: {
@@ -250,7 +250,7 @@ const CORRIDOR_HEALTH_PROFILES: Partial<Record<Currency, CorridorHealthProfile>>
     highValueHealthScore: 77,
     highValueThreshold: 650,
     normalInsight: "Vietnam corridor is operational with stable settlement coverage.",
-    highValueInsight: "Vietnam corridor remains active with heightened treasury sensitivity.",
+    highValueInsight: "Vietnam corridor remains active with heightened route capacity sensitivity.",
   },
 };
 

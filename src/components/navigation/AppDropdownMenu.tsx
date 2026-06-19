@@ -36,7 +36,7 @@ const MENU_ITEMS = [
   },
   {
     label: "Live Intelligence Feeds",
-    description: "Live FX, treasury and market intelligence feeds",
+    description: "Live FX, corridor liquidity and market intelligence feeds",
     route: "/live-intelligence-feeds",
     match: "/live-intelligence-feeds",
   },

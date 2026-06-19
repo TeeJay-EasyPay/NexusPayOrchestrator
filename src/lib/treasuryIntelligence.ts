@@ -114,7 +114,7 @@ const CORRIDOR_LIQUIDITY_PROFILES: Partial<Record<Currency, CorridorLiquidityPro
     highValueCapacityScore: 72,
     highValueThreshold: 600,
     preferredRail: "FIAT",
-    normalInsight: "Malaysia liquidity is stable with balanced treasury headroom.",
+    normalInsight: "Malaysia liquidity is stable with balanced route capacity headroom.",
     highValueInsight:
       "Malaysia liquidity is available, but payout capacity is monitored more conservatively than Philippines routes.",
   },
@@ -128,8 +128,8 @@ const CORRIDOR_LIQUIDITY_PROFILES: Partial<Record<Currency, CorridorLiquidityPro
     highValueCapacityScore: 84,
     highValueThreshold: 900,
     preferredRail: "FIAT",
-    normalInsight: "UAE corridor shows strong treasury depth across partner rails.",
-    highValueInsight: "UAE corridor remains liquid with moderate treasury pressure at higher amounts.",
+    normalInsight: "UAE corridor shows strong liquidity depth across partner rails.",
+    highValueInsight: "UAE corridor remains liquid with moderate route capacity pressure at higher amounts.",
   },
   SAR: {
     corridor: "GBP → SAR",
@@ -141,8 +141,8 @@ const CORRIDOR_LIQUIDITY_PROFILES: Partial<Record<Currency, CorridorLiquidityPro
     highValueCapacityScore: 75,
     highValueThreshold: 850,
     preferredRail: "FIAT",
-    normalInsight: "Saudi corridor capacity is stable with normal treasury controls.",
-    highValueInsight: "Saudi corridor remains available with elevated treasury pressure for larger transfers.",
+    normalInsight: "Saudi corridor capacity is stable with normal route controls.",
+    highValueInsight: "Saudi corridor remains available with elevated route capacity pressure for larger transfers.",
   },
   QAR: {
     corridor: "GBP → QAR",
@@ -168,7 +168,7 @@ const CORRIDOR_LIQUIDITY_PROFILES: Partial<Record<Currency, CorridorLiquidityPro
     highValueThreshold: 750,
     preferredRail: "FIAT",
     normalInsight: "Kuwait corridor liquidity is healthy with steady settlement throughput.",
-    highValueInsight: "Kuwait corridor remains usable with increased treasury pressure.",
+    highValueInsight: "Kuwait corridor remains usable with increased route capacity pressure.",
   },
   BHD: {
     corridor: "GBP → BHD",
@@ -180,7 +180,7 @@ const CORRIDOR_LIQUIDITY_PROFILES: Partial<Record<Currency, CorridorLiquidityPro
     highValueCapacityScore: 72,
     highValueThreshold: 700,
     preferredRail: "FIAT",
-    normalInsight: "Bahrain corridor remains stable with predictable treasury utilisation.",
+    normalInsight: "Bahrain corridor remains stable with predictable route capacity utilisation.",
     highValueInsight: "Bahrain corridor remains operational with tighter liquidity margins.",
   },
   OMR: {
@@ -193,7 +193,7 @@ const CORRIDOR_LIQUIDITY_PROFILES: Partial<Record<Currency, CorridorLiquidityPro
     highValueCapacityScore: 71,
     highValueThreshold: 700,
     preferredRail: "FIAT",
-    normalInsight: "Oman corridor liquidity is serviceable with stable treasury posture.",
+    normalInsight: "Oman corridor liquidity is serviceable with stable route capacity posture.",
     highValueInsight: "Oman corridor remains active with elevated pressure for larger payouts.",
   },
   SGD: {
@@ -207,7 +207,7 @@ const CORRIDOR_LIQUIDITY_PROFILES: Partial<Record<Currency, CorridorLiquidityPro
     highValueThreshold: 950,
     preferredRail: "FIAT",
     normalInsight: "Singapore corridor has deep liquidity and strong settlement optionality.",
-    highValueInsight: "Singapore corridor remains strong with mild treasury pressure at scale.",
+    highValueInsight: "Singapore corridor remains strong with mild route capacity pressure at scale.",
   },
   THB: {
     corridor: "GBP → THB",
@@ -220,7 +220,7 @@ const CORRIDOR_LIQUIDITY_PROFILES: Partial<Record<Currency, CorridorLiquidityPro
     highValueThreshold: 700,
     preferredRail: "FIAT",
     normalInsight: "Thailand corridor liquidity is stable across primary payout banks.",
-    highValueInsight: "Thailand corridor remains available with increased treasury pressure.",
+    highValueInsight: "Thailand corridor remains available with increased route capacity pressure.",
   },
   IDR: {
     corridor: "GBP → IDR",
@@ -233,7 +233,7 @@ const CORRIDOR_LIQUIDITY_PROFILES: Partial<Record<Currency, CorridorLiquidityPro
     highValueThreshold: 650,
     preferredRail: "FIAT",
     normalInsight: "Indonesia corridor liquidity is stable with managed operational buffers.",
-    highValueInsight: "Indonesia corridor remains usable with stricter treasury controls.",
+    highValueInsight: "Indonesia corridor remains usable with stricter route capacity controls.",
   },
   VND: {
     corridor: "GBP → VND",
@@ -246,7 +246,7 @@ const CORRIDOR_LIQUIDITY_PROFILES: Partial<Record<Currency, CorridorLiquidityPro
     highValueThreshold: 650,
     preferredRail: "FIAT",
     normalInsight: "Vietnam corridor liquidity remains stable across supported payout windows.",
-    highValueInsight: "Vietnam corridor remains operational with elevated treasury pressure.",
+    highValueInsight: "Vietnam corridor remains operational with elevated route capacity pressure.",
   },
 };
 
@@ -280,7 +280,7 @@ function buildCorridorLiquidity(currency: Currency, amount: number): CorridorLiq
     pressure: "MEDIUM",
     availableCapacityScore: 76,
     preferredRail: "FIAT",
-    insight: "Corridor liquidity has limited operating history, so treasury applies conservative capacity assumptions.",
+    insight: "Corridor liquidity has limited operating history, so conservative route capacity assumptions apply.",
   };
 }
 
@@ -395,7 +395,7 @@ function buildRailLiquidity({
       insight:
         pressure === "LOW"
           ? "RLUSD bridge reserves are sufficient for this route."
-          : "RLUSD bridge reserves are under pressure, so treasury reduces hybrid route preference.",
+          : "RLUSD bridge reserves are under pressure, so the route engine reduces hybrid route preference.",
     };
   }
 
@@ -442,18 +442,18 @@ export function getTreasuryIntelligence(input: TreasuryInput): TreasuryIntellige
 
   const liquidityRecommendation =
     treasuryScore >= 90
-      ? "Treasury preferred: strong liquidity depth across corridor, partner and settlement rail."
+      ? "Route preferred: strong liquidity depth across corridor, partner and settlement rail."
       : treasuryScore >= 78
-      ? "Treasury approved: sufficient liquidity available with manageable pressure."
+      ? "Route approved: sufficient liquidity available with manageable pressure."
       : treasuryScore >= 62
-      ? "Treasury watch: route is usable, but liquidity pressure should be monitored."
-      : "Treasury constrained: preserve this route for fallback unless stronger liquidity becomes available.";
+      ? "Corridor liquidity watch: route is usable, but liquidity pressure should be monitored."
+      : "Route constrained: preserve this route for fallback unless stronger liquidity becomes available.";
 
   const decisionFactors = [
     `${corridor.corridor} liquidity ${corridor.liquidityDepth.toLowerCase()} with ${corridor.pressure.toLowerCase()} pressure`,
     `${partner.provider} capacity ${partner.availableCapacityScore}/100`,
     `${rail.rail}${rail.bridgeAsset ? `/${rail.bridgeAsset}` : ""} rail capacity ${rail.availableCapacityScore}/100`,
-    `Treasury liquidity score ${treasuryScore}/100`,
+    `Route capacity score ${treasuryScore}/100`,
   ];
 
   return {

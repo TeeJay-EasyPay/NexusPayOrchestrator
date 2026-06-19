@@ -23,11 +23,18 @@ import {
     DashboardSummaryResult,
     generateDashboardSummary,
 } from "../src/services/nexusAIService";
+import {
+    getPlatformHealthDomain,
+    loadPlatformHealthSnapshot,
+    type PlatformHealthItem,
+    type PlatformHealthSnapshot,
+} from "../src/services/platformHealthService";
 import { logStartupWarn } from "../src/services/startupLogger";
 import { usePaymentMethods } from "../src/state/PaymentMethodsContext";
 import { useTransfer } from "../src/state/TransferContext";
 import { colors, spacing } from "../src/theme";
 import { Transfer } from "../src/types/transfer";
+import { DataProvenanceBadge } from "../src/components/operations-v2/DataProvenanceBadge";
 
 const FX_BASELINES: Record<string, number> = {
   PHP: 72.93,
@@ -216,18 +223,68 @@ function BalanceAction({
 }
 
 function StatusBadge({ label }: { label: string }) {
+  const statusColor =
+    label === "HEALTHY" ||
+    label === "DEGRADED" ||
+    label === "OFFLINE" ||
+    label === "NO_DATA" ||
+    label === "DIAGNOSTIC" ||
+    label === "DISABLED"
+      ? getHealthColor(label)
+      : "#166534";
+
   return (
     <View
       style={{
         paddingHorizontal: 10,
         paddingVertical: 6,
         borderRadius: 999,
-        backgroundColor: "#DCFCE7",
+        backgroundColor: `${statusColor}14`,
       }}
     >
-      <AppText variant="caption" style={{ color: "#166534", fontWeight: "900" }}>
+      <AppText variant="caption" style={{ color: statusColor, fontWeight: "900" }}>
         {label}
       </AppText>
+    </View>
+  );
+}
+
+function getHealthColor(status: PlatformHealthItem["status"]) {
+  if (status === "HEALTHY") return "#16A34A";
+  if (status === "DEGRADED") return "#D97706";
+  if (status === "DIAGNOSTIC") return "#9333EA";
+  if (status === "NO_DATA") return "#64748B";
+  if (status === "DISABLED") return "#6B7280";
+  return "#DC2626";
+}
+
+function HealthStatusBadge({ item }: { item: PlatformHealthItem | null }) {
+  const label = item?.label.replace(" Health", " Status") ?? "Status";
+  const status = item?.status ?? "NO_DATA";
+  const color = getHealthColor(status);
+
+  return (
+    <View
+      style={{
+        minWidth: 138,
+        paddingHorizontal: 10,
+        paddingVertical: 8,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: `${color}30`,
+        backgroundColor: `${color}12`,
+        gap: 5,
+      }}
+    >
+      <AppText variant="caption" style={{ color: colors.textDarkMuted, fontWeight: "800", fontSize: 10 }}>
+        {label}
+      </AppText>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+        <AppText variant="caption" style={{ color, fontWeight: "900", fontSize: 11, flexShrink: 1 }}>
+          {status}
+        </AppText>
+        <DataProvenanceBadge classification={item?.provenance ?? "NO_DATA"} />
+      </View>
     </View>
   );
 }
@@ -294,6 +351,7 @@ export default function HomeScreen() {
   const [dashboardSummary, setDashboardSummary] =
     useState<DashboardSummaryResult | null>(null);
   const [dashboardAILoading, setDashboardAILoading] = useState(false);
+  const [platformHealth, setPlatformHealth] = useState<PlatformHealthSnapshot | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -337,6 +395,42 @@ export default function HomeScreen() {
 
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function refreshHealth() {
+      try {
+        const snapshot = await loadPlatformHealthSnapshot({
+          aiEnabled: homeAIEnabled,
+          aiLoading: dashboardAILoading,
+          aiSummary: dashboardSummary,
+          realtimeStatus: "Diagnostic Mode",
+        });
+
+        if (mounted) {
+          setPlatformHealth(snapshot);
+        }
+      } catch (error) {
+        logStartupWarn({
+          event: "home-platform-health-load-failed",
+          stage: "app-bootstrap",
+          status: "fallback",
+          details: {
+            reason: error instanceof Error ? error.message : "Unknown platform health error",
+          },
+        });
+      }
+    }
+
+    void refreshHealth();
+    const interval = setInterval(refreshHealth, 30000);
+
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, [dashboardAILoading, dashboardSummary, homeAIEnabled]);
 
   async function loadDashboardData() {
     try {
@@ -415,6 +509,12 @@ export default function HomeScreen() {
     );
   }, [corridorHealth, fxSnapshots]);
 
+  const networkHealthStatus = getPlatformHealthDomain(platformHealth, "network");
+  const liquidityHealthStatus = getPlatformHealthDomain(platformHealth, "liquidity");
+  const aiHealthStatus = getPlatformHealthDomain(platformHealth, "ai");
+  const marketHealthStatus = getPlatformHealthDomain(platformHealth, "market");
+  const settlementHealthStatus = getPlatformHealthDomain(platformHealth, "settlement");
+
   useEffect(() => {
     let active = true;
 
@@ -432,26 +532,21 @@ export default function HomeScreen() {
         : `${corridorHealth.filter((item) => item.status !== "Restricted").length}/${corridorHealth.length}`;
 
     const strongestCorridor = recommendedCorridors[0]?.corridor ?? "GBP → PHP";
-    const treasuryStatus = loading
-      ? "Syncing"
-      : corridorHealth.length > 0
-      ? "Healthy"
-      : "Watch";
-
-    const networkHealth =
-      corridorHealth.length > 0 && corridorHealth.every((item) => item.status !== "Restricted")
-        ? "Healthy"
-        : "Watch";
-
     void generateDashboardSummary(
       {
         telemetry: {
-          treasuryStatus,
-          liquidityStatus: coverage === "--" ? "Unknown" : "Strong",
+          treasuryStatus: liquidityHealthStatus?.status ?? "NO_DATA",
+          liquidityStatus: liquidityHealthStatus
+            ? `${liquidityHealthStatus.status} (${liquidityHealthStatus.provenance})`
+            : "NO_DATA",
           corridorHealth: `${strongestCorridor} strongest`,
-          networkHealth,
+          networkHealth: networkHealthStatus
+            ? `${networkHealthStatus.status} (${networkHealthStatus.provenance})`
+            : "NO_DATA",
           fxStatus: fxSnapshots.length > 0 ? "Live" : "Fallback",
-          marketStatus: "Operational",
+          marketStatus: marketHealthStatus
+            ? `${marketHealthStatus.status} (${marketHealthStatus.provenance})`
+            : "NO_DATA",
           activeTransferCount: activeTransfer ? 1 : 0,
           corridorCoverage: coverage,
         },
@@ -493,6 +588,9 @@ export default function HomeScreen() {
     corridorHealth,
     fxSnapshots,
     loading,
+    liquidityHealthStatus,
+    marketHealthStatus,
+    networkHealthStatus,
     recommendedCorridors,
   ]);
 
@@ -623,9 +721,9 @@ export default function HomeScreen() {
                 </AppText>
 
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                  <StatusBadge label="Markets Open" />
-                  <StatusBadge label="Liquidity Strong" />
-                  <StatusBadge label="Network Healthy" />
+                  <HealthStatusBadge item={marketHealthStatus} />
+                  <HealthStatusBadge item={liquidityHealthStatus} />
+                  <HealthStatusBadge item={networkHealthStatus} />
                 </View>
 
                 <View
@@ -642,7 +740,7 @@ export default function HomeScreen() {
 
                     {(dashboardSummary?.executiveSummary ?? [
                       `Recommended corridor: ${recommendedCorridors[0]?.corridor ?? "GBP → PHP"}.`,
-                      `Settlement forecast: ${recommendedCorridors[0]?.settlement ?? "< 3 minutes"} with ${recommendedCorridors[0]?.liquidity ?? "healthy"} liquidity.`,
+                      `Settlement forecast: ${recommendedCorridors[0]?.settlement ?? "< 3 minutes"} with ${liquidityHealthStatus?.status ?? "NO_DATA"} liquidity intelligence.`,
                       `Operational status: ${activeTransfer ? "1 active transfer in-flight" : "No active transfer incidents"}.`,
                     ]).map((line, index) => (
                       <AppText key={`summary-${index}`} variant="body" color={colors.textDarkSecondary}>
@@ -652,9 +750,8 @@ export default function HomeScreen() {
 
                     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 2 }}>
                       <StatusBadge label={`Sensitivity: ${settings?.sensitivity ?? "balanced"}`} />
-                      <StatusBadge
-                        label={`Treasury Capacity: ${loading ? "Syncing" : corridorHealth.length > 0 ? "Healthy" : "Watch"}`}
-                      />
+                      <HealthStatusBadge item={settlementHealthStatus} />
+                      <HealthStatusBadge item={aiHealthStatus} />
                       <StatusBadge
                         label={`Liquidity Coverage: ${corridorHealth.length === 0 ? "--" : `${corridorHealth.filter((item) => item.status !== "Restricted").length}/${corridorHealth.length}`}`}
                       />
@@ -819,23 +916,21 @@ export default function HomeScreen() {
             <AppCard style={{ flex: 1 }}>
               <View style={{ gap: 12 }}>
                 <AppText variant="subheading" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
-                  Treasury & Liquidity Status
+                  Settlement Network Status
                 </AppText>
 
                 {[
-                  { label: "Treasury Capacity", value: 91, tone: "Healthy" },
-                  { label: "Liquidity Coverage", value: 98, tone: "Excellent" },
-                  { label: "XRPL Network Health", value: 99.98, tone: "Optimal" },
-                ].map((metric) => (
-                  <View key={metric.label} style={{ gap: 6 }}>
+                  liquidityHealthStatus,
+                  settlementHealthStatus,
+                  networkHealthStatus,
+                ].map((metric, index) => (
+                  <View key={metric?.domain ?? `health-${index}`} style={{ gap: 6 }}>
                     <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                       <AppText variant="caption" color={colors.textDarkSecondary}>
-                        {metric.label}
+                        {metric?.label ?? "Health Status"}
                       </AppText>
 
-                      <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
-                        {metric.value}%
-                      </AppText>
+                      <DataProvenanceBadge classification={metric?.provenance ?? "NO_DATA"} />
                     </View>
 
                     <View
@@ -846,16 +941,16 @@ export default function HomeScreen() {
                         overflow: "hidden",
                       }}
                     >
-                      <View
-                        style={{
-                          width: `${Math.min(100, metric.value)}%`,
+                        <View
+                          style={{
+                          width: "100%",
                           height: "100%",
-                          backgroundColor: "#16A34A",
+                          backgroundColor: getHealthColor(metric?.status ?? "NO_DATA"),
                         }}
                       />
                     </View>
 
-                    <StatusBadge label={metric.tone} />
+                    <StatusBadge label={metric?.status ?? "NO_DATA"} />
                   </View>
                 ))}
               </View>

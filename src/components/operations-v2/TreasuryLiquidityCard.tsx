@@ -61,7 +61,7 @@ export function TreasuryLiquidityCard({ treasurySummary, feedData, showDataSourc
   const utilization = treasurySummary?.utilization ?? 0;
   const available = treasurySummary?.availableCapacity ?? 0;
   const pressure = treasurySummary?.pressure ?? "LOW";
-  const forecast = treasurySummary?.forecast ?? "No treasury data available";
+  const forecast = treasurySummary?.forecast ?? "No corridor liquidity data available";
   const distribution = Array.isArray(treasurySummary?.currencyDistribution)
     ? treasurySummary.currencyDistribution
     : [];
@@ -79,7 +79,7 @@ export function TreasuryLiquidityCard({ treasurySummary, feedData, showDataSourc
       <View style={styles.header}>
         <Feather name="database" size={18} color={colors.gold} style={{ marginRight: 8 }} />
         <AppText variant="subheading" color={colors.textDarkPrimary} style={styles.title}>
-          Treasury & Liquidity
+          Corridor Liquidity
         </AppText>
         {showDataSources && <DataProvenanceBadge classification="SIMULATED" />}
         <View style={[styles.pressureBadge, { backgroundColor: `${pc}12`, borderColor: `${pc}28` }]}>
@@ -100,7 +100,7 @@ export function TreasuryLiquidityCard({ treasurySummary, feedData, showDataSourc
       </View>
 
       <View style={styles.metricsBlock}>
-        <MetricRow label="Available Capacity" value={`${available}%`} color="#16A34A" />
+        <MetricRow label="Route Capacity" value={`${available}%`} color="#16A34A" />
         <MetricRow label="FX Feed Status" value={feedLabel} color={feedColor} provenance={showDataSources ? "LIVE" : undefined} />
         <MetricRow label="Pressure Level" value={pressure} color={pc} />
       </View>

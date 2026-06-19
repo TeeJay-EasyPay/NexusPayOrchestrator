@@ -1,6 +1,11 @@
 import { PersistedExecutionSession } from "../services/execution/executionPersistenceService";
 import { LiveIntelligenceFeeds } from "../services/liveIntelligenceFeedService";
 import { IntelligenceReportResult } from "../services/nexusAIService";
+import {
+  buildPlatformHealthSnapshot,
+  type PlatformHealthItem,
+  type PlatformHealthSnapshot,
+} from "../services/platformHealthService";
 import { RouteOperationalEventRow } from "../services/routeOperationalEventService";
 import { TreasuryLiquiditySnapshotRow } from "../services/treasuryIntelligenceService";
 import { Transfer } from "../types/transfer";
@@ -8,7 +13,15 @@ import { Transfer } from "../types/transfer";
 export type OperationsAlertFilter = "ALL" | "CRITICAL" | "WARNING" | "INFO";
 export type OperationsPressure = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 export type OperationsStatusTone = "healthy" | "warning" | "critical" | "neutral";
-export type DataProvenanceClassification = "LIVE" | "DERIVED" | "SIMULATED" | "MOCK" | "FALLBACK";
+export type DataProvenanceClassification =
+  | "LIVE"
+  | "DERIVED"
+  | "SIMULATED"
+  | "MOCK"
+  | "FALLBACK"
+  | "NO_DATA"
+  | "DIAGNOSTIC"
+  | "DISABLED";
 
 export type OperationsKpiItem = {
   key: string;
@@ -67,10 +80,7 @@ export type OperationsTreasurySummary = {
   currencyDistribution: { currency: string; amount: number; percentage: number }[];
 };
 
-export type OperationsServiceHealth = {
-  label: string;
-  status: "HEALTHY" | "DEGRADED" | "OFFLINE";
-};
+export type OperationsServiceHealth = PlatformHealthItem;
 
 export type OperationsInsights = {
   kpis: OperationsKpiItem[];
@@ -78,6 +88,7 @@ export type OperationsInsights = {
   activeTransfers: OperationsTransferRow[];
   treasurySummary: OperationsTreasurySummary;
   serviceHealth: OperationsServiceHealth[];
+  platformHealth: PlatformHealthSnapshot;
   missionStatus: OperationsMissionStatus;
   alertOptions: OperationsAlertFilter[];
   transferSuccessAnomaly?: string;
@@ -147,7 +158,7 @@ export function getAlertColor(level: OperationsAlertFilter) {
 
 function getMissionTone(status: string): OperationsStatusTone {
   if (status === "CRITICAL" || status === "OFFLINE") return "critical";
-  if (status === "DEGRADED" || status === "WATCH") return "warning";
+  if (status === "DEGRADED" || status === "WATCH" || status === "DIAGNOSTIC") return "warning";
   if (status === "HEALTHY" || status === "LIVE") return "healthy";
   return "neutral";
 }
@@ -235,7 +246,7 @@ export function buildTreasurySummary(
       utilization: 0,
       availableCapacity: 0,
       pressure: "LOW",
-      forecast: "No treasury telemetry yet",
+      forecast: "No corridor liquidity telemetry yet",
       currencyDistribution: distribution,
     };
   }
@@ -251,10 +262,10 @@ export function buildTreasurySummary(
     pressure === "CRITICAL"
       ? "Capacity risk elevated across one or more rails"
       : pressure === "HIGH"
-        ? "Watch liquidity buffers for near-term settlement windows"
+        ? "Watch corridor liquidity for near-term settlement windows"
         : pressure === "MEDIUM"
-          ? "Liquidity coverage is stable with moderate monitoring required"
-          : "Liquidity coverage supports current transfer load";
+          ? "Corridor liquidity is stable with moderate monitoring required"
+          : "Corridor liquidity supports current transfer load";
 
   const grouped = new Map<string, number>();
   transfers.forEach((transfer) => {
@@ -413,8 +424,8 @@ export function buildKpis(params: {
         provenance: "DERIVED",
       },
       {
-        key: "treasury",
-        label: "Treasury Capacity",
+        key: "route-capacity",
+        label: "Corridor Liquidity Capacity",
         value: `${Math.round(avgCapacity)}%`,
         delta: `${formatDelta(capacityDelta, "%")}`,
         trend: trendFromDelta(capacityDelta),
@@ -438,88 +449,63 @@ export function buildKpis(params: {
 }
 
 export function buildServiceHealth(params: {
-  alerts: RouteOperationalEventRow[];
-  treasuryPressure: OperationsPressure;
-  fxFeedCount: number;
-  marketOpenCount: number;
+  events: RouteOperationalEventRow[];
+  snapshots: TreasuryLiquiditySnapshotRow[];
+  sessions: PersistedExecutionSession[];
+  feeds: LiveIntelligenceFeeds | null;
   missionSummary: IntelligenceReportResult | null;
   missionSummaryLoading: boolean;
   aiEnabled: boolean;
   realtimeStatus: string;
-}): OperationsServiceHealth[] {
-  const criticalAlerts = params.alerts.filter((item) => mapEventToAlertFilter(item) === "CRITICAL").length;
-  const warningAlerts = params.alerts.filter((item) => mapEventToAlertFilter(item) === "WARNING").length;
-
-  const routingStatus = criticalAlerts > 1 ? "OFFLINE" : warningAlerts > 0 ? "DEGRADED" : "HEALTHY";
-  const treasuryStatus =
-    params.treasuryPressure === "CRITICAL"
-      ? "OFFLINE"
-      : params.treasuryPressure === "HIGH"
-        ? "DEGRADED"
-        : "HEALTHY";
-  const fxStatus = params.fxFeedCount > 0 ? "HEALTHY" : "OFFLINE";
-  const marketStatus = params.marketOpenCount > 0 ? "HEALTHY" : "DEGRADED";
-  const aiStatus = params.aiEnabled
-    ? params.missionSummary
-      ? "HEALTHY"
-      : params.missionSummaryLoading
-        ? "DEGRADED"
-        : "OFFLINE"
-    : "DEGRADED";
-  const executionStatus = params.realtimeStatus === "Live" ? "HEALTHY" : "DEGRADED";
-
-  return [
-    { label: "Platform Status", status: executionStatus },
-    { label: "Network Status", status: routingStatus },
-    { label: "Liquidity Status", status: treasuryStatus },
-    { label: "Markets Status", status: marketStatus },
-    { label: "AI Monitoring Status", status: aiStatus },
-    { label: "FX Feed Service", status: fxStatus },
-    { label: "Notification Service", status: criticalAlerts > 2 ? "DEGRADED" : "HEALTHY" },
-  ];
+}): PlatformHealthSnapshot {
+  return buildPlatformHealthSnapshot({
+    events: params.events,
+    snapshots: params.snapshots,
+    sessions: params.sessions,
+    feeds: params.feeds,
+    aiEnabled: params.aiEnabled,
+    aiLoading: params.missionSummaryLoading,
+    aiSummary: params.missionSummary,
+    realtimeStatus: params.realtimeStatus,
+  });
 }
 
 export function buildMissionControlStatus(params: {
   kpis: OperationsKpiItem[];
   treasurySummary: OperationsTreasurySummary;
-  serviceHealth: OperationsServiceHealth[];
+  platformHealth: PlatformHealthSnapshot;
   missionSummaryLoading: boolean;
   missionSummary: IntelligenceReportResult | null;
   aiEnabled: boolean;
   successRateAnomaly?: string;
 }): OperationsMissionStatus {
-  const platformStatus =
-    params.serviceHealth.find((item) => item.label === "Platform Status")?.status ?? "DEGRADED";
-  const networkStatus =
-    params.serviceHealth.find((item) => item.label === "Network Status")?.status ?? "DEGRADED";
-  const liquidityStatus =
-    params.serviceHealth.find((item) => item.label === "Liquidity Status")?.status ?? "DEGRADED";
-  const marketsStatus =
-    params.serviceHealth.find((item) => item.label === "Markets Status")?.status ?? "DEGRADED";
-  const aiMonitoringStatus =
-    params.serviceHealth.find((item) => item.label === "AI Monitoring Status")?.status ?? "DEGRADED";
+  const platformHealth = params.platformHealth.domains.platform;
+  const networkHealth = params.platformHealth.domains.network;
+  const liquidityHealth = params.platformHealth.domains.liquidity;
+  const marketHealth = params.platformHealth.domains.market;
+  const aiHealth = params.platformHealth.domains.ai;
 
   const attentionSummary =
     params.successRateAnomaly ??
-    (platformStatus === "HEALTHY" && liquidityStatus === "HEALTHY"
-      ? "Operations remain stable. Treasury utilisation is under control and the platform is executing normally."
-      : networkStatus === "OFFLINE"
-        ? "Network conditions require immediate attention. Review corridor failures and routing health."
+    (platformHealth.status === "HEALTHY" && liquidityHealth.status === "HEALTHY"
+      ? "Operations remain stable. Corridor liquidity is under control and the platform is executing normally."
+      : networkHealth.status === "NO_DATA"
+        ? "Mission Control has no route network telemetry available. Review source availability before interpreting health."
         : "Mission Control is monitoring operational conditions and highlighting the highest-priority items.");
 
   return {
-    platformStatus,
-    networkStatus,
-    liquidityStatus,
-    marketsStatus,
-    aiMonitoringStatus,
+    platformStatus: platformHealth.status,
+    networkStatus: networkHealth.status,
+    liquidityStatus: liquidityHealth.status,
+    marketsStatus: marketHealth.status,
+    aiMonitoringStatus: aiHealth.status,
     attentionSummary,
     chips: [
-      { label: "Platform", value: platformStatus, tone: getMissionTone(platformStatus) },
-      { label: "Network", value: networkStatus, tone: getMissionTone(networkStatus) },
-      { label: "Liquidity", value: liquidityStatus, tone: getMissionTone(liquidityStatus) },
-      { label: "Markets", value: marketsStatus, tone: getMissionTone(marketsStatus) },
-      { label: "AI", value: aiMonitoringStatus, tone: getMissionTone(aiMonitoringStatus) },
+      { label: "Platform", value: platformHealth.status, tone: getMissionTone(platformHealth.status), detail: platformHealth.provenance },
+      { label: "Network", value: networkHealth.status, tone: getMissionTone(networkHealth.status), detail: networkHealth.provenance },
+      { label: "Liquidity", value: liquidityHealth.status, tone: getMissionTone(liquidityHealth.status), detail: liquidityHealth.provenance },
+      { label: "Markets", value: marketHealth.status, tone: getMissionTone(marketHealth.status), detail: marketHealth.provenance },
+      { label: "AI", value: aiHealth.status, tone: getMissionTone(aiHealth.status), detail: aiHealth.provenance },
     ],
   };
 }
@@ -534,20 +520,21 @@ export function buildOperationsInsights(params: OperationsLiveState): Operations
     snapshots: params.snapshots,
     events: params.events,
   });
-  const serviceHealth = buildServiceHealth({
-    alerts: params.events,
-    treasuryPressure: treasurySummary.pressure,
-    fxFeedCount: params.feeds?.fx.length ?? 0,
-    marketOpenCount: params.feeds?.marketHours.filter((item) => item.status === "OPEN").length ?? 0,
+  const platformHealth = buildServiceHealth({
+    events: params.events,
+    snapshots: params.snapshots,
+    sessions: params.sessions,
+    feeds: params.feeds,
     missionSummary: params.missionSummary,
     missionSummaryLoading: params.missionSummaryLoading,
     aiEnabled: params.missionSummaryEnabled,
     realtimeStatus: params.realtimeStatus,
   });
+  const serviceHealth = Object.values(platformHealth.domains);
   const missionStatus = buildMissionControlStatus({
     kpis: kpiResult.items,
     treasurySummary,
-    serviceHealth,
+    platformHealth,
     missionSummaryLoading: params.missionSummaryLoading,
     missionSummary: params.missionSummary,
     aiEnabled: params.missionSummaryEnabled,
@@ -561,6 +548,7 @@ export function buildOperationsInsights(params: OperationsLiveState): Operations
     activeTransfers,
     treasurySummary,
     serviceHealth,
+    platformHealth,
     missionStatus,
     alertOptions,
     transferSuccessAnomaly: kpiResult.successRateAnomaly,

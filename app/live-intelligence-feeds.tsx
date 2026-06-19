@@ -85,7 +85,7 @@ export default function LiveIntelligenceFeedsScreen() {
         <Text style={styles.title}>Live Intelligence Feeds</Text>
 
         <Text style={styles.subtitle}>
-          Real-time market, treasury and operational intelligence powering
+          Real-time market, corridor liquidity and operational intelligence powering
           NexusPay Orchestrator.
         </Text>
       </View>

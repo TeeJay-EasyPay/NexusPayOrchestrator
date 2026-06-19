@@ -448,7 +448,7 @@ export function OperationsCommandCentre() {
         </AppCard>
 
         <AppCard>
-          <SectionHeader title="Corridor Health" subtitle="Live corridor intelligence from treasury and route telemetry" />
+          <SectionHeader title="Corridor Health" subtitle="Corridor intelligence from liquidity and route telemetry" />
           <View style={styles.stack}>
             {corridorRowsToShow.slice(0, 8).map((item) => (
               <CorridorRow key={item.corridor} item={item} />
@@ -478,7 +478,7 @@ export function OperationsCommandCentre() {
 
         <View style={twoColumnLayout ? styles.dualGrid : styles.singleStack}>
           <AppCard style={styles.flexCard}>
-            <SectionHeader title="Treasury & Liquidity" subtitle="Utilisation, available liquidity and capacity forecast" />
+            <SectionHeader title="Corridor Liquidity" subtitle="Utilisation, route capacity and settlement readiness forecast" />
             <View style={styles.metricTriple}>
               <MetricTile label="Utilisation" value={`${treasurySummary.utilization}%`} />
               <MetricTile label="Available" value={`${treasurySummary.availableCapacity}%`} />

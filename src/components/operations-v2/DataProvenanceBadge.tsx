@@ -15,6 +15,9 @@ const PROVENANCE_COLORS: Record<DataProvenanceClassification, string> = {
   SIMULATED: "#D97706",
   MOCK: "#DC2626",
   FALLBACK: "#6B7280",
+  NO_DATA: "#64748B",
+  DIAGNOSTIC: "#9333EA",
+  DISABLED: "#6B7280",
 };
 
 export function DataProvenanceBadge({ classification }: Props) {

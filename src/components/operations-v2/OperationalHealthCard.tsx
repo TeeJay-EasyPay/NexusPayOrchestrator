@@ -18,18 +18,24 @@ type ServiceStatus = OperationsServiceHealth["status"];
 function statusColor(status: ServiceStatus): string {
   if (status === "HEALTHY") return "#16A34A";
   if (status === "DEGRADED") return "#D97706";
+  if (status === "NO_DATA") return "#64748B";
+  if (status === "DIAGNOSTIC") return "#9333EA";
+  if (status === "DISABLED") return "#6B7280";
   return "#DC2626";
 }
 
 function statusIcon(status: ServiceStatus): React.ComponentProps<typeof Feather>["name"] {
   if (status === "HEALTHY") return "check-circle";
   if (status === "DEGRADED") return "alert-circle";
+  if (status === "NO_DATA") return "help-circle";
+  if (status === "DIAGNOSTIC") return "tool";
+  if (status === "DISABLED") return "pause-circle";
   return "x-circle";
 }
 
 function ServiceRow({ item }: { item: OperationsServiceHealth }) {
-  const color = statusColor(item.status ?? "OFFLINE");
-  const icon = statusIcon(item.status ?? "OFFLINE");
+  const color = statusColor(item.status ?? "NO_DATA");
+  const icon = statusIcon(item.status ?? "NO_DATA");
 
   return (
     <View style={styles.serviceRow}>
@@ -37,6 +43,7 @@ function ServiceRow({ item }: { item: OperationsServiceHealth }) {
       <AppText variant="caption" color={colors.textDarkPrimary} style={styles.serviceLabel}>
         {item.label ?? "Unknown service"}
       </AppText>
+      <DataProvenanceBadge classification={item.provenance === "NO_DATA" ? "NO_DATA" : item.provenance} />
       <View style={[styles.statusBadge, { backgroundColor: `${color}12`, borderColor: `${color}28` }]}>
         <AppText variant="caption" style={[styles.statusText, { color }]}>
           {item.status ?? "—"}
@@ -50,9 +57,15 @@ function overallHealth(services: OperationsServiceHealth[]): { color: string; la
   if (services.length === 0) return { color: colors.textDarkMuted, label: "No data" };
   const hasOffline = services.some((s) => s.status === "OFFLINE");
   const hasDegraded = services.some((s) => s.status === "DEGRADED");
-  if (hasOffline) return { color: "#DC2626", label: "Service Issue" };
+  if (hasOffline) return { color: "#DC2626", label: "Confirmed Service Issue" };
   if (hasDegraded) return { color: "#D97706", label: "Degraded" };
-  return { color: "#16A34A", label: "All Systems Operational" };
+  const hasDiagnostic = services.some((s) => s.status === "DIAGNOSTIC");
+  const hasNoData = services.some((s) => s.status === "NO_DATA");
+  const hasDisabled = services.some((s) => s.status === "DISABLED");
+  if (hasDiagnostic) return { color: "#9333EA", label: "Diagnostic Mode" };
+  if (hasNoData) return { color: "#64748B", label: "Telemetry Incomplete" };
+  if (hasDisabled) return { color: "#6B7280", label: "Services Disabled" };
+  return { color: "#16A34A", label: "Operational" };
 }
 
 export function OperationalHealthCard({ serviceHealth, showDataSources = true }: Props) {
@@ -61,7 +74,8 @@ export function OperationalHealthCard({ serviceHealth, showDataSources = true }:
 
   const healthyCount = services.filter((s) => s.status === "HEALTHY").length;
   const degradedCount = services.filter((s) => s.status === "DEGRADED").length;
-  const offlineCount = services.filter((s) => s.status === "OFFLINE").length;
+  const noDataCount = services.filter((s) => s.status === "NO_DATA").length;
+  const diagnosticCount = services.filter((s) => s.status === "DIAGNOSTIC" || s.status === "DISABLED").length;
 
   return (
     <AppCard style={styles.card}>
@@ -90,8 +104,13 @@ export function OperationalHealthCard({ serviceHealth, showDataSources = true }:
         </View>
         <View style={styles.summaryDivider} />
         <View style={styles.summaryItem}>
-          <AppText variant="caption" color="#DC2626" style={styles.summaryCount}>{offlineCount}</AppText>
-          <AppText variant="caption" color={colors.textDarkMuted} style={styles.summaryLabel}>Offline</AppText>
+          <AppText variant="caption" color="#64748B" style={styles.summaryCount}>{noDataCount}</AppText>
+          <AppText variant="caption" color={colors.textDarkMuted} style={styles.summaryLabel}>No Data</AppText>
+        </View>
+        <View style={styles.summaryDivider} />
+        <View style={styles.summaryItem}>
+          <AppText variant="caption" color="#9333EA" style={styles.summaryCount}>{diagnosticCount}</AppText>
+          <AppText variant="caption" color={colors.textDarkMuted} style={styles.summaryLabel}>Diagnostic</AppText>
         </View>
       </View>
 

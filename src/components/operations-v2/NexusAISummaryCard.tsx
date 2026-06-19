@@ -67,7 +67,7 @@ function buildFallbackSummary(props: {
     }
   }
 
-  // Treasury
+  // Corridor liquidity
   const pressure = treasurySummary?.pressure ?? null;
   const utilization = treasurySummary?.utilization ?? null;
   if (pressure && utilization !== null) {
@@ -76,8 +76,8 @@ function buildFallbackSummary(props: {
       pressure === "HIGH" ? "elevated — monitoring recommended" :
       pressure === "MEDIUM" ? "moderate" :
       "within normal parameters";
-    sentences.push(`Treasury pressure ${pressureDesc}.`);
-    findings.push(`Treasury utilisation at ${utilization}%.`);
+    sentences.push(`Corridor liquidity pressure ${pressureDesc}.`);
+    findings.push(`Route capacity utilisation at ${utilization}%.`);
   }
 
   // Alerts
@@ -93,11 +93,15 @@ function buildFallbackSummary(props: {
   // Service health
   const offlineCount = serviceHealth.filter((s) => s.status === "OFFLINE").length;
   const degradedCount = serviceHealth.filter((s) => s.status === "DEGRADED").length;
+  const noDataCount = serviceHealth.filter((s) => s.status === "NO_DATA").length;
+  const diagnosticCount = serviceHealth.filter((s) => s.status === "DIAGNOSTIC" || s.status === "DISABLED").length;
   if (offlineCount > 0) {
     const names = serviceHealth.filter((s) => s.status === "OFFLINE").map((s) => s.label).slice(0, 3).join(", ");
-    sentences.push(`Platform operating with service disruption: ${names}.`);
+    sentences.push(`Platform has confirmed service disruption: ${names}.`);
   } else if (degradedCount > 0) {
     sentences.push(`Platform operating in degraded state (${degradedCount} service${degradedCount !== 1 ? "s" : ""} affected).`);
+  } else if (noDataCount > 0 || diagnosticCount > 0) {
+    sentences.push(`Platform health telemetry is incomplete (${noDataCount} no-data, ${diagnosticCount} diagnostic or disabled).`);
   } else if (serviceHealth.length > 0) {
     sentences.push("All platform services operational.");
   }
@@ -167,7 +171,7 @@ export function NexusAISummaryCard({
           <AppText variant="subheading" color={colors.textDarkPrimary} style={styles.title}>
             Nexus AI Mission Summary
           </AppText>
-          {showDataSources && <DataProvenanceBadge classification="FALLBACK" />}
+          {showDataSources && <DataProvenanceBadge classification="DISABLED" />}
         </View>
         <View style={styles.disabledBlock}>
           <Feather name="toggle-left" size={22} color={colors.textDarkMuted} />

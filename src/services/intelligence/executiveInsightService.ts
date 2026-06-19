@@ -71,7 +71,7 @@ export function buildExecutiveInsight(
     riskLevel = "HIGH";
 
     recommendation =
-      "Review provider performance, treasury positioning and routing decisions immediately.";
+      "Review provider performance, corridor liquidity positioning and routing decisions immediately.";
   } else if (
     input.successRate < 98 ||
     input.routeConfidence < 90

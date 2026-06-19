@@ -73,7 +73,7 @@ export default function AICorridorIntelligenceCard() {
 
       <AppText variant="caption" style={styles.subtitle}>
         Live orchestration intelligence generated from transfer execution,
-        treasury activity and operational telemetry.
+        corridor liquidity activity and operational telemetry.
       </AppText>
 
       {loading ? (

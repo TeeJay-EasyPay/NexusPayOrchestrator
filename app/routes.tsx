@@ -276,16 +276,16 @@ function RouteOptionCard({
                 }}
               >
                 <AppText variant="caption" color="#8A6218">
-                  Treasury liquidity intelligence
+                  Corridor liquidity intelligence
                 </AppText>
 
                 <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
-                  {route.treasuryRecommendation ?? "Treasury intelligence pending"}
+                  {route.treasuryRecommendation ?? "Corridor liquidity intelligence pending"}
                 </AppText>
 
                 <View style={{ flexDirection: "row", gap: 8 }}>
                   <MiniStat
-                    label="Treasury"
+                    label="Route Capacity"
                     value={`${route.treasuryScore ?? 0}/100`}
                   />
 
@@ -497,7 +497,7 @@ export default function RoutesScreen() {
 
           <NexusAIToggleCard
             title="Nexus AI"
-            description="Controls route intelligence scoring, treasury reasoning and route explanations on this screen."
+            description="Controls route intelligence scoring, corridor liquidity reasoning and route explanations on this screen."
             enabled={routeAIEnabled}
             disabled={routeAIDisabled}
             loading={nexusAILoading}
@@ -538,7 +538,7 @@ export default function RoutesScreen() {
 
           <NexusAIToggleCard
             title="Nexus AI"
-            description="Controls route intelligence scoring, treasury reasoning and route explanations on this screen."
+            description="Controls route intelligence scoring, corridor liquidity reasoning and route explanations on this screen."
             enabled={routeAIEnabled}
             disabled={routeAIDisabled}
             loading={nexusAILoading}

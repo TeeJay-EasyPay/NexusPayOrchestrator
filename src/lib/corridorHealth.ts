@@ -105,7 +105,7 @@ function getActiveRail(to: string) {
 function getFallbackRail(to: string) {
   if (to === "PHP") return "Bank payout partner";
   if (to === "MYR") return "Secondary liquidity provider";
-  return "Manual treasury review";
+  return "Manual route capacity review";
 }
 
 export function buildCorridorHealth(fxRates: FxRate[]): CorridorHealth[] {

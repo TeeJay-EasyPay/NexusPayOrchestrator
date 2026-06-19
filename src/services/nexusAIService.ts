@@ -40,7 +40,7 @@ type NexusAIRequestOptions = {
 };
 
 type DashboardTelemetryPayload = {
-	treasuryStatus: string;
+  treasuryStatus: string;
 	liquidityStatus: string;
 	corridorHealth: string;
 	networkHealth: string;
@@ -201,9 +201,9 @@ function buildDashboardFallback(input: DashboardSummaryInput): DashboardSummaryR
 	return {
 		title: "Nexus AI Summary",
 		executiveSummary: [
-			`Treasury capacity is ${input.telemetry.treasuryStatus.toLowerCase()}. Current utilisation remains within optimal operating thresholds.`,
-			`${input.telemetry.corridorHealth} corridor conditions continue to support routing quality. No significant capacity constraints are currently detected.`,
-			`Settlement network status is ${input.telemetry.networkHealth.toLowerCase()} with ${input.telemetry.fxStatus.toLowerCase()} FX conditions. All primary payment rails remain operational.`,
+			`Corridor liquidity status is ${input.telemetry.treasuryStatus.toLowerCase()} based on the current shared health model.`,
+			`${input.telemetry.corridorHealth} corridor conditions are available for route guidance; verify provenance before treating them as live telemetry.`,
+			`Settlement network status is ${input.telemetry.networkHealth.toLowerCase()} with ${input.telemetry.fxStatus.toLowerCase()} FX conditions.`,
 			topCorridorLine,
 		],
 		highlights: [
@@ -236,7 +236,7 @@ function buildRouteFallback(input: RouteExplanationInput): RouteExplanationResul
 		title: "Why this route?",
 		bullets: [
 			`Route score is ${input.routeScore.toFixed(1)}/100 with ${scoreQuality} characteristics. Settlement is estimated at ${input.settlementEstimate}.`,
-			`Treasury signal is ${input.treasuryScore.toFixed(1)}/100 and liquidity support is ${input.liquidityScore.toFixed(1)}/100. ${settlementQuality}.`,
+			`Route capacity signal is ${input.treasuryScore.toFixed(1)}/100 and liquidity support is ${input.liquidityScore.toFixed(1)}/100. ${settlementQuality}.`,
 			`Payout reliability and settlement performance remain well-aligned with current corridor conditions and operational capacity.`,
 		],
 		confidence: input.routeScore >= 90 ? "HIGH" : input.routeScore >= 75 ? "MEDIUM" : "LOW",
@@ -279,7 +279,7 @@ function buildReportFallback(input: IntelligenceReportInput): IntelligenceReport
 	const reportContext = input.reportType === "corridor_analysis"
 		? "corridor operational performance"
 		: input.reportType === "treasury_analysis"
-			? "treasury capacity and utilisation"
+			? "corridor liquidity capacity and utilisation"
 			: input.reportType === "value_flow_analysis"
 				? "value movement patterns and corridor performance"
 				: "market conditions and operational intelligence";
@@ -288,7 +288,7 @@ function buildReportFallback(input: IntelligenceReportInput): IntelligenceReport
 		executiveSummary: `${input.focus} intelligence analysis based on current operational telemetry. ${reportContext} remains stable with no critical constraints detected. All operational metrics support continued normal service delivery.`,
 		keyFindings: [
 			"Core transfer orchestration systems remain fully operational and responsive.",
-			"Treasury and route telemetry indicate healthy operational capacity across primary corridors.",
+			"Corridor liquidity and route telemetry indicate available operational capacity across primary corridors.",
 			"Settlement performance metrics remain consistent with service level expectations.",
 			"No significant operational risks are currently identified that require immediate escalation.",
 		],

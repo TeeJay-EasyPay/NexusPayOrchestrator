@@ -36,6 +36,57 @@ OTA:
 Known Warnings:
 - Expo publish continued to show the existing `@noble/hashes/crypto.js` export warning. It did not block OTA.
 
+## 2026-06-19 - Health Consistency Remediation Phases 1-3
+
+Prompt / Objective:
+Complete the Health Consistency Remediation Program so Home Dashboard, Operations Command Centre, and Nexus AI summaries use one operational health model, remove misleading health indicators, and replace legacy treasury terminology in user-facing surfaces.
+
+Files Changed:
+- `app/index.tsx`
+- `app/live-intelligence-feeds.tsx`
+- `app/routes.tsx`
+- `src/components/intelligence/AICorridorIntelligenceCard.tsx`
+- `src/components/navigation/AppDropdownMenu.tsx`
+- `src/components/operations-v2/DataProvenanceBadge.tsx`
+- `src/components/operations-v2/NexusAISummaryCard.tsx`
+- `src/components/operations-v2/OperationalHealthCard.tsx`
+- `src/components/operations-v2/TreasuryLiquidityCard.tsx`
+- `src/components/operations/OperationsCommandCentre.tsx`
+- `src/lib/aiRouteIntelligence.ts`
+- `src/lib/corridorHealth.ts`
+- `src/lib/routeOperationalState.ts`
+- `src/lib/settlementOrchestrator.ts`
+- `src/lib/treasuryIntelligence.ts`
+- `src/services/intelligence/executiveInsightService.ts`
+- `src/services/liveIntelligenceFeedService.ts`
+- `src/services/nexusAIService.ts`
+- `src/services/platformHealthService.ts`
+- `src/utils/operationsCommandCentre.ts`
+- `governance/reports/OCC_HOME_CONSISTENCY_AUDIT.md`
+- `governance/reports/HEALTH_CONSISTENCY_REMEDIATION_REPORT.md`
+
+Summary:
+- Added `platformHealthService` as the shared health calculation engine for Platform, Network, Liquidity, AI, Market, and Settlement Health.
+- Replaced Home hardcoded health badges with shared health status/provenance indicators.
+- Replaced static Home health percentages with shared health status rows.
+- Migrated OCC service health and Mission Control chips to the shared health snapshot.
+- Reclassified diagnostic realtime, disabled AI, unavailable AI summaries, closed market windows, and missing telemetry as `DIAGNOSTIC`, `DISABLED`, `NO_DATA`, or `FALLBACK` instead of confirmed `OFFLINE`.
+- Extended provenance badges to include `NO_DATA`, `DIAGNOSTIC`, and `DISABLED`.
+- Replaced user-facing treasury terminology with corridor liquidity, route capacity, settlement readiness, and provider/network language.
+- Updated Home and OCC Nexus AI fallback language so simulated/no-data intelligence is not presented as live operational certainty.
+
+Validation:
+- `npx tsc --noEmit` passed.
+- `npx eslint .` passed with zero errors.
+- Existing lint warnings remain in unrelated legacy files.
+
+Reports:
+- `governance/reports/OCC_HOME_CONSISTENCY_AUDIT.md`
+- `governance/reports/HEALTH_CONSISTENCY_REMEDIATION_REPORT.md`
+
+Pending Deployment:
+- Commit, push, and preview OTA publish to be completed after final diff review.
+
 ## 2026-06-19 - OCC KPI Accuracy and Data Provenance Remediation
 
 Prompt / Objective:

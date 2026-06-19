@@ -172,7 +172,7 @@ function buildSettlementStages(
       "RLUSD bridge liquidity checked",
       liquidityStatus === "AVAILABLE"
         ? "RLUSD bridge liquidity reserved"
-        : "RLUSD liquidity shortfall flagged for treasury top-up",
+        : "RLUSD liquidity shortfall flagged for corridor liquidity review",
       "XRPL settlement rail prepared",
       "Local payout partner receives fiat payout instruction",
       "Recipient payout completed",
