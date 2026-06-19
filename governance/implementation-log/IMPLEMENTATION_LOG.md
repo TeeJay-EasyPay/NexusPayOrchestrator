@@ -36,6 +36,79 @@ OTA:
 Known Warnings:
 - Expo publish continued to show the existing `@noble/hashes/crypto.js` export warning. It did not block OTA.
 
+## 2026-06-19 - OCC KPI Accuracy and Data Provenance Remediation
+
+Prompt / Objective:
+Implement OCC Phase 1 and Phase 2 improvements to make the Operations Command Centre operationally honest, technically correct, and transparent about live, derived, simulated, mock, and fallback data.
+
+Files Changed:
+- `app/operations-v2.tsx`
+- `src/components/operations-v2/ActiveAlertsCard.tsx`
+- `src/components/operations-v2/CorridorHealthCard.tsx`
+- `src/components/operations-v2/DataProvenanceBadge.tsx`
+- `src/components/operations-v2/GlobalFlowCard.tsx`
+- `src/components/operations-v2/KpiGrid.tsx`
+- `src/components/operations-v2/MissionControlCard.tsx`
+- `src/components/operations-v2/NexusAISummaryCard.tsx`
+- `src/components/operations-v2/OperationalHealthCard.tsx`
+- `src/components/operations-v2/OperationsHeader.tsx`
+- `src/components/operations-v2/ProviderSandboxCard.tsx`
+- `src/components/operations-v2/QATestCentreCard.tsx`
+- `src/components/operations-v2/TreasuryLiquidityCard.tsx`
+- `src/hooks/useOperationsCommandCentre.ts`
+- `src/services/execution/executionPersistenceService.ts`
+- `src/utils/operationsCommandCentre.ts`
+- `governance/reports/OCC_DATA_PROVENANCE_AUDIT.md`
+- `governance/reports/OCC_PHASE1_PHASE2_REMEDIATION.md`
+- `eslint.config.js`
+- `tsconfig.json`
+- `src/components/operations/OperationsCommandCentre.tsx`
+- `src/services/execution/executionRealtimeService.ts`
+- `src/services/intelligence/liveIntelligenceFeedService.ts`
+- `src/services/intelligence/contextBuilder.ts`
+- `src/services/treasury/treasuryIntelligence.ts`
+- `src/services/wallets/simulatedRLusdWallet.ts`
+
+Summary:
+- Corrected OCC Success Rate so it uses genuine terminal execution sessions instead of a loader that excluded completed and failed sessions.
+- Corrected Settlement Time so it uses completed execution durations and displays `Insufficient data` when completed-session evidence is unavailable.
+- Added `loadRecentExecutionSessions` to include terminal execution evidence alongside recoverable sessions.
+- Kept realtime monitoring disabled for stability and labelled the OCC status honestly as `Diagnostic Mode` / `Realtime Disabled`.
+- Added reusable `DataProvenanceBadge` component with `LIVE`, `DERIVED`, `SIMULATED`, `MOCK`, and `FALLBACK` classifications.
+- Added Founder visibility toggle, `Show Data Sources`, defaulted ON, to show or hide provenance badges.
+- Added provenance badges across OCC KPI, treasury, corridor, provider, QA, alerts, AI summary, global flow, mission control, and operational health surfaces.
+- Preserved the OCC V2 layout and avoided introducing new metrics or redesigning the screen.
+
+Provenance Mapping:
+- Frankfurter FX rates: `LIVE`
+- Transfer count, active transfers, success rate, settlement time, QA status, global flow, mission control, and operational health: `DERIVED`
+- Treasury capacity, corridor health, alerts, corridor activity, and treasury intelligence-style summaries: `SIMULATED`
+- Provider sandbox: `MOCK`
+- AI fallback summary: `FALLBACK`
+
+Realtime Status Outcome:
+- Realtime subscription restoration was not enabled in this remediation.
+- OCC now exposes the disabled realtime state explicitly as diagnostic mode so users do not infer active realtime monitoring.
+
+Validation:
+- `npx tsc --noEmit` passed.
+- `npx eslint .` passed with zero errors and existing warnings only.
+- Expo OTA export and publish completed successfully.
+- No database migrations were added.
+
+Commit:
+- `f16d17b74a71afcb40d199fa1c8e120d964f09ef`
+
+OTA:
+- Branch: `preview`
+- Update group: `4bbd1992-c2c3-4cbc-a2a7-dcbab654713d`
+- Android update: `019ee0df-fc36-725b-bb01-f14ec7c606b0`
+- iOS update: `019ee0df-fc36-74ff-8bb8-1a7483300896`
+- Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/4bbd1992-c2c3-4cbc-a2a7-dcbab654713d`
+
+Known Warnings:
+- Expo publish continued to show the existing `@noble/hashes/crypto.js` export warning. It did not block OTA.
+
 ## 2026-06-18 - Persona Visual Polish Sprint
 
 Prompt / Objective:
