@@ -25,10 +25,17 @@ Validation:
 - Targeted ESLint passed for changed files.
 
 Commit:
-- Pending
+- `933c2e0dd4fdf626a5e6cf07a7ea3f1ea019200a`
 
 OTA:
-- Pending
+- Branch: `preview`
+- Update group: `01e66963-01b7-4fe6-b20e-c572a0e8a115`
+- Android update: `019ef1bc-2230-70ce-919e-7f03ced2383c`
+- iOS update: `019ef1bc-2230-7213-8946-64d59b69af46`
+- Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/01e66963-01b7-4fe6-b20e-c572a0e8a115`
+
+Known Warnings:
+- Expo publish continued to show the existing `@noble/hashes/crypto.js` export warning. It did not block OTA.
 
 ## 2026-06-22 - Corporate Governance And Approval Framework V1
 
