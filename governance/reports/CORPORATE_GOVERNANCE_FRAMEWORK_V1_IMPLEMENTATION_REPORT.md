@@ -158,6 +158,16 @@ Residual baseline:
 
 - Full-project lint still reports 40 pre-existing warnings in unrelated files, including older root payment screens, legacy OCC V1 component code, provider mock imports, and older intelligence context types. No lint errors were present.
 
+# Deployment
+
+- Implementation commit: `67fef21edd71e5d9ea9e0640897e8525cac0bfb2`
+- Branch pushed: `startup-v2-founder-validation-consumer-multi-account`
+- OTA branch: `preview`
+- OTA update group: `a3961dd6-4057-4654-8057-4bc7ec7a2466`
+- Android update: `019ef18e-dd8b-71b8-8940-8c37bd3f59f3`
+- iOS update: `019ef18e-dd8b-7c68-ab0e-2157c79349df`
+- Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/a3961dd6-4057-4654-8057-4bc7ec7a2466`
+
 # Founder Testing Instructions
 
 1. Open the persona selector.

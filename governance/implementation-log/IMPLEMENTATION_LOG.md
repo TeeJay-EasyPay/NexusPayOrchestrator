@@ -65,10 +65,17 @@ Known Limitations:
 - Some internal `treasury*` names remain as compatibility fields for existing OCC and route-intelligence data contracts, although visible terminology is orchestration-aligned.
 
 Commit:
-- Pending
+- `67fef21edd71e5d9ea9e0640897e8525cac0bfb2`
 
 OTA:
-- Pending
+- Branch: `preview`
+- Update group: `a3961dd6-4057-4654-8057-4bc7ec7a2466`
+- Android update: `019ef18e-dd8b-71b8-8940-8c37bd3f59f3`
+- iOS update: `019ef18e-dd8b-7c68-ab0e-2157c79349df`
+- Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/a3961dd6-4057-4654-8057-4bc7ec7a2466`
+
+Known Warnings:
+- Expo publish continued to show the existing `@noble/hashes/crypto.js` export warning. It did not block OTA.
 
 ## 2026-06-19 - Login Declutter And Business Teal Hero Fix
 
