@@ -1,6 +1,7 @@
 import { usePathname, useRouter } from "expo-router";
 import { Pressable, ScrollView, View } from "react-native";
 
+import { isCorporatePersona as checkCorporatePersona } from "../../services/corporateAccessService";
 import { usePersona } from "../../state/PersonaContext";
 import { colors } from "../../theme";
 import { AppText } from "../ui/AppText";
@@ -18,7 +19,7 @@ export function AppMenu() {
   const pathname = usePathname();
   const { selectedPersona } = usePersona();
 
-  const isCorporatePersona = selectedPersona.id === "corporate-demo";
+  const isCorporatePersona = checkCorporatePersona(selectedPersona);
   const isParticipantPersona = selectedPersona.kind === "PARTICIPANT";
 
   const menuItems = [

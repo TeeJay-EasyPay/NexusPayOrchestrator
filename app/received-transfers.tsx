@@ -3,6 +3,7 @@ import { ScrollView, View } from "react-native";
 
 import { AppText } from "../src/components/ui/AppText";
 import { Screen } from "../src/components/ui/Screen";
+import { isCorporatePersona as checkCorporatePersona } from "../src/services/corporateAccessService";
 import { loadReceivedTransfers } from "../src/services/multiEntityOrchestrationService";
 import { usePersona } from "../src/state/PersonaContext";
 import { ConsumerCard, ConsumerShell, consumerColors } from "../src/components/consumer/ConsumerShell";
@@ -40,7 +41,7 @@ export default function ReceivedTransfersScreen() {
     status: string;
   }[]>([]);
   const [loading, setLoading] = useState(true);
-  const isCorporatePersona = selectedPersona.id === "corporate-demo";
+  const isCorporatePersona = checkCorporatePersona(selectedPersona);
   const isBusinessPersona = selectedPersona.participantType === "BUSINESS";
 
   useEffect(() => {

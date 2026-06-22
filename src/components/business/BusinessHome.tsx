@@ -8,6 +8,7 @@ import {
   BusinessDashboardData,
   loadBusinessDashboardData,
 } from "../../services/businessPersonaService";
+import { isCorporatePersona as checkCorporatePersona } from "../../services/corporateAccessService";
 import { usePersona } from "../../state/PersonaContext";
 import { Transfer } from "../../types/transfer";
 import { AppText } from "../ui/AppText";
@@ -126,7 +127,7 @@ export function BusinessHome() {
   }, [participantId]);
 
   const participant = data?.participant;
-  const isCorporatePersona = selectedPersona.id === "corporate-demo";
+  const isCorporatePersona = checkCorporatePersona(selectedPersona);
   const currency = participant?.currency ?? selectedPersona.currency ?? "GBP";
   const businessName = participant?.name ?? selectedPersona.label;
   const currentMonthLabel = getCurrentMonthLabel();

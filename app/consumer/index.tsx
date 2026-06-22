@@ -12,6 +12,7 @@ import {
   consumerColors,
 } from "../../src/components/consumer/ConsumerShell";
 import { AppText } from "../../src/components/ui/AppText";
+import { isCorporatePersona } from "../../src/services/corporateAccessService";
 import { loadSavedRecipients } from "../../src/services/recipientService";
 import { usePersona } from "../../src/state/PersonaContext";
 import { useTransfer } from "../../src/state/TransferContext";
@@ -102,7 +103,7 @@ export default function ConsumerHomeScreen() {
     [completedTransfers]
   );
 
-  if (selectedPersona.id === "corporate-demo" || selectedPersona.participantType === "BUSINESS") {
+  if (isCorporatePersona(selectedPersona) || selectedPersona.participantType === "BUSINESS") {
     return <BusinessHome />;
   }
 

@@ -7,6 +7,7 @@ import { AppText } from "../src/components/ui/AppText";
 import { Screen } from "../src/components/ui/Screen";
 import { ConsumerShell, consumerColors } from "../src/components/consumer/ConsumerShell";
 import { SavedPaymentMethod } from "../src/data/mockPaymentMethods";
+import { isCorporatePersona as checkCorporatePersona } from "../src/services/corporateAccessService";
 import { usePersona } from "../src/state/PersonaContext";
 import { usePaymentMethods } from "../src/state/PaymentMethodsContext";
 import { colors } from "../src/theme";
@@ -171,7 +172,7 @@ export default function PaymentMethodsScreen() {
     primaryMethod,
     setPrimaryMethod,
   } = usePaymentMethods();
-  const isCorporatePersona = selectedPersona.id === "corporate-demo";
+  const isCorporatePersona = checkCorporatePersona(selectedPersona);
 
   const content = (
         <View style={{ gap: 18, paddingBottom: 40 }}>

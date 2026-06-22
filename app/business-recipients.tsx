@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 
 import {
   ConsumerAction,
@@ -9,9 +9,10 @@ import {
   ConsumerPill,
   ConsumerShell,
 } from "../src/components/consumer/ConsumerShell";
+import { CorporateShell } from "../src/components/corporate/CorporateShell";
 import { AppText } from "../src/components/ui/AppText";
-import { Screen } from "../src/components/ui/Screen";
 import { BusinessRecipient, loadBusinessRecipients } from "../src/services/businessPersonaService";
+import { isCorporatePersona as checkCorporatePersona } from "../src/services/corporateAccessService";
 import { usePersona } from "../src/state/PersonaContext";
 
 const businessColors = {
@@ -31,7 +32,7 @@ export default function BusinessRecipientsScreen() {
   const { selectedPersona } = usePersona();
   const [recipients, setRecipients] = useState<BusinessRecipient[]>([]);
   const [loading, setLoading] = useState(true);
-  const isCorporatePersona = selectedPersona.id === "corporate-demo";
+  const isCorporatePersona = checkCorporatePersona(selectedPersona);
 
   useEffect(() => {
     let mounted = true;
@@ -155,11 +156,13 @@ export default function BusinessRecipientsScreen() {
 
   if (isCorporatePersona) {
     return (
-      <Screen>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 40 }}>
-          {content}
-        </ScrollView>
-      </Screen>
+      <CorporateShell
+        routeKey="recipients"
+        title="Recipients"
+        subtitle="Corporate payees available for classified batch payment workflows."
+      >
+        {content}
+      </CorporateShell>
     );
   }
 

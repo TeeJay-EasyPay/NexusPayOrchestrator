@@ -28,7 +28,7 @@ function mapRowToParticipant(row: any): ParticipantRecord {
 }
 
 function getDefaultParticipants(): ParticipantRecord[] {
-  return DEMO_PERSONAS
+  const participants = DEMO_PERSONAS
     .filter((p) => p.kind === "PARTICIPANT" && p.participantId)
     .map((p) => ({
       id: p.participantId as string,
@@ -39,6 +39,8 @@ function getDefaultParticipants(): ParticipantRecord[] {
       accountLast4: p.accountLast4 ?? "",
       currency: p.currency ?? "GBP",
     }));
+
+  return Array.from(new Map(participants.map((item) => [item.id, item])).values());
 }
 
 export async function seedDemoParticipantsIfMissing(): Promise<void> {

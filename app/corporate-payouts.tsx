@@ -5,8 +5,13 @@ import { Pressable, ScrollView, TextInput, View } from "react-native";
 import { AppButton } from "../src/components/ui/AppButton";
 import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
-import { Screen } from "../src/components/ui/Screen";
 import { ConsumerShell, consumerColors } from "../src/components/consumer/ConsumerShell";
+import { CorporateCard, CorporateShell } from "../src/components/corporate/CorporateShell";
+import {
+  canAccessCorporateRoute,
+  isCorporatePersona as checkCorporatePersona,
+} from "../src/services/corporateAccessService";
+import { loadPaymentCategories, loadPaymentTypes } from "../src/services/corporateGovernanceService";
 import { executePayoutBatch } from "../src/services/multiEntityOrchestrationService";
 import { loadBusinessRecipients } from "../src/services/businessPersonaService";
 import {
@@ -14,7 +19,7 @@ import {
   seedDemoParticipantsIfMissing,
 } from "../src/services/participantService";
 import { usePersona } from "../src/state/PersonaContext";
-import { ParticipantRecord } from "../src/types/multiEntity";
+import { ParticipantRecord, PaymentCategoryRecord, PaymentTypeRecord } from "../src/types/multiEntity";
 import { colors } from "../src/theme";
 
 function participantTypeLabel(type: string): string {
@@ -37,10 +42,15 @@ export default function CorporatePayoutsScreen() {
   const [executing, setExecuting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [selectedRecipientId, setSelectedRecipientId] = useState<string | null>(null);
+  const [paymentCategories, setPaymentCategories] = useState<PaymentCategoryRecord[]>([]);
+  const [paymentTypes, setPaymentTypes] = useState<PaymentTypeRecord[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("supplier_payments");
+  const [selectedTypeId, setSelectedTypeId] = useState<string>("vendor");
 
-  const isCorporatePersona = selectedPersona.id === "corporate-demo";
+  const isCorporatePersona = checkCorporatePersona(selectedPersona);
   const isBusinessPersona = selectedPersona.participantType === "BUSINESS";
   const canUseBatchPayments = isCorporatePersona || isBusinessPersona;
+  const canCreateCorporateBatch = !isCorporatePersona || canAccessCorporateRoute(selectedPersona, "batch_payments");
   const senderParticipantId = selectedPersona.participantId ?? "nexus-manufacturing-ltd";
   const senderName = selectedPersona.label;
 
@@ -82,6 +92,28 @@ export default function CorporatePayoutsScreen() {
     };
   }, [canUseBatchPayments, isBusinessPersona, router, senderParticipantId]);
 
+  useEffect(() => {
+    if (!isCorporatePersona) return;
+
+    let mounted = true;
+
+    async function loadGovernanceData() {
+      const [categories, types] = await Promise.all([loadPaymentCategories(), loadPaymentTypes()]);
+      if (!mounted) return;
+
+      setPaymentCategories(categories);
+      setPaymentTypes(types);
+      setSelectedCategoryId((current) => categories.some((item) => item.id === current) ? current : categories[0]?.id ?? "");
+      setSelectedTypeId((current) => types.some((item) => item.id === current) ? current : types[0]?.id ?? "");
+    }
+
+    void loadGovernanceData();
+
+    return () => {
+      mounted = false;
+    };
+  }, [isCorporatePersona]);
+
   const recipientMap = useMemo(() => {
     const map: Record<string, ParticipantRecord> = {};
     for (const recipient of recipients) {
@@ -100,6 +132,18 @@ export default function CorporatePayoutsScreen() {
     [recipients, amounts],
   );
 
+  const visiblePaymentTypes = useMemo(
+    () => paymentTypes.filter((item) => item.categoryId === selectedCategoryId),
+    [paymentTypes, selectedCategoryId],
+  );
+
+  useEffect(() => {
+    if (!isCorporatePersona || visiblePaymentTypes.length === 0) return;
+    if (!visiblePaymentTypes.some((item) => item.id === selectedTypeId)) {
+      setSelectedTypeId(visiblePaymentTypes[0].id);
+    }
+  }, [isCorporatePersona, selectedTypeId, visiblePaymentTypes]);
+
   async function handleExecuteBatch() {
     if (executing) return;
 
@@ -114,6 +158,10 @@ export default function CorporatePayoutsScreen() {
           amount: Number(amounts[recipient.id]) || 0,
         })),
         recipientMap,
+        actorPersona: isCorporatePersona ? selectedPersona : undefined,
+        paymentCategoryId: isCorporatePersona ? selectedCategoryId : undefined,
+        paymentTypeId: isCorporatePersona ? selectedTypeId : undefined,
+        requiresApproval: isCorporatePersona,
       });
 
       if (!output.batch) {
@@ -121,8 +169,9 @@ export default function CorporatePayoutsScreen() {
         return;
       }
 
-      setStatusMessage(
-        `Batch ${output.batch.id.slice(0, 8)} executed. ${output.transfers.length} transfers created and ${output.notifications.length} notifications sent.`,
+      setStatusMessage(isCorporatePersona
+        ? `Batch ${output.batch.id.slice(0, 8)} created for governance review. ${output.approvals?.length ?? 0} approval request(s) generated.`
+        : `Batch ${output.batch.id.slice(0, 8)} executed. ${output.transfers.length} transfers created and ${output.notifications.length} notifications sent.`,
       );
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : "Failed to execute batch");
@@ -133,6 +182,75 @@ export default function CorporatePayoutsScreen() {
 
   const content = (
       <View style={{ gap: 12 }}>
+        {isCorporatePersona ? (
+          <CorporateCard>
+            <View style={{ gap: 10 }}>
+              <View>
+                <AppText variant="subheading" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
+                  Payment classification
+                </AppText>
+                <AppText variant="caption" color={colors.textDarkSecondary}>
+                  Corporate batches require category, type, and approval governance evaluation.
+                </AppText>
+              </View>
+
+              <View style={{ gap: 8 }}>
+                <AppText variant="caption" color={colors.textDarkMuted}>Category</AppText>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                  {paymentCategories.map((category) => {
+                    const active = selectedCategoryId === category.id;
+                    return (
+                      <Pressable
+                        key={category.id}
+                        onPress={() => setSelectedCategoryId(category.id)}
+                        style={{
+                          borderRadius: 999,
+                          borderWidth: 1,
+                          borderColor: active ? "#0B3F4A" : "#D1D5DB",
+                          backgroundColor: active ? "#0B3F4A" : "#FFFFFF",
+                          paddingHorizontal: 11,
+                          paddingVertical: 8,
+                        }}
+                      >
+                        <AppText variant="caption" color={active ? "#FFFFFF" : colors.textDarkPrimary} style={{ fontWeight: "900" }}>
+                          {category.label}
+                        </AppText>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+
+              <View style={{ gap: 8 }}>
+                <AppText variant="caption" color={colors.textDarkMuted}>Payment type</AppText>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                  {visiblePaymentTypes.map((type) => {
+                    const active = selectedTypeId === type.id;
+                    return (
+                      <Pressable
+                        key={type.id}
+                        onPress={() => setSelectedTypeId(type.id)}
+                        style={{
+                          borderRadius: 999,
+                          borderWidth: 1,
+                          borderColor: active ? "#087C89" : "#D1D5DB",
+                          backgroundColor: active ? "#DDF4F2" : "#FFFFFF",
+                          paddingHorizontal: 11,
+                          paddingVertical: 8,
+                        }}
+                      >
+                        <AppText variant="caption" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
+                          {type.label}
+                        </AppText>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            </View>
+          </CorporateCard>
+        ) : null}
+
         <AppCard>
           <View style={{ gap: 4 }}>
             <AppText variant="caption" color={isBusinessPersona ? "#087C89" : colors.gold}>
@@ -293,9 +411,9 @@ export default function CorporatePayoutsScreen() {
         )}
 
         <AppButton
-          title={executing ? "Executing batch..." : "Execute Batch"}
+          title={executing ? (isCorporatePersona ? "Creating approval requests..." : "Executing batch...") : (isCorporatePersona ? "Create Batch for Approval" : "Execute Batch")}
           onPress={handleExecuteBatch}
-          disabled={executing || loading}
+          disabled={executing || loading || !canCreateCorporateBatch}
         />
 
         {statusMessage ? (
@@ -319,11 +437,13 @@ export default function CorporatePayoutsScreen() {
 
   if (isCorporatePersona) {
     return (
-      <Screen>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 40 }}>
-          {content}
-        </ScrollView>
-      </Screen>
+      <CorporateShell
+        routeKey="batch_payments"
+        title="Batch Payments"
+        subtitle="Create classified corporate payment batches and route them through approval governance."
+      >
+        {content}
+      </CorporateShell>
     );
   }
 

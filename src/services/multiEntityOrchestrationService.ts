@@ -1,18 +1,25 @@
 import { supabase } from "../lib/supabase";
+import { createApprovalRequestsForBatch, writeAuditEvent } from "./corporateGovernanceService";
 import {
+  BatchApprovalRecord,
   BatchTransferRecord,
   BatchTransferStatus,
   NotificationRecord,
   ParticipantRecord,
   PayoutBatchRecord,
+  PersonaOption,
 } from "../types/multiEntity";
 
 export type ExecuteBatchInput = {
   senderParticipantId: string;
-  transfers: Array<{
+  actorPersona?: PersonaOption;
+  paymentCategoryId?: string;
+  paymentTypeId?: string;
+  requiresApproval?: boolean;
+  transfers: {
     recipientParticipantId: string;
     amount: number;
-  }>;
+  }[];
   recipientMap: Record<string, ParticipantRecord>;
 };
 
@@ -41,11 +48,12 @@ export async function executePayoutBatch(
   batch: PayoutBatchRecord | null;
   transfers: BatchTransferRecord[];
   notifications: NotificationRecord[];
+  approvals?: BatchApprovalRecord[];
 }> {
   const validTransfers = input.transfers.filter((t) => Number(t.amount) > 0);
 
   if (validTransfers.length === 0) {
-    return { batch: null, transfers: [], notifications: [] };
+    return { batch: null, transfers: [], notifications: [], approvals: [] };
   }
 
   const totalValue = validTransfers.reduce((sum, t) => sum + Number(t.amount), 0);
@@ -55,7 +63,16 @@ export async function executePayoutBatch(
     .insert({
       sender_participant_id: input.senderParticipantId,
       total_value: totalValue,
-      status: "CREATED",
+      status: input.requiresApproval ? "PENDING_APPROVAL" : "CREATED",
+      payment_category_id: input.paymentCategoryId ?? null,
+      payment_type_id: input.paymentTypeId ?? null,
+      created_by_persona_id: input.actorPersona?.id ?? null,
+      created_by_role: input.actorPersona?.corporateRole ?? null,
+      approval_status: input.requiresApproval ? "PENDING" : "NOT_REQUIRED",
+      governance_metadata: {
+        requiresApproval: Boolean(input.requiresApproval),
+        createdBy: input.actorPersona?.id ?? null,
+      },
     })
     .select("*")
     .single();
@@ -91,7 +108,7 @@ export async function executePayoutBatch(
     createdAt: String(row.created_at ?? nowIso()),
   }));
 
-  const notificationsPayload = transferList.map((transfer) => {
+  const notificationsPayload = input.requiresApproval ? [] : transferList.map((transfer) => {
     const recipient = input.recipientMap[transfer.recipientParticipantId];
     const symbol = toCurrencySymbol(recipient?.currency ?? "GBP");
 
@@ -100,25 +117,59 @@ export async function executePayoutBatch(
       title: "New incoming transfer",
       message: `${symbol}${transfer.amount.toLocaleString()} from Nexus Manufacturing Ltd has been delivered to ${recipient?.bankName ?? "your account"} ****${recipient?.accountLast4 ?? ""}.`,
       read: false,
+      notification_type: "INCOMING_TRANSFER",
+      metadata: { batchId: String(batchRow.id), transferId: transfer.id },
     };
   });
 
-  const { data: notificationRows, error: notificationError } = await supabase
-    .from("notifications")
-    .insert(notificationsPayload)
-    .select("*");
+  const { data: notificationRows, error: notificationError } = notificationsPayload.length
+    ? await supabase
+      .from("notifications")
+      .insert(notificationsPayload)
+      .select("*")
+    : { data: [], error: null };
 
   if (notificationError) {
     throw new Error(notificationError.message);
   }
 
-  const { error: batchUpdateError } = await supabase
-    .from("payout_batches")
-    .update({ status: "COMPLETED" })
-    .eq("id", String(batchRow.id));
+  let approvals: BatchApprovalRecord[] = [];
 
-  if (batchUpdateError) {
-    console.warn("batch status update failed", batchUpdateError.message);
+  if (input.requiresApproval && input.paymentTypeId && input.actorPersona) {
+    const approvalOutput = await createApprovalRequestsForBatch({
+      batchId: String(batchRow.id),
+      paymentTypeId: input.paymentTypeId,
+      amount: totalValue,
+      actor: input.actorPersona,
+    });
+    approvals = approvalOutput.approvals;
+  } else {
+    const { error: batchUpdateError } = await supabase
+      .from("payout_batches")
+      .update({ status: "COMPLETED" })
+      .eq("id", String(batchRow.id));
+
+    if (batchUpdateError) {
+      console.warn("batch status update failed", batchUpdateError.message);
+    }
+  }
+
+  if (input.actorPersona) {
+    await writeAuditEvent({
+      entityType: "payout_batch",
+      entityId: String(batchRow.id),
+      actor: input.actorPersona,
+      eventType: input.requiresApproval ? "BATCH_CREATED_PENDING_APPROVAL" : "BATCH_CREATED",
+      eventMessage: input.requiresApproval
+        ? "Corporate batch created and routed for approval."
+        : "Batch created and executed.",
+      metadata: {
+        totalValue,
+        paymentCategoryId: input.paymentCategoryId ?? null,
+        paymentTypeId: input.paymentTypeId ?? null,
+        transferCount: transferList.length,
+      },
+    });
   }
 
   return {
@@ -126,8 +177,13 @@ export async function executePayoutBatch(
       id: String(batchRow.id),
       senderParticipantId: String(batchRow.sender_participant_id),
       totalValue: Number(batchRow.total_value),
-      status: "COMPLETED",
+      status: input.requiresApproval ? "PENDING_APPROVAL" : "COMPLETED",
       createdAt: String(batchRow.created_at ?? nowIso()),
+      paymentCategoryId: input.paymentCategoryId ?? null,
+      paymentTypeId: input.paymentTypeId ?? null,
+      createdByPersonaId: input.actorPersona?.id ?? null,
+      createdByRole: input.actorPersona?.corporateRole ?? null,
+      approvalStatus: input.requiresApproval ? "PENDING" : "NOT_REQUIRED",
     },
     transfers: transferList,
     notifications: (notificationRows ?? []).map((row: any) => ({
@@ -138,16 +194,17 @@ export async function executePayoutBatch(
       read: Boolean(row.read),
       createdAt: String(row.created_at ?? nowIso()),
     })),
+    approvals,
   };
 }
 
-export async function loadReceivedTransfers(participantId: string): Promise<Array<{
+export async function loadReceivedTransfers(participantId: string): Promise<{
   id: string;
   createdAt: string;
   senderName: string;
   amount: number;
   status: BatchTransferStatus;
-}>> {
+}[]> {
   const { data, error } = await supabase
     .from("batch_transfers")
     .select("id, amount, status, created_at, sender_participant_id")

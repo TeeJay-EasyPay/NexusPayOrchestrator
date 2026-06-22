@@ -1,11 +1,11 @@
+import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 
-import { AppButton } from "../src/components/ui/AppButton";
-import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
 import { Screen } from "../src/components/ui/Screen";
+import { isCorporatePersona } from "../src/services/corporateAccessService";
 import { seedDemoParticipantsIfMissing } from "../src/services/participantService";
 import { useAccount } from "../src/state/AccountContext";
 import { useAuth } from "../src/state/AuthContext";
@@ -14,19 +14,39 @@ import { usePersona } from "../src/state/PersonaContext";
 import { colors } from "../src/theme/colors";
 import { PersonaOption } from "../src/types/multiEntity";
 
+type PersonaGroupKey = "corporate" | "business" | "private";
+
 function maskLast4(last4?: string): string {
   return last4 ? `****${last4}` : "****";
 }
 
 function personaMeta(persona: PersonaOption): string {
-  if (persona.kind === "PERSONAL") return "Personal account";
+  if (isCorporatePersona(persona)) return persona.corporateRole?.replace(/_/g, " ").toUpperCase() ?? "CORPORATE";
   return [
-    persona.participantType === "CORPORATE" ? "Corporate workspace" : "Persona account",
+    persona.participantType === "BUSINESS" ? "Business entity" : "Private user",
     persona.country,
     persona.bankName ? `${persona.bankName} ${maskLast4(persona.accountLast4)}` : null,
   ]
     .filter(Boolean)
     .join(" - ");
+}
+
+function groupPurpose(key: PersonaGroupKey): string {
+  if (key === "corporate") return "Corporate governance, approvals, batch operations, reporting, audit, and operations oversight.";
+  if (key === "business") return "Business operations, payments, receipts, recipients, and batch management.";
+  return "Personal payments, receipts, and notifications.";
+}
+
+function groupTitle(key: PersonaGroupKey): string {
+  if (key === "corporate") return "Corporate Workspace";
+  if (key === "business") return "Business Entities";
+  return "Private Users";
+}
+
+function groupIcon(key: PersonaGroupKey): keyof typeof Feather.glyphMap {
+  if (key === "corporate") return "shield";
+  if (key === "business") return "briefcase";
+  return "user";
 }
 
 export default function MultiAccountPreviewScreen() {
@@ -35,30 +55,21 @@ export default function MultiAccountPreviewScreen() {
   const { setAccountScope } = useAccount();
   const { unlock, unlockWithPassword, biometricAvailable, lockApp } = useDeviceUnlock();
   const { personas, selectedPersona, selectPersona } = usePersona();
-  const [busyTarget, setBusyTarget] = useState<"corporate" | "personal" | "persona" | null>(null);
+  const [busyTarget, setBusyTarget] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [selectedId, setSelectedId] = useState(selectedPersona.id);
-  const [selectorOpen, setSelectorOpen] = useState(false);
-  const busy = busyTarget !== null;
 
-  const personaOptions = useMemo(
-    () => personas.filter((persona) => persona.kind === "PARTICIPANT" && persona.id !== "corporate-demo"),
+  const groups = useMemo(
+    () => ({
+      corporate: personas.filter(isCorporatePersona),
+      business: personas.filter((persona) => persona.personaGroup === "BUSINESS_ENTITY"),
+      private: personas.filter((persona) => persona.personaGroup === "PRIVATE_USER"),
+    }),
     [personas],
   );
 
   useEffect(() => {
-    const selectedIsPersonaOption = personaOptions.some((persona) => persona.id === selectedPersona.id);
-    setSelectedId(selectedIsPersonaOption ? selectedPersona.id : personaOptions[0]?.id ?? selectedPersona.id);
-  }, [personaOptions, selectedPersona.id]);
-
-  useEffect(() => {
     void seedDemoParticipantsIfMissing();
   }, []);
-
-  const selectedOption = useMemo(
-    () => personaOptions.find((persona) => persona.id === selectedId) ?? personaOptions[0],
-    [personaOptions, selectedId],
-  );
 
   async function requireUnlock() {
     lockApp();
@@ -71,40 +82,11 @@ export default function MultiAccountPreviewScreen() {
     return true;
   }
 
-  async function openDemoWorkspace() {
-    if (busy) return;
+  async function openPersona(persona: PersonaOption) {
+    if (busyTarget) return;
 
-    setBusyTarget("corporate");
+    setBusyTarget(persona.id);
     setErrorMessage(null);
-
-    try {
-      const unlocked = await requireUnlock();
-      if (!unlocked) {
-        setErrorMessage("Biometric unlock was cancelled.");
-        return;
-      }
-
-      await selectPersona("corporate-demo");
-      await setAccountScope("demo");
-      const error = await enableDemoAccess();
-
-      if (error) {
-        setErrorMessage(error);
-        return;
-      }
-
-      router.replace("/" as never);
-    } finally {
-      setBusyTarget(null);
-    }
-  }
-
-  async function openPersonalWorkspace(persona: PersonaOption = personas[0], target: "personal" | "persona" = "persona") {
-    if (busy) return;
-
-    setBusyTarget(target);
-    setErrorMessage(null);
-    setSelectorOpen(false);
 
     try {
       const unlocked = await requireUnlock();
@@ -115,9 +97,19 @@ export default function MultiAccountPreviewScreen() {
 
       await selectPersona(persona.id);
 
+      if (isCorporatePersona(persona)) {
+        await setAccountScope("demo");
+        const error = await enableDemoAccess();
+        if (error) {
+          setErrorMessage(error);
+          return;
+        }
+        router.replace("/corporate-dashboard" as never);
+        return;
+      }
+
       await setAccountScope("personal");
       const error = await enablePrivateUserAccess();
-
       if (error) {
         setErrorMessage(error);
         return;
@@ -129,142 +121,111 @@ export default function MultiAccountPreviewScreen() {
     }
   }
 
-  return (
-    <Screen>
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 28 }}>
-        <View style={{ gap: 8 }}>
-          <AppText variant="caption" color={colors.gold}>
-            Account selection
-          </AppText>
+  function renderGroup(key: PersonaGroupKey, items: PersonaOption[]) {
+    const activeGroup = items.some((item) => item.id === selectedPersona.id);
 
-          <AppText variant="title" color={colors.textPrimary}>
-            NexusPay Multi-Account Preview
-          </AppText>
-        </View>
-
-        <AppCard>
-          <View style={{ gap: 12 }}>
-            <AppText variant="subheading" color={colors.textDarkPrimary} style={{ fontWeight: "800" }}>
-              Workspace entry
+    return (
+      <View
+        key={key}
+        style={{
+          borderRadius: 14,
+          borderWidth: 1,
+          borderColor: activeGroup ? "#6ED3D8" : "#DDE6EE",
+          backgroundColor: "#FFFFFF",
+          padding: 14,
+          gap: 12,
+        }}
+      >
+        <View style={{ flexDirection: "row", gap: 11, alignItems: "flex-start" }}>
+          <View
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 12,
+              backgroundColor: key === "corporate" ? "#0B3F4A" : key === "business" ? "#DDF4F2" : "#DCEBFF",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Feather name={groupIcon(key)} size={19} color={key === "corporate" ? "#6ED3D8" : key === "business" ? "#087C89" : "#0A3D78"} />
+          </View>
+          <View style={{ flex: 1, gap: 4 }}>
+            <AppText variant="subheading" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
+              {groupTitle(key)}
             </AppText>
-
-            <View style={{ flexDirection: "row", gap: 10, flexWrap: "wrap" }}>
-              <View style={{ flex: 1, minWidth: 150 }}>
-                <AppButton
-                  title={busyTarget === "corporate" ? "Opening..." : "Corporate Workspace"}
-                  onPress={openDemoWorkspace}
-                  disabled={busy}
-                />
-              </View>
-
-              <View style={{ flex: 1, minWidth: 150 }}>
-                <AppButton
-                  title={busyTarget === "personal" ? "Opening..." : "Personal Account"}
-                  onPress={() => openPersonalWorkspace(personas[0], "personal")}
-                  disabled={busy}
-                  variant="secondary"
-                />
-              </View>
-            </View>
-
-            <AppText variant="caption" color={colors.textDarkMuted}>
-              Biometric unlock required.
+            <AppText variant="caption" color={colors.textDarkSecondary} style={{ lineHeight: 18 }}>
+              {groupPurpose(key)}
             </AppText>
           </View>
-        </AppCard>
+        </View>
 
-        <AppCard>
-          <View style={{ gap: 10 }}>
-            <AppText variant="subheading" color={colors.textDarkPrimary} style={{ fontWeight: "800" }}>
-              Select persona
-            </AppText>
+        <View style={{ gap: 8 }}>
+          {items.map((persona) => {
+            const active = persona.id === selectedPersona.id;
+            const busy = busyTarget === persona.id;
 
-            <View style={{ gap: 8 }}>
+            return (
               <Pressable
-                onPress={() => setSelectorOpen((open) => !open)}
-                disabled={busy || personaOptions.length === 0}
+                key={persona.id}
+                onPress={() => openPersona(persona)}
+                disabled={busyTarget !== null}
                 style={{
-                  borderRadius: 12,
+                  borderRadius: 10,
                   borderWidth: 1,
-                  borderColor: selectorOpen ? colors.gold : "#CBD5E1",
-                  backgroundColor: "#F8FAFC",
+                  borderColor: active ? "#6ED3D8" : "#E2E8F0",
+                  backgroundColor: active ? "#F0FDFF" : "#F8FAFC",
                   paddingHorizontal: 12,
-                  paddingVertical: 12,
+                  paddingVertical: 11,
                   flexDirection: "row",
-                  justifyContent: "space-between",
                   alignItems: "center",
                   gap: 10,
                 }}
               >
                 <View style={{ flex: 1 }}>
                   <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
-                    {selectedOption?.label ?? "Select a persona"}
+                    {busy ? "Opening..." : persona.label}
                   </AppText>
-                  {selectedOption ? (
-                    <AppText variant="caption" color={colors.textDarkSecondary}>
-                      {personaMeta(selectedOption)}
-                    </AppText>
-                  ) : null}
+                  <AppText variant="caption" color={colors.textDarkSecondary}>
+                    {personaMeta(persona)}
+                  </AppText>
                 </View>
-                <AppText variant="subheading" color={colors.textDarkMuted} style={{ fontWeight: "900" }}>
-                  {selectorOpen ? "^" : "v"}
-                </AppText>
+                <Feather name="chevron-right" size={18} color="#64748B" />
               </Pressable>
+            );
+          })}
+        </View>
+      </View>
+    );
+  }
 
-              {selectorOpen ? (
-                <View
-                  style={{
-                    borderRadius: 12,
-                    borderWidth: 1,
-                    borderColor: "#DDE6EE",
-                    backgroundColor: "#FFFFFF",
-                    overflow: "hidden",
-                  }}
-                >
-                  {personaOptions.map((persona) => {
-                    const active = selectedId === persona.id;
+  return (
+    <Screen>
+      <ScrollView contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 28 }}>
+        <View style={{ gap: 8 }}>
+          <AppText variant="caption" color={colors.gold}>
+            Persona selection
+          </AppText>
 
-                    return (
-                      <Pressable
-                        key={persona.id}
-                        onPress={() => {
-                          setSelectedId(persona.id);
-                          setSelectorOpen(false);
-                        }}
-                        style={{
-                          borderBottomWidth: 1,
-                          borderBottomColor: "#EEF2F6",
-                          backgroundColor: active ? "#FFF7E6" : "#FFFFFF",
-                          paddingHorizontal: 12,
-                          paddingVertical: 11,
-                        }}
-                      >
-                        <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "800" }}>
-                          {persona.label}
-                        </AppText>
-                        <AppText variant="caption" color={colors.textDarkSecondary}>
-                          {personaMeta(persona)}
-                        </AppText>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              ) : null}
-            </View>
+          <AppText variant="title" color={colors.textPrimary}>
+            NexusPay Workspace Access
+          </AppText>
 
-            <AppButton
-              title={busyTarget === "persona" ? "Opening..." : "Continue"}
-              onPress={() => selectedOption && openPersonalWorkspace(selectedOption, "persona")}
-              disabled={busy || !selectedOption}
-            />
+          <AppText variant="body" color={colors.textSecondary}>
+            Choose a workspace persona. Corporate access now uses role-based governance permissions.
+          </AppText>
+        </View>
 
-            {errorMessage ? (
-              <AppText variant="caption" style={{ color: "#b91c1c" }}>
-                {errorMessage}
-              </AppText>
-            ) : null}
+        {renderGroup("corporate", groups.corporate)}
+        {renderGroup("business", groups.business)}
+        {renderGroup("private", groups.private)}
+
+        {errorMessage ? (
+          <View style={{ borderRadius: 10, backgroundColor: "#FFF1F2", borderWidth: 1, borderColor: "#FECDD3", padding: 12 }}>
+            <AppText variant="caption" style={{ color: "#B91C1C", fontWeight: "800" }}>
+              {errorMessage}
+            </AppText>
           </View>
-        </AppCard>
+        ) : null}
       </ScrollView>
     </Screen>
   );

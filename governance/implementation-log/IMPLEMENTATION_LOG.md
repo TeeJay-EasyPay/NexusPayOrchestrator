@@ -2,6 +2,74 @@
 
 Purpose: durable record of meaningful implementation work, security/context fixes, validation, commits, and OTA deployments. New code changes should append an entry here before commit when practical.
 
+## 2026-06-22 - Corporate Governance And Approval Framework V1
+
+Prompt / Objective:
+Transform NexusPay from a Batch Payments preview into a scalable Corporate Governance & Approval Platform while preserving private user, business entity, batch payment, notification, participant, Health Consistency, and OCC functionality.
+
+Files Changed:
+- `app/multi-account-preview.tsx`
+- `app/corporate-dashboard.tsx`
+- `app/corporate-payouts.tsx`
+- `app/corporate-governance.tsx`
+- `app/approval-queue.tsx`
+- `app/batch-operations-dashboard.tsx`
+- `app/audit-logs.tsx`
+- `app/corporate-reports.tsx`
+- `app/corporate-users-personas.tsx`
+- `app/business-recipients.tsx`
+- `app/participant-notifications.tsx`
+- `app/received-transfers.tsx`
+- `app/payment-methods.tsx`
+- `app/consumer/index.tsx`
+- `src/components/corporate/CorporateShell.tsx`
+- `src/components/consumer/ConsumerShell.tsx`
+- `src/components/business/BusinessHome.tsx`
+- `src/components/navigation/AppMenu.tsx`
+- `src/components/navigation/AppDropdownMenu.tsx`
+- `src/services/corporateAccessService.ts`
+- `src/services/corporateGovernanceService.ts`
+- `src/services/multiEntityOrchestrationService.ts`
+- `src/services/participantService.ts`
+- `src/types/multiEntity.ts`
+- `supabase/migrations/20260622000100_corporate_governance_approval_framework.sql`
+- `governance/reports/CORPORATE_GOVERNANCE_FRAMEWORK_V1.md`
+- `governance/reports/CORPORATE_GOVERNANCE_FRAMEWORK_V1_IMPLEMENTATION_REPORT.md`
+- `governance/implementation-log/IMPLEMENTATION_LOG.md`
+
+Summary:
+- Rebuilt persona selection into Corporate Workspace, Business Entities, and Private Users.
+- Added corporate roles for Corporate User, CEO, CFO, CTO, Finance Manager, Finance Director, and Auditor.
+- Added role-aware `CorporateShell` with dark corporate background, white cards, teal highlights, and menu isolation.
+- Added centralized corporate route and permission checks in `corporateAccessService`.
+- Added database-driven payment categories, payment types, approval roles, approval rules, approval rule roles, batch approvals, and audit events.
+- Updated corporate batch creation to require payment classification and route batches through approval governance instead of immediately marking them completed.
+- Added Approval Queue, Corporate Governance, Batch Operations Dashboard, Audit Logs, Corporate Reports, Corporate Dashboard, and Users & Personas screens.
+- Added approval decision audit events and approved-batch release controls.
+- Updated shared persona/business screens to detect corporate roles instead of only `corporate-demo`.
+- Kept visible orchestration terminology aligned to corridor liquidity, settlement readiness, route capacity, provider network, and governance language.
+
+Validation:
+- `npx tsc --noEmit` passed.
+- Targeted ESLint for all touched app, component, service, and type files passed with no warnings.
+- `npx eslint .` passed with zero errors.
+- Full-project ESLint still reports 40 pre-existing warnings in unrelated legacy files.
+
+Reports:
+- `governance/reports/CORPORATE_GOVERNANCE_FRAMEWORK_V1.md`
+- `governance/reports/CORPORATE_GOVERNANCE_FRAMEWORK_V1_IMPLEMENTATION_REPORT.md`
+
+Known Limitations:
+- Supabase RLS remains permissive in the current authenticated preview model; production enforcement should move corporate role claims into server-side policies or Edge Functions.
+- Users & Personas is a role registry/visibility screen, not a full database-backed persona creation workflow yet.
+- Some internal `treasury*` names remain as compatibility fields for existing OCC and route-intelligence data contracts, although visible terminology is orchestration-aligned.
+
+Commit:
+- Pending
+
+OTA:
+- Pending
+
 ## 2026-06-19 - Login Declutter And Business Teal Hero Fix
 
 Prompt / Objective:

@@ -1,11 +1,12 @@
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { ScrollView, View } from "react-native";
+import { View } from "react-native";
 
 import { AppButton } from "../src/components/ui/AppButton";
 import { AppText } from "../src/components/ui/AppText";
-import { Screen } from "../src/components/ui/Screen";
+import { CorporateShell } from "../src/components/corporate/CorporateShell";
 import { usePersonaNotifications } from "../src/hooks/usePersonaNotifications";
+import { isCorporatePersona as checkCorporatePersona } from "../src/services/corporateAccessService";
 import { loadNotifications, markAllNotificationsRead } from "../src/services/notificationService";
 import { seedDemoParticipantsIfMissing } from "../src/services/participantService";
 import { usePersona } from "../src/state/PersonaContext";
@@ -60,7 +61,7 @@ export default function ParticipantNotificationsScreen() {
   const fallbackUnreadCount = items.filter((n) => !n.read).length;
   const badgeCount = unreadCount || fallbackUnreadCount;
   const groups: NotificationGroup[] = ["Payments", "Batch Payments", "Approvals", "System Events"];
-  const isCorporatePersona = selectedPersona.id === "corporate-demo";
+  const isCorporatePersona = checkCorporatePersona(selectedPersona);
   const isBusinessPersona = selectedPersona.participantType === "BUSINESS";
 
   async function markRead() {
@@ -215,11 +216,13 @@ export default function ParticipantNotificationsScreen() {
 
   if (isCorporatePersona) {
     return (
-      <Screen>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 40 }}>
-          {content}
-        </ScrollView>
-      </Screen>
+      <CorporateShell
+        routeKey="notifications"
+        title="Notifications"
+        subtitle="Corporate payment, batch, approval, and system messages."
+      >
+        {content}
+      </CorporateShell>
     );
   }
 

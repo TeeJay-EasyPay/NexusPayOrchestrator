@@ -7,6 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAccount } from "../../state/AccountContext";
 import { useAuth } from "../../state/AuthContext";
 import { usePersona } from "../../state/PersonaContext";
+import { isCorporatePersona as checkCorporatePersona } from "../../services/corporateAccessService";
 import { AppText } from "../ui/AppText";
 
 export const consumerColors = {
@@ -77,7 +78,7 @@ export function ConsumerShell({
   const [menuOpen, setMenuOpen] = useState(false);
   const { height } = useWindowDimensions();
   const dropdownMaxHeight = Math.max(240, height - 128);
-  const isCorporatePersona = selectedPersona.id === "corporate-demo";
+  const isCorporatePersona = checkCorporatePersona(selectedPersona);
   const isBusinessPersona = selectedPersona.participantType === "BUSINESS";
   const isParticipantPersona = selectedPersona.kind === "PARTICIPANT";
   const shellTint = isCorporatePersona

@@ -2,6 +2,7 @@ import { usePathname, useRouter } from "expo-router";
 import { useState } from "react";
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
 
+import { isCorporatePersona as checkCorporatePersona } from "../../services/corporateAccessService";
 import { useAuth } from "../../state/AuthContext";
 import { useDeviceUnlock } from "../../state/DeviceUnlockContext";
 import { usePersona } from "../../state/PersonaContext";
@@ -69,7 +70,7 @@ export function AppDropdownMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const { height } = useWindowDimensions();
 
-  const isCorporatePersona = selectedPersona.id === "corporate-demo";
+  const isCorporatePersona = checkCorporatePersona(selectedPersona);
   const isParticipantPersona = selectedPersona.kind === "PARTICIPANT";
   const menuMaxHeight = Math.max(240, height - 118);
 
