@@ -153,6 +153,7 @@ Completed:
 - `npx tsc --noEmit` passed.
 - Targeted lint for all touched files passed with no warnings.
 - `npx eslint .` passed with 0 errors.
+- `supabase db push` applied `20260622000100_corporate_governance_approval_framework.sql` to the linked remote database.
 
 Residual baseline:
 

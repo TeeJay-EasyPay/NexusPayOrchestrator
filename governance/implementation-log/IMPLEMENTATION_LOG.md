@@ -54,6 +54,7 @@ Validation:
 - Targeted ESLint for all touched app, component, service, and type files passed with no warnings.
 - `npx eslint .` passed with zero errors.
 - Full-project ESLint still reports 40 pre-existing warnings in unrelated legacy files.
+- `supabase db push` applied `20260622000100_corporate_governance_approval_framework.sql` to the linked remote database.
 
 Reports:
 - `governance/reports/CORPORATE_GOVERNANCE_FRAMEWORK_V1.md`
