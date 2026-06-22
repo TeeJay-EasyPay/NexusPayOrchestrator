@@ -57,6 +57,8 @@ export default function MultiAccountPreviewScreen() {
   const { personas, selectedPersona, selectPersona } = usePersona();
   const [busyTarget, setBusyTarget] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [openGroup, setOpenGroup] = useState<PersonaGroupKey | null>(null);
+  const [selectedByGroup, setSelectedByGroup] = useState<Partial<Record<PersonaGroupKey, string>>>({});
 
   const groups = useMemo(
     () => ({
@@ -70,6 +72,14 @@ export default function MultiAccountPreviewScreen() {
   useEffect(() => {
     void seedDemoParticipantsIfMissing();
   }, []);
+
+  useEffect(() => {
+    setSelectedByGroup((current) => ({
+      corporate: current.corporate ?? groups.corporate[0]?.id,
+      business: current.business ?? groups.business[0]?.id,
+      private: current.private ?? groups.private[0]?.id,
+    }));
+  }, [groups.business, groups.corporate, groups.private]);
 
   async function requireUnlock() {
     lockApp();
@@ -123,6 +133,9 @@ export default function MultiAccountPreviewScreen() {
 
   function renderGroup(key: PersonaGroupKey, items: PersonaOption[]) {
     const activeGroup = items.some((item) => item.id === selectedPersona.id);
+    const selectedId = selectedByGroup[key] ?? items[0]?.id;
+    const selectedOption = items.find((persona) => persona.id === selectedId) ?? items[0];
+    const busy = selectedOption ? busyTarget === selectedOption.id : false;
 
     return (
       <View
@@ -160,39 +173,90 @@ export default function MultiAccountPreviewScreen() {
         </View>
 
         <View style={{ gap: 8 }}>
-          {items.map((persona) => {
-            const active = persona.id === selectedPersona.id;
-            const busy = busyTarget === persona.id;
+          <Pressable
+            onPress={() => setOpenGroup((current) => current === key ? null : key)}
+            disabled={busyTarget !== null || items.length === 0}
+            style={{
+              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: activeGroup ? "#6ED3D8" : "#E2E8F0",
+              backgroundColor: activeGroup ? "#F0FDFF" : "#F8FAFC",
+              paddingHorizontal: 12,
+              paddingVertical: 11,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 10,
+            }}
+          >
+            <View style={{ flex: 1 }}>
+              <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
+                {busy ? "Opening..." : selectedOption?.label ?? "Select persona"}
+              </AppText>
+              {selectedOption ? (
+                <AppText variant="caption" color={colors.textDarkSecondary}>
+                  {personaMeta(selectedOption)}
+                </AppText>
+              ) : null}
+            </View>
+            <Feather name={openGroup === key ? "chevron-up" : "chevron-down"} size={18} color="#64748B" />
+          </Pressable>
 
-            return (
-              <Pressable
-                key={persona.id}
-                onPress={() => openPersona(persona)}
-                disabled={busyTarget !== null}
-                style={{
-                  borderRadius: 10,
-                  borderWidth: 1,
-                  borderColor: active ? "#6ED3D8" : "#E2E8F0",
-                  backgroundColor: active ? "#F0FDFF" : "#F8FAFC",
-                  paddingHorizontal: 12,
-                  paddingVertical: 11,
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 10,
-                }}
-              >
-                <View style={{ flex: 1 }}>
-                  <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
-                    {busy ? "Opening..." : persona.label}
-                  </AppText>
-                  <AppText variant="caption" color={colors.textDarkSecondary}>
-                    {personaMeta(persona)}
-                  </AppText>
-                </View>
-                <Feather name="chevron-right" size={18} color="#64748B" />
-              </Pressable>
-            );
-          })}
+          {openGroup === key ? (
+            <View
+              style={{
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: "#DDE6EE",
+                backgroundColor: "#FFFFFF",
+                overflow: "hidden",
+              }}
+            >
+              {items.map((persona) => {
+                const active = persona.id === selectedOption?.id;
+                return (
+                  <Pressable
+                    key={persona.id}
+                    onPress={() => {
+                      setSelectedByGroup((current) => ({ ...current, [key]: persona.id }));
+                      setOpenGroup(null);
+                    }}
+                    disabled={busyTarget !== null}
+                    style={{
+                      borderBottomWidth: 1,
+                      borderBottomColor: "#EEF2F6",
+                      backgroundColor: active ? "#F0FDFF" : "#FFFFFF",
+                      paddingHorizontal: 12,
+                      paddingVertical: 11,
+                    }}
+                  >
+                    <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
+                      {persona.label}
+                    </AppText>
+                    <AppText variant="caption" color={colors.textDarkSecondary}>
+                      {personaMeta(persona)}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ) : null}
+
+          <Pressable
+            onPress={() => selectedOption && openPersona(selectedOption)}
+            disabled={busyTarget !== null || !selectedOption}
+            style={{
+              minHeight: 44,
+              borderRadius: 10,
+              backgroundColor: key === "corporate" ? "#0B3F4A" : key === "business" ? "#087C89" : "#0A3D78",
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: busyTarget !== null && !busy ? 0.55 : 1,
+            }}
+          >
+            <AppText color="#FFFFFF" style={{ fontWeight: "900" }}>
+              {busy ? "Opening..." : `Open ${groupTitle(key)}`}
+            </AppText>
+          </Pressable>
         </View>
       </View>
     );

@@ -2,6 +2,34 @@
 
 Purpose: durable record of meaningful implementation work, security/context fixes, validation, commits, and OTA deployments. New code changes should append an entry here before commit when practical.
 
+## 2026-06-23 - Corporate Menu Restoration And Persona Selector Dropdowns
+
+Prompt / Objective:
+Refine the Corporate Governance V1 rollout after founder review: keep the new visual design, restore Corporate User access to the broader pre-governance demo menu surface, and reduce login/persona selector clutter with dropdown list boxes inside each card.
+
+Files Changed:
+- `app/multi-account-preview.tsx`
+- `src/components/corporate/CorporateShell.tsx`
+- `src/services/corporateAccessService.ts`
+- `governance/implementation-log/IMPLEMENTATION_LOG.md`
+
+Summary:
+- Added Corporate User menu access to Route Intelligence, Live Intelligence Feeds, Nexus AI, Track Transfer, and Account & Profile.
+- Kept OCC and Platform Health visible in the corporate menu.
+- Preserved role-filtered corporate navigation for non-admin corporate personas.
+- Replaced long visible persona lists on the workspace access screen with one dropdown selector and open action per card.
+- Kept Corporate Workspace, Business Entities, and Private Users visually separated while reducing first-screen clutter.
+
+Validation:
+- `npx tsc --noEmit` passed.
+- Targeted ESLint passed for changed files.
+
+Commit:
+- Pending
+
+OTA:
+- Pending
+
 ## 2026-06-22 - Corporate Governance And Approval Framework V1
 
 Prompt / Objective:

@@ -15,6 +15,11 @@ export type CorporateRouteKey =
   | "payment_analytics"
   | "audit_logs"
   | "users_personas"
+  | "route_intelligence"
+  | "live_intelligence_feeds"
+  | "nexus_ai"
+  | "track_transfer"
+  | "account_profile"
   | "settings"
   | "operations_command_centre"
   | "platform_health";
@@ -64,6 +69,11 @@ const ROLE_ROUTES: Record<CorporateRole, CorporateRouteKey[]> = {
     "payment_analytics",
     "audit_logs",
     "users_personas",
+    "route_intelligence",
+    "live_intelligence_feeds",
+    "nexus_ai",
+    "track_transfer",
+    "account_profile",
     "operations_command_centre",
     "platform_health",
     "settings",

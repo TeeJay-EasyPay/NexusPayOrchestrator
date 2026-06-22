@@ -37,8 +37,13 @@ const MENU_ITEMS: MenuItem[] = [
   { key: "payment_analytics", label: "Payment Analytics", route: "/batch-operations-dashboard", icon: "pie-chart" },
   { key: "audit_logs", label: "Audit Logs", route: "/audit-logs", icon: "archive" },
   { key: "users_personas", label: "Users & Personas", route: "/corporate-users-personas", icon: "user-check" },
+  { key: "route_intelligence", label: "Route Intelligence", route: "/routes", icon: "navigation" },
   { key: "operations_command_centre", label: "Operations Command Centre", route: "/operations-v2", icon: "activity" },
   { key: "platform_health", label: "Platform Health", route: "/operations-v2", icon: "cpu" },
+  { key: "live_intelligence_feeds", label: "Live Intelligence Feeds", route: "/live-intelligence-feeds", icon: "radio" },
+  { key: "nexus_ai", label: "Nexus AI", route: "/nexus-ai", icon: "zap" },
+  { key: "track_transfer", label: "Track Transfer", route: "/track", icon: "clock" },
+  { key: "account_profile", label: "Account & Profile", route: "/account", icon: "user" },
   { key: "settings", label: "Settings", route: "/consumer/settings", icon: "settings" },
 ];
 
