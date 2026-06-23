@@ -2,6 +2,30 @@
 
 Purpose: durable record of meaningful implementation work, security/context fixes, validation, commits, and OTA deployments. New code changes should append an entry here before commit when practical.
 
+## 2026-06-23 - Corporate User Home Header Alignment
+
+Prompt / Objective:
+After splitting `Corporate User` from `Batch Payments Processor`, align the old demo/operator home header with the corporate visual language so the Corporate User experience does not feel like a separate legacy account shell.
+
+Files Changed:
+- `src/components/navigation/AppDropdownMenu.tsx`
+- `governance/implementation-log/IMPLEMENTATION_LOG.md`
+
+Summary:
+- Added a corporate-style NP identity header for `Corporate User` on root/demo screens.
+- Kept non-corporate root navigation unchanged.
+- Preserved the separated batch/governance persona model from the prior remediation commit.
+
+Validation:
+- `npx tsc --noEmit` passed.
+- Targeted ESLint passed for `src/components/navigation/AppDropdownMenu.tsx` with no warnings.
+
+Commit:
+- Pending.
+
+OTA:
+- Pending.
+
 ## 2026-06-23 - Corporate User And Batch Processor Persona Split
 
 Prompt / Objective:

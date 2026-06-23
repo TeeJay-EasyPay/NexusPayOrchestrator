@@ -1,8 +1,9 @@
+import { Feather } from "@expo/vector-icons";
 import { usePathname, useRouter } from "expo-router";
 import { useState } from "react";
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
 
-import { getCorporateRole, isCorporatePersona as checkCorporatePersona } from "../../services/corporateAccessService";
+import { getCorporateRole, getRoleLabel, isCorporatePersona as checkCorporatePersona } from "../../services/corporateAccessService";
 import { useAuth } from "../../state/AuthContext";
 import { useDeviceUnlock } from "../../state/DeviceUnlockContext";
 import { usePersona } from "../../state/PersonaContext";
@@ -72,6 +73,7 @@ export function AppDropdownMenu() {
 
   const isCorporatePersona = checkCorporatePersona(selectedPersona);
   const corporateRole = getCorporateRole(selectedPersona);
+  const useCorporateHeader = corporateRole === "corporate_user";
   const isParticipantPersona = selectedPersona.kind === "PARTICIPANT";
   const menuMaxHeight = Math.max(240, height - 118);
 
@@ -141,6 +143,55 @@ export function AppDropdownMenu() {
           gap: 12,
         }}
       >
+        {useCorporateHeader ? (
+          <>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12, flex: 1 }}>
+              <View
+                style={{
+                  width: 42,
+                  height: 42,
+                  borderRadius: 21,
+                  backgroundColor: "#6ED3D8",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <AppText color="#061625" style={{ fontWeight: "900" }}>
+                  NP
+                </AppText>
+              </View>
+
+              <View style={{ flex: 1 }}>
+                <AppText variant="caption" color="#6ED3D8" style={{ fontWeight: "900", textTransform: "uppercase", letterSpacing: 0.7 }}>
+                  Corporate Workspace
+                </AppText>
+                <AppText variant="subheading" color={colors.white} style={{ fontWeight: "900" }}>
+                  {selectedPersona.label}
+                </AppText>
+                <AppText variant="caption" color="#B7C7D8">
+                  {getRoleLabel(corporateRole)}
+                </AppText>
+              </View>
+            </View>
+
+            <Pressable
+              onPress={() => setIsOpen((current) => !current)}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: "rgba(255,255,255,0.08)",
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.16)",
+              }}
+            >
+              <Feather name="menu" size={18} color="#6ED3D8" />
+            </Pressable>
+          </>
+        ) : (
+          <>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
           <Pressable
             onPress={() => setIsOpen((current) => !current)}
@@ -175,6 +226,8 @@ export function AppDropdownMenu() {
         </View>
 
         <UserAccountBadge />
+          </>
+        )}
       </View>
 
       <Modal
