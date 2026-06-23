@@ -14,13 +14,14 @@ import { usePersona } from "../src/state/PersonaContext";
 import { colors } from "../src/theme/colors";
 import { PersonaOption } from "../src/types/multiEntity";
 
-type PersonaGroupKey = "corporate" | "business" | "private";
+type PersonaGroupKey = "platform" | "corporate" | "business" | "private";
 
 function maskLast4(last4?: string): string {
   return last4 ? `****${last4}` : "****";
 }
 
 function personaMeta(persona: PersonaOption): string {
+  if (persona.personaGroup === "PLATFORM_ADMINISTRATION") return "NEXUSPAY PLATFORM ADMINISTRATION";
   if (isCorporatePersona(persona)) return persona.corporateRole?.replace(/_/g, " ").toUpperCase() ?? "CORPORATE";
   return [
     persona.participantType === "BUSINESS" ? "Business entity" : "Private user",
@@ -32,18 +33,21 @@ function personaMeta(persona: PersonaOption): string {
 }
 
 function groupPurpose(key: PersonaGroupKey): string {
+  if (key === "platform") return "NexusPay infrastructure, partners, corridors, providers, environments, readiness, and platform audit.";
   if (key === "corporate") return "Operator intelligence, corporate payments, approvals, batch operations, reporting, and audit.";
   if (key === "business") return "Business operations, payments, receipts, recipients, and batch management.";
   return "Personal payments, receipts, and notifications.";
 }
 
 function groupTitle(key: PersonaGroupKey): string {
+  if (key === "platform") return "Platform Administration";
   if (key === "corporate") return "Corporate Workspace";
   if (key === "business") return "Business Entities";
   return "Private Users";
 }
 
 function groupIcon(key: PersonaGroupKey): keyof typeof Feather.glyphMap {
+  if (key === "platform") return "settings";
   if (key === "corporate") return "shield";
   if (key === "business") return "briefcase";
   return "user";
@@ -62,6 +66,7 @@ export default function MultiAccountPreviewScreen() {
 
   const groups = useMemo(
     () => ({
+      platform: personas.filter((persona) => persona.personaGroup === "PLATFORM_ADMINISTRATION"),
       corporate: personas.filter(isCorporatePersona),
       business: personas.filter((persona) => persona.personaGroup === "BUSINESS_ENTITY"),
       private: personas.filter((persona) => persona.personaGroup === "PRIVATE_USER"),
@@ -75,11 +80,12 @@ export default function MultiAccountPreviewScreen() {
 
   useEffect(() => {
     setSelectedByGroup((current) => ({
+      platform: current.platform ?? groups.platform[0]?.id,
       corporate: current.corporate ?? groups.corporate[0]?.id,
       business: current.business ?? groups.business[0]?.id,
       private: current.private ?? groups.private[0]?.id,
     }));
-  }, [groups.business, groups.corporate, groups.private]);
+  }, [groups.business, groups.corporate, groups.platform, groups.private]);
 
   async function requireUnlock() {
     lockApp();
@@ -106,6 +112,17 @@ export default function MultiAccountPreviewScreen() {
       }
 
       await selectPersona(persona.id);
+
+      if (persona.personaGroup === "PLATFORM_ADMINISTRATION") {
+        await setAccountScope("demo");
+        const error = await enableDemoAccess();
+        if (error) {
+          setErrorMessage(error);
+          return;
+        }
+        router.replace("/platform-admin" as never);
+        return;
+      }
 
       if (isCorporatePersona(persona)) {
         await setAccountScope("demo");
@@ -156,12 +173,12 @@ export default function MultiAccountPreviewScreen() {
               width: 40,
               height: 40,
               borderRadius: 12,
-              backgroundColor: key === "corporate" ? "#0B3F4A" : key === "business" ? "#DDF4F2" : "#DCEBFF",
+              backgroundColor: key === "platform" ? "#061625" : key === "corporate" ? "#0B3F4A" : key === "business" ? "#DDF4F2" : "#DCEBFF",
               alignItems: "center",
               justifyContent: "center",
             }}
           >
-            <Feather name={groupIcon(key)} size={19} color={key === "corporate" ? "#6ED3D8" : key === "business" ? "#087C89" : "#0A3D78"} />
+            <Feather name={groupIcon(key)} size={19} color={key === "platform" || key === "corporate" ? "#6ED3D8" : key === "business" ? "#087C89" : "#0A3D78"} />
           </View>
           <View style={{ flex: 1, gap: 4 }}>
             <AppText variant="subheading" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
@@ -248,7 +265,7 @@ export default function MultiAccountPreviewScreen() {
             style={{
               minHeight: 44,
               borderRadius: 10,
-              backgroundColor: key === "corporate" ? "#0B3F4A" : key === "business" ? "#087C89" : "#0A3D78",
+              backgroundColor: key === "platform" ? "#061625" : key === "corporate" ? "#0B3F4A" : key === "business" ? "#087C89" : "#0A3D78",
               alignItems: "center",
               justifyContent: "center",
               opacity: busyTarget !== null && !busy ? 0.55 : 1,
@@ -280,6 +297,7 @@ export default function MultiAccountPreviewScreen() {
           </AppText>
         </View>
 
+        {renderGroup("platform", groups.platform)}
         {renderGroup("corporate", groups.corporate)}
         {renderGroup("business", groups.business)}
         {renderGroup("private", groups.private)}

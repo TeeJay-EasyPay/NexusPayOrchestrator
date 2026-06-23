@@ -22,7 +22,7 @@ export type ParticipantRecord = {
 };
 
 export type PersonaKind = "PERSONAL" | "PARTICIPANT";
-export type PersonaGroup = "CORPORATE_WORKSPACE" | "BUSINESS_ENTITY" | "PRIVATE_USER";
+export type PersonaGroup = "PLATFORM_ADMINISTRATION" | "CORPORATE_WORKSPACE" | "BUSINESS_ENTITY" | "PRIVATE_USER";
 
 export type PersonaOption = {
   id: string;
@@ -169,6 +169,14 @@ const corporateBank = {
 };
 
 export const DEMO_PERSONAS: PersonaOption[] = [
+  {
+    id: "platform-administrator",
+    kind: "PERSONAL",
+    personaGroup: "PLATFORM_ADMINISTRATION",
+    label: "Platform Administrator",
+    description: "Manage NexusPay platform infrastructure, partner integrations, corridors and readiness.",
+    country: "United Kingdom",
+  },
   {
     id: "corporate-demo",
     kind: "PARTICIPANT",
