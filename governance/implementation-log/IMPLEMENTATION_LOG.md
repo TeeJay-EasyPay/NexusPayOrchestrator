@@ -2,6 +2,32 @@
 
 Purpose: durable record of meaningful implementation work, security/context fixes, validation, commits, and OTA deployments. New code changes should append an entry here before commit when practical.
 
+## 2026-06-23 - Corporate User Menu Link Consistency
+
+Prompt / Objective:
+Founder review found that `Corporate User` saw the correct menu from Home and Live Intelligence Feeds, but navigating from OCC or other `CorporateShell` screens to Send Money opened the consumer send screen with a shortened menu.
+
+Files Changed:
+- `src/components/corporate/CorporateShell.tsx`
+- `src/services/corporateAccessService.ts`
+- `governance/implementation-log/IMPLEMENTATION_LOG.md`
+
+Summary:
+- Reviewed Corporate User menu links across Home, Live Intelligence Feeds, OCC, Nexus AI and Send Money.
+- Fixed `CorporateShell` so `Send Payments` resolves to `/send` for `Corporate User`, matching the Home menu path and preserving the full corporate-aware root menu.
+- Kept non-Corporate-User corporate roles on their existing send route behaviour.
+- Added `Received Transfers` to the Corporate User shell menu and removed the consumer-settings-only item from the Corporate User route set so shell menus and root menus show the same Corporate User items.
+
+Validation:
+- `npx tsc --noEmit` passed.
+- Targeted ESLint passed for changed files with no warnings.
+
+Commit:
+- Pending.
+
+OTA:
+- Pending.
+
 ## 2026-06-23 - Corporate User Home Header Alignment
 
 Prompt / Objective:

@@ -21,6 +21,7 @@ export type CorporateRouteKey =
   | "nexus_ai"
   | "track_transfer"
   | "account_profile"
+  | "received_transfers"
   | "settings"
   | "operations_command_centre"
   | "platform_health";
@@ -67,9 +68,9 @@ const ROLE_ROUTES: Record<CorporateRole, CorporateRouteKey[]> = {
     "nexus_ai",
     "track_transfer",
     "account_profile",
+    "received_transfers",
     "operations_command_centre",
     "platform_health",
-    "settings",
   ],
   batch_payments_processor: [
     "dashboard",

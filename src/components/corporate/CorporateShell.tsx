@@ -21,13 +21,22 @@ type MenuItem = {
   key: CorporateRouteKey;
   label: string;
   route: string;
+  corporateUserRoute?: string;
   icon: keyof typeof Feather.glyphMap;
 };
 
 const MENU_ITEMS: MenuItem[] = [
   { key: "home_dashboard", label: "Home", route: "/", icon: "home" },
   { key: "dashboard", label: "Dashboard", route: "/corporate-dashboard", icon: "grid" },
-  { key: "send_payments", label: "Send Payments", route: "/consumer/send", icon: "send" },
+  { key: "send_payments", label: "Send Payments", route: "/consumer/send", corporateUserRoute: "/send", icon: "send" },
+  { key: "route_intelligence", label: "Route Intelligence", route: "/routes", icon: "navigation" },
+  { key: "operations_command_centre", label: "Operations Command Centre", route: "/operations-v2", icon: "activity" },
+  { key: "platform_health", label: "Platform Health", route: "/operations-v2", icon: "cpu" },
+  { key: "live_intelligence_feeds", label: "Live Intelligence Feeds", route: "/live-intelligence-feeds", icon: "radio" },
+  { key: "nexus_ai", label: "Nexus AI", route: "/nexus-ai", icon: "zap" },
+  { key: "track_transfer", label: "Track Transfer", route: "/track", icon: "clock" },
+  { key: "account_profile", label: "Account & Profile", route: "/account", icon: "user" },
+  { key: "received_transfers", label: "Received Transfers", route: "/received-transfers", icon: "download" },
   { key: "batch_payments", label: "Batch Payments", route: "/corporate-payouts", icon: "layers" },
   { key: "batch_operations", label: "Batch Operations Dashboard", route: "/batch-operations-dashboard", icon: "bar-chart-2" },
   { key: "recipients", label: "Recipients", route: "/business-recipients", icon: "users" },
@@ -39,13 +48,6 @@ const MENU_ITEMS: MenuItem[] = [
   { key: "payment_analytics", label: "Payment Analytics", route: "/batch-operations-dashboard", icon: "pie-chart" },
   { key: "audit_logs", label: "Audit Logs", route: "/audit-logs", icon: "archive" },
   { key: "users_personas", label: "Users & Personas", route: "/corporate-users-personas", icon: "user-check" },
-  { key: "route_intelligence", label: "Route Intelligence", route: "/routes", icon: "navigation" },
-  { key: "operations_command_centre", label: "Operations Command Centre", route: "/operations-v2", icon: "activity" },
-  { key: "platform_health", label: "Platform Health", route: "/operations-v2", icon: "cpu" },
-  { key: "live_intelligence_feeds", label: "Live Intelligence Feeds", route: "/live-intelligence-feeds", icon: "radio" },
-  { key: "nexus_ai", label: "Nexus AI", route: "/nexus-ai", icon: "zap" },
-  { key: "track_transfer", label: "Track Transfer", route: "/track", icon: "clock" },
-  { key: "account_profile", label: "Account & Profile", route: "/account", icon: "user" },
   { key: "settings", label: "Settings", route: "/consumer/settings", icon: "settings" },
 ];
 
@@ -70,7 +72,11 @@ export function CorporateShell({
   const allowed = canAccessCorporateRoute(selectedPersona, routeKey);
   const menuItems = MENU_ITEMS
     .filter((item) => allowedKeys.includes(item.key))
-    .filter((item, index, items) => items.findIndex((candidate) => candidate.route === item.route) === index);
+    .filter((item, index, items) => items.findIndex((candidate) => resolveMenuRoute(candidate, role) === resolveMenuRoute(item, role)) === index);
+
+  function resolveMenuRoute(item: MenuItem, currentRole: typeof role): string {
+    return currentRole === "corporate_user" && item.corporateUserRoute ? item.corporateUserRoute : item.route;
+  }
 
   async function handleSignOut() {
     setMenuOpen(false);
@@ -138,7 +144,7 @@ export function CorporateShell({
                   key={`${item.key}-${item.route}`}
                   onPress={() => {
                     setMenuOpen(false);
-                    router.push(item.route as never);
+                    router.push(resolveMenuRoute(item, role) as never);
                   }}
                   style={styles.menuItem}
                 >
