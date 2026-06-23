@@ -23,6 +23,7 @@ import {
     DashboardSummaryResult,
     generateDashboardSummary,
 } from "../src/services/nexusAIService";
+import { getCorporateRole } from "../src/services/corporateAccessService";
 import {
     getPlatformHealthDomain,
     loadPlatformHealthSnapshot,
@@ -31,6 +32,7 @@ import {
 } from "../src/services/platformHealthService";
 import { logStartupWarn } from "../src/services/startupLogger";
 import { usePaymentMethods } from "../src/state/PaymentMethodsContext";
+import { usePersona } from "../src/state/PersonaContext";
 import { useTransfer } from "../src/state/TransferContext";
 import { colors, spacing } from "../src/theme";
 import { Transfer } from "../src/types/transfer";
@@ -334,6 +336,8 @@ export default function HomeScreen() {
 
   const { transfer, completedTransfers } = useTransfer();
   const { paymentMethods } = usePaymentMethods();
+  const { selectedPersona } = usePersona();
+  const corporateRole = getCorporateRole(selectedPersona);
 
   const {
     loading: nexusAILoading,
@@ -352,6 +356,12 @@ export default function HomeScreen() {
     useState<DashboardSummaryResult | null>(null);
   const [dashboardAILoading, setDashboardAILoading] = useState(false);
   const [platformHealth, setPlatformHealth] = useState<PlatformHealthSnapshot | null>(null);
+
+  useEffect(() => {
+    if (corporateRole && corporateRole !== "corporate_user") {
+      router.replace("/corporate-dashboard" as never);
+    }
+  }, [corporateRole, router]);
 
   useEffect(() => {
     let mounted = true;

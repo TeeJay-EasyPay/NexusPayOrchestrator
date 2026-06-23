@@ -5,7 +5,7 @@ import { Pressable, ScrollView, View } from "react-native";
 
 import { AppText } from "../src/components/ui/AppText";
 import { Screen } from "../src/components/ui/Screen";
-import { isCorporatePersona } from "../src/services/corporateAccessService";
+import { getCorporateRole, isCorporatePersona } from "../src/services/corporateAccessService";
 import { seedDemoParticipantsIfMissing } from "../src/services/participantService";
 import { useAccount } from "../src/state/AccountContext";
 import { useAuth } from "../src/state/AuthContext";
@@ -32,7 +32,7 @@ function personaMeta(persona: PersonaOption): string {
 }
 
 function groupPurpose(key: PersonaGroupKey): string {
-  if (key === "corporate") return "Corporate governance, approvals, batch operations, reporting, audit, and operations oversight.";
+  if (key === "corporate") return "Operator intelligence, corporate payments, approvals, batch operations, reporting, and audit.";
   if (key === "business") return "Business operations, payments, receipts, recipients, and batch management.";
   return "Personal payments, receipts, and notifications.";
 }
@@ -114,7 +114,8 @@ export default function MultiAccountPreviewScreen() {
           setErrorMessage(error);
           return;
         }
-        router.replace("/corporate-dashboard" as never);
+        const nextRoute = getCorporateRole(persona) === "corporate_user" ? "/" : "/corporate-dashboard";
+        router.replace(nextRoute as never);
         return;
       }
 

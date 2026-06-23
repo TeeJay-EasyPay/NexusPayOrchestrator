@@ -52,7 +52,7 @@ export default function CorporateDashboardScreen() {
   return (
     <CorporateShell
       routeKey="dashboard"
-      title={selectedPersona.corporateRole === "ceo" ? "Executive Dashboard" : selectedPersona.corporateRole === "cfo" ? "Finance Dashboard" : selectedPersona.corporateRole === "cto" ? "Technology Dashboard" : selectedPersona.corporateRole === "auditor" ? "Audit Dashboard" : "Corporate Dashboard"}
+      title={selectedPersona.corporateRole === "ceo" ? "Executive Dashboard" : selectedPersona.corporateRole === "cfo" ? "Finance Dashboard" : selectedPersona.corporateRole === "cto" ? "Technology Dashboard" : selectedPersona.corporateRole === "auditor" ? "Audit Dashboard" : selectedPersona.corporateRole === "batch_payments_processor" ? "Batch Payments Processor" : "Corporate Dashboard"}
       subtitle={`${getRoleLabel(selectedPersona.corporateRole)} workspace with role-scoped governance access.`}
     >
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>

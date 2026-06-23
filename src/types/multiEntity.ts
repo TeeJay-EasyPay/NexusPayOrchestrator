@@ -2,6 +2,7 @@ export type ParticipantType = "CORPORATE" | "INDIVIDUAL" | "BUSINESS";
 
 export type CorporateRole =
   | "corporate_user"
+  | "batch_payments_processor"
   | "ceo"
   | "cfo"
   | "cto"
@@ -173,7 +174,15 @@ export const DEMO_PERSONAS: PersonaOption[] = [
     kind: "PARTICIPANT",
     corporateRole: "corporate_user",
     label: "Corporate User",
-    description: "Corporate platform administrator",
+    description: "Operator demo workspace with home, intelligence and operations screens",
+    ...corporateBank,
+  },
+  {
+    id: "batch-payments-processor",
+    kind: "PARTICIPANT",
+    corporateRole: "batch_payments_processor",
+    label: "Batch Payments Processor",
+    description: "Batch payments, approvals and governance operations",
     ...corporateBank,
   },
   {

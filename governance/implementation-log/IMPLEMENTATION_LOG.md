@@ -2,6 +2,42 @@
 
 Purpose: durable record of meaningful implementation work, security/context fixes, validation, commits, and OTA deployments. New code changes should append an entry here before commit when practical.
 
+## 2026-06-23 - Corporate User And Batch Processor Persona Split
+
+Prompt / Objective:
+Founder clarification confirmed that the former demo/operator persona and the new batch governance persona should not be merged. `Corporate User` should retain the old demo home and operator intelligence surface, while `Batch Payments Processor` should own batch payments, approvals and governance menus only.
+
+Files Changed:
+- `app/index.tsx`
+- `app/multi-account-preview.tsx`
+- `app/corporate-dashboard.tsx`
+- `app/corporate-governance.tsx`
+- `src/types/multiEntity.ts`
+- `src/services/corporateAccessService.ts`
+- `src/components/corporate/CorporateShell.tsx`
+- `src/components/navigation/AppDropdownMenu.tsx`
+- `src/components/navigation/AppMenu.tsx`
+- `governance/implementation-log/IMPLEMENTATION_LOG.md`
+
+Summary:
+- Added a separate `Batch Payments Processor` corporate persona.
+- Kept `Corporate User` as the old demo/operator persona with Home, Send, Route Intelligence, OCC, Live Intelligence Feeds, Nexus AI, Track Transfer, Account/Profile, Notifications and Settings access.
+- Moved batch creation, batch operations, approval queue, governance rules, reports, payment analytics and audit logs to the batch/governance persona.
+- Routed `Corporate User` from the persona selector to the old demo home and routed batch/governance corporate personas to the corporate dashboard.
+- Added a corporate shell Home route so operator-style corporate screens can return to the demo home.
+- Removed batch payout shortcuts from the old root dropdown/bottom navigation for `Corporate User`.
+- Added a home guard so non-operator corporate personas cannot accidentally use the old demo home through direct navigation.
+
+Validation:
+- `npx tsc --noEmit` passed.
+- Targeted ESLint passed for changed files with no warnings.
+
+Commit:
+- Pending.
+
+OTA:
+- Pending.
+
 ## 2026-06-23 - Corporate Shell Consistency For Demo-Origin Screens
 
 Prompt / Objective:

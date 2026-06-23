@@ -1,6 +1,7 @@
 import type { CorporateRole, PersonaOption } from "../types/multiEntity";
 
 export type CorporateRouteKey =
+  | "home_dashboard"
   | "dashboard"
   | "send_payments"
   | "batch_payments"
@@ -36,8 +37,11 @@ type Permission =
 
 const ROLE_PERMISSIONS: Record<CorporateRole, Permission[]> = {
   corporate_user: [
+    "view_reports",
+    "view_operations",
+  ],
+  batch_payments_processor: [
     "configure_governance",
-    "manage_personas",
     "create_batches",
     "approve_payments",
     "release_batches",
@@ -55,8 +59,20 @@ const ROLE_PERMISSIONS: Record<CorporateRole, Permission[]> = {
 
 const ROLE_ROUTES: Record<CorporateRole, CorporateRouteKey[]> = {
   corporate_user: [
-    "dashboard",
+    "home_dashboard",
     "send_payments",
+    "notifications",
+    "route_intelligence",
+    "live_intelligence_feeds",
+    "nexus_ai",
+    "track_transfer",
+    "account_profile",
+    "operations_command_centre",
+    "platform_health",
+    "settings",
+  ],
+  batch_payments_processor: [
+    "dashboard",
     "batch_payments",
     "batch_operations",
     "recipients",
@@ -68,14 +84,6 @@ const ROLE_ROUTES: Record<CorporateRole, CorporateRouteKey[]> = {
     "reports",
     "payment_analytics",
     "audit_logs",
-    "users_personas",
-    "route_intelligence",
-    "live_intelligence_feeds",
-    "nexus_ai",
-    "track_transfer",
-    "account_profile",
-    "operations_command_centre",
-    "platform_health",
     "settings",
   ],
   ceo: ["dashboard", "approval_queue", "batch_operations", "reports", "audit_logs", "approval_rules", "notifications"],
@@ -115,6 +123,8 @@ export function getRoleLabel(role: CorporateRole | string | null | undefined): s
   switch (role) {
     case "corporate_user":
       return "Corporate User";
+    case "batch_payments_processor":
+      return "Batch Payments Processor";
     case "ceo":
       return "CEO";
     case "cfo":
@@ -136,6 +146,8 @@ export function getPersonasForRole(role: CorporateRole): string[] {
   switch (role) {
     case "corporate_user":
       return ["corporate-demo"];
+    case "batch_payments_processor":
+      return ["batch-payments-processor"];
     case "ceo":
       return ["corporate-ceo"];
     case "cfo":

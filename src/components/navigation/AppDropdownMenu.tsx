@@ -2,7 +2,7 @@ import { usePathname, useRouter } from "expo-router";
 import { useState } from "react";
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
 
-import { isCorporatePersona as checkCorporatePersona } from "../../services/corporateAccessService";
+import { getCorporateRole, isCorporatePersona as checkCorporatePersona } from "../../services/corporateAccessService";
 import { useAuth } from "../../state/AuthContext";
 import { useDeviceUnlock } from "../../state/DeviceUnlockContext";
 import { usePersona } from "../../state/PersonaContext";
@@ -71,12 +71,13 @@ export function AppDropdownMenu() {
   const { height } = useWindowDimensions();
 
   const isCorporatePersona = checkCorporatePersona(selectedPersona);
+  const corporateRole = getCorporateRole(selectedPersona);
   const isParticipantPersona = selectedPersona.kind === "PARTICIPANT";
   const menuMaxHeight = Math.max(240, height - 118);
 
   const menuItems = [
     ...MENU_ITEMS,
-    ...(isCorporatePersona
+    ...(isCorporatePersona && corporateRole === "batch_payments_processor"
       ? [
           {
             label: "Corporate Payouts",

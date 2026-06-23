@@ -25,6 +25,7 @@ type MenuItem = {
 };
 
 const MENU_ITEMS: MenuItem[] = [
+  { key: "home_dashboard", label: "Home", route: "/", icon: "home" },
   { key: "dashboard", label: "Dashboard", route: "/corporate-dashboard", icon: "grid" },
   { key: "send_payments", label: "Send Payments", route: "/consumer/send", icon: "send" },
   { key: "batch_payments", label: "Batch Payments", route: "/corporate-payouts", icon: "layers" },

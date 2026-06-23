@@ -107,7 +107,7 @@ export default function CorporateGovernanceScreen() {
           Approval Governance
         </AppText>
         <AppText color={colors.textDarkSecondary}>
-          Corporate User may enable chains, change thresholds, and assign approver roles. {getRoleLabel(selectedPersona.corporateRole)} currently has {editable ? "edit" : "view"} access.
+          Batch Payments Processor may enable chains, change thresholds, and assign approver roles. {getRoleLabel(selectedPersona.corporateRole)} currently has {editable ? "edit" : "view"} access.
         </AppText>
       </CorporateCard>
 
