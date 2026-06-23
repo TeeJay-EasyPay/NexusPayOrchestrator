@@ -58,11 +58,17 @@ export default function ParticipantNotificationsScreen() {
     };
   }, [participantId]);
 
-  const fallbackUnreadCount = items.filter((n) => !n.read).length;
-  const badgeCount = unreadCount || fallbackUnreadCount;
   const groups: NotificationGroup[] = ["Payments", "Batch Payments", "Approvals", "System Events"];
   const isCorporatePersona = checkCorporatePersona(selectedPersona);
   const isBusinessPersona = selectedPersona.participantType === "BUSINESS";
+  const visibleItems = isCorporatePersona
+    ? items.filter((item) => {
+        const assignedPersonaId = item.metadata?.assignedPersonaId;
+        return !assignedPersonaId || assignedPersonaId === selectedPersona.id;
+      })
+    : items;
+  const fallbackUnreadCount = visibleItems.filter((n) => !n.read).length;
+  const badgeCount = isCorporatePersona ? fallbackUnreadCount : unreadCount || fallbackUnreadCount;
 
   async function markRead() {
     if (!participantId || busy) return;
@@ -125,13 +131,13 @@ export default function ParticipantNotificationsScreen() {
               No notification inbox is linked to this persona.
             </AppText>
           </ConsumerCard>
-        ) : items.length === 0 ? (
+        ) : visibleItems.length === 0 ? (
           <ConsumerCard>
             <AppText variant="body" color={consumerColors.text}>No notifications yet.</AppText>
           </ConsumerCard>
         ) : (
           groups.map((group) => {
-            const groupItems = items.filter((item) => getNotificationGroup(item) === group);
+            const groupItems = visibleItems.filter((item) => getNotificationGroup(item) === group);
             if (groupItems.length === 0) return null;
 
             return (

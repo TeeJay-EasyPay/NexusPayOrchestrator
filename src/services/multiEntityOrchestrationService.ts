@@ -42,6 +42,10 @@ function statusFromIndex(index: number): BatchTransferStatus {
   return "DELIVERED";
 }
 
+function initialTransferStatus(index: number, requiresApproval?: boolean): BatchTransferStatus {
+  return requiresApproval ? "CREATED" : statusFromIndex(index);
+}
+
 export async function executePayoutBatch(
   input: ExecuteBatchInput,
 ): Promise<{
@@ -86,7 +90,7 @@ export async function executePayoutBatch(
     sender_participant_id: input.senderParticipantId,
     recipient_participant_id: t.recipientParticipantId,
     amount: Number(t.amount),
-    status: statusFromIndex(index),
+    status: initialTransferStatus(index, input.requiresApproval),
   }));
 
   const { data: transferRows, error: transferError } = await supabase
@@ -134,6 +138,8 @@ export async function executePayoutBatch(
   }
 
   let approvals: BatchApprovalRecord[] = [];
+  let finalBatchStatus: PayoutBatchRecord["status"] = input.requiresApproval ? "PENDING_APPROVAL" : "COMPLETED";
+  let finalApprovalStatus: PayoutBatchRecord["approvalStatus"] = input.requiresApproval ? "PENDING" : "NOT_REQUIRED";
 
   if (input.requiresApproval && input.paymentTypeId && input.actorPersona) {
     const approvalOutput = await createApprovalRequestsForBatch({
@@ -143,6 +149,10 @@ export async function executePayoutBatch(
       actor: input.actorPersona,
     });
     approvals = approvalOutput.approvals;
+    if (!approvalOutput.rule) {
+      finalBatchStatus = "APPROVED";
+      finalApprovalStatus = "NOT_REQUIRED";
+    }
   } else {
     const { error: batchUpdateError } = await supabase
       .from("payout_batches")
@@ -177,13 +187,13 @@ export async function executePayoutBatch(
       id: String(batchRow.id),
       senderParticipantId: String(batchRow.sender_participant_id),
       totalValue: Number(batchRow.total_value),
-      status: input.requiresApproval ? "PENDING_APPROVAL" : "COMPLETED",
+      status: finalBatchStatus,
       createdAt: String(batchRow.created_at ?? nowIso()),
       paymentCategoryId: input.paymentCategoryId ?? null,
       paymentTypeId: input.paymentTypeId ?? null,
       createdByPersonaId: input.actorPersona?.id ?? null,
       createdByRole: input.actorPersona?.corporateRole ?? null,
-      approvalStatus: input.requiresApproval ? "PENDING" : "NOT_REQUIRED",
+      approvalStatus: finalApprovalStatus,
     },
     transfers: transferList,
     notifications: (notificationRows ?? []).map((row: any) => ({

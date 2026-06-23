@@ -9,6 +9,8 @@ function mapNotification(row: any): NotificationRecord {
     message: String(row.message ?? ""),
     read: Boolean(row.read),
     createdAt: String(row.created_at ?? new Date().toISOString()),
+    notificationType: row.notification_type ? String(row.notification_type) : "GENERAL",
+    metadata: (row.metadata ?? {}) as Record<string, unknown>,
   };
 }
 

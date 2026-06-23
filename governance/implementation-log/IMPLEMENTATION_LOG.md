@@ -2,6 +2,44 @@
 
 Purpose: durable record of meaningful implementation work, security/context fixes, validation, commits, and OTA deployments. New code changes should append an entry here before commit when practical.
 
+## 2026-06-23 - Batch Approval And Release Integrity Remediation
+
+Prompt / Objective:
+Founder review found that created batches did not visibly lock, approvers lacked enough context, approval alerts were not persona-specific enough, and release/approval actions needed stronger protection against duplicate approval or duplicate release.
+
+Files Changed:
+- `app/corporate-payouts.tsx`
+- `app/approval-queue.tsx`
+- `app/batch-operations-dashboard.tsx`
+- `app/participant-notifications.tsx`
+- `src/services/corporateGovernanceService.ts`
+- `src/services/multiEntityOrchestrationService.ts`
+- `src/services/notificationService.ts`
+- `governance/implementation-log/IMPLEMENTATION_LOG.md`
+
+Summary:
+- Added a locked created-batch card after corporate batch creation with batch ID, value, transfer count, required approvers and a Watch Batch Request action.
+- Disabled the create button after a batch is created so the same form cannot submit the same batch twice.
+- Kept approval-required transfer rows in `CREATED` until release rather than showing partial processing before approval.
+- Enriched approval queue cards with batch amount, classification, recipient transfer count, creator, status and approval chain.
+- Changed approval queues to show pending approval requests only.
+- Prevented repeat approval decisions by rejecting attempts to decide a non-pending approval request.
+- Added persona-targeted approval request notification metadata.
+- Added a `Batch ready for release` notification for the Batch Payments Processor when all approvals are complete.
+- Filtered corporate notification display by assigned persona metadata.
+- Added release idempotency: release only updates rows where `status = APPROVED` and `released_at IS NULL`.
+- Hid release buttons after release and showed released-by/released-at information.
+
+Validation:
+- `npx tsc --noEmit` passed.
+- Targeted ESLint passed for changed files with no warnings.
+
+Commit:
+- Pending.
+
+OTA:
+- Pending.
+
 ## 2026-06-23 - Corporate User Menu Link Consistency
 
 Prompt / Objective:

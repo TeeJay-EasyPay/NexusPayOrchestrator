@@ -19,7 +19,7 @@ import {
   seedDemoParticipantsIfMissing,
 } from "../src/services/participantService";
 import { usePersona } from "../src/state/PersonaContext";
-import { ParticipantRecord, PaymentCategoryRecord, PaymentTypeRecord } from "../src/types/multiEntity";
+import { BatchApprovalRecord, ParticipantRecord, PaymentCategoryRecord, PaymentTypeRecord, PayoutBatchRecord } from "../src/types/multiEntity";
 import { colors } from "../src/theme";
 
 function participantTypeLabel(type: string): string {
@@ -46,6 +46,7 @@ export default function CorporatePayoutsScreen() {
   const [paymentTypes, setPaymentTypes] = useState<PaymentTypeRecord[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("supplier_payments");
   const [selectedTypeId, setSelectedTypeId] = useState<string>("vendor");
+  const [createdBatch, setCreatedBatch] = useState<{ batch: PayoutBatchRecord; approvals: BatchApprovalRecord[]; transferCount: number } | null>(null);
 
   const isCorporatePersona = checkCorporatePersona(selectedPersona);
   const isBusinessPersona = selectedPersona.participantType === "BUSINESS";
@@ -145,7 +146,7 @@ export default function CorporatePayoutsScreen() {
   }, [isCorporatePersona, selectedTypeId, visiblePaymentTypes]);
 
   async function handleExecuteBatch() {
-    if (executing) return;
+    if (executing || createdBatch) return;
 
     setExecuting(true);
     setStatusMessage(null);
@@ -168,6 +169,12 @@ export default function CorporatePayoutsScreen() {
         setStatusMessage("No valid amounts entered. Please set at least one amount greater than 0.");
         return;
       }
+
+      setCreatedBatch({
+        batch: output.batch,
+        approvals: output.approvals ?? [],
+        transferCount: output.transfers.length,
+      });
 
       setStatusMessage(isCorporatePersona
         ? `Batch ${output.batch.id.slice(0, 8)} created for governance review. ${output.approvals?.length ?? 0} approval request(s) generated.`
@@ -247,6 +254,54 @@ export default function CorporatePayoutsScreen() {
                   })}
                 </ScrollView>
               </View>
+            </View>
+          </CorporateCard>
+        ) : null}
+
+        {isCorporatePersona && createdBatch ? (
+          <CorporateCard>
+            <View style={{ gap: 10 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
+                <View style={{ flex: 1 }}>
+                  <AppText variant="caption" color="#087C89" style={{ fontWeight: "900" }}>
+                    LOCKED - WAITING FOR RELEASE
+                  </AppText>
+                  <AppText variant="subheading" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
+                    Batch {createdBatch.batch.id.slice(0, 8)}
+                  </AppText>
+                  <AppText variant="caption" color={colors.textDarkSecondary}>
+                    Created and locked. This payment run cannot be submitted again from this form.
+                  </AppText>
+                </View>
+                <View style={{ alignItems: "flex-end" }}>
+                  <AppText color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
+                    {formatMoney(createdBatch.batch.totalValue)}
+                  </AppText>
+                  <AppText variant="caption" color={colors.textDarkSecondary}>
+                    {createdBatch.transferCount} transfers
+                  </AppText>
+                </View>
+              </View>
+
+              <View style={{ borderTopWidth: 1, borderTopColor: "#E2E8F0", paddingTop: 10, gap: 6 }}>
+                <AppText variant="caption" color={colors.textDarkMuted}>Required approvals</AppText>
+                {createdBatch.approvals.length === 0 ? (
+                  <AppText color={colors.textDarkSecondary}>No approval rule matched. Batch is eligible for release.</AppText>
+                ) : (
+                  createdBatch.approvals.map((approval) => (
+                    <AppText key={approval.id} color={colors.textDarkPrimary} style={{ fontWeight: "800" }}>
+                      {approval.approvalRoleId.replace(/_/g, " ").toUpperCase()} - assigned to {approval.assignedPersonaId}
+                    </AppText>
+                  ))
+                )}
+              </View>
+
+              <Pressable
+                onPress={() => router.push("/batch-operations-dashboard" as never)}
+                style={{ minHeight: 42, borderRadius: 10, backgroundColor: "#0B3F4A", alignItems: "center", justifyContent: "center" }}
+              >
+                <AppText color="#FFFFFF" style={{ fontWeight: "900" }}>Watch batch request</AppText>
+              </Pressable>
             </View>
           </CorporateCard>
         ) : null}
@@ -411,9 +466,9 @@ export default function CorporatePayoutsScreen() {
         )}
 
         <AppButton
-          title={executing ? (isCorporatePersona ? "Creating approval requests..." : "Executing batch...") : (isCorporatePersona ? "Create Batch for Approval" : "Execute Batch")}
+          title={createdBatch ? "Batch locked - awaiting approval/release" : executing ? (isCorporatePersona ? "Creating approval requests..." : "Executing batch...") : (isCorporatePersona ? "Create Batch for Approval" : "Execute Batch")}
           onPress={handleExecuteBatch}
-          disabled={executing || loading || !canCreateCorporateBatch}
+          disabled={executing || loading || !canCreateCorporateBatch || Boolean(createdBatch)}
         />
 
         {statusMessage ? (

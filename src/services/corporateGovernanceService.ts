@@ -5,6 +5,7 @@ import {
   AuditEventRecord,
   BatchApprovalDecision,
   BatchApprovalRecord,
+  BatchTransferRecord,
   CorporateRole,
   PaymentCategoryRecord,
   PaymentTypeRecord,
@@ -153,6 +154,18 @@ function mapApproval(row: any): BatchApprovalRecord {
     decisionByPersonaId: row.decision_by_persona_id ? String(row.decision_by_persona_id) : null,
     decisionAt: row.decision_at ? String(row.decision_at) : null,
     comment: row.comment ? String(row.comment) : null,
+    createdAt: String(row.created_at ?? nowIso()),
+  };
+}
+
+function mapBatchTransfer(row: any): BatchTransferRecord {
+  return {
+    id: String(row.id),
+    batchId: String(row.batch_id),
+    senderParticipantId: String(row.sender_participant_id),
+    recipientParticipantId: String(row.recipient_participant_id),
+    amount: Number(row.amount),
+    status: String(row.status ?? "CREATED") as BatchTransferRecord["status"],
     createdAt: String(row.created_at ?? nowIso()),
   };
 }
@@ -367,10 +380,17 @@ export async function createApprovalRequestsForBatch(input: {
   const notificationPayload = approvals.map((approval) => ({
     participant_id: "nexus-manufacturing-ltd",
     title: "Approval request assigned",
-    message: `Batch ${input.batchId.slice(0, 8)} requires ${approval.approvalRoleId.replace(/_/g, " ")} approval.`,
+    message: `Batch ${input.batchId.slice(0, 8)} for ${input.amount.toLocaleString()} requires ${approval.approvalRoleId.replace(/_/g, " ")} approval.`,
     read: false,
     notification_type: "APPROVAL_REQUEST",
-    metadata: { batchId: input.batchId, assignedPersonaId: approval.assignedPersonaId, approvalId: approval.id },
+    metadata: {
+      batchId: input.batchId,
+      assignedPersonaId: approval.assignedPersonaId,
+      approvalId: approval.id,
+      approvalRoleId: approval.approvalRoleId,
+      paymentTypeId: input.paymentTypeId,
+      amount: input.amount,
+    },
   }));
   if (notificationPayload.length) {
     await supabase.from("notifications").insert(notificationPayload);
@@ -399,11 +419,45 @@ export async function loadBatchApprovals(batchId?: string): Promise<BatchApprova
   return (data ?? []).map(mapApproval);
 }
 
+export async function loadPayoutBatchesByIds(batchIds: string[]): Promise<PayoutBatchRecord[]> {
+  if (batchIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from("payout_batches")
+    .select("*")
+    .in("id", batchIds);
+
+  if (error) {
+    console.warn("payout batches by id unavailable", error.message);
+    return [];
+  }
+
+  return (data ?? []).map(mapBatch);
+}
+
+export async function loadBatchTransfersForBatches(batchIds: string[]): Promise<BatchTransferRecord[]> {
+  if (batchIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from("batch_transfers")
+    .select("*")
+    .in("batch_id", batchIds)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.warn("batch transfer details unavailable", error.message);
+    return [];
+  }
+
+  return (data ?? []).map(mapBatchTransfer);
+}
+
 export async function loadApprovalQueue(persona: PersonaOption): Promise<BatchApprovalRecord[]> {
   const { data, error } = await supabase
     .from("batch_approvals")
     .select("*")
     .eq("assigned_persona_id", persona.id)
+    .eq("decision", "PENDING")
     .order("created_at", { ascending: false });
   if (error) {
     console.warn("approval queue unavailable", error.message);
@@ -436,6 +490,10 @@ export async function decideApproval(input: {
     throw new Error("This approval request is assigned to another persona.");
   }
 
+  if (String((approvalRow as any).decision) !== "PENDING") {
+    throw new Error("This approval request has already been decided.");
+  }
+
   const batchId = String((approvalRow as any).batch_id);
 
   const { error } = await supabase
@@ -457,6 +515,14 @@ export async function decideApproval(input: {
     await supabase.from("payout_batches").update({ approval_status: "REJECTED", status: "REJECTED" }).eq("id", batchId);
   } else if (allApproved) {
     await supabase.from("payout_batches").update({ approval_status: "APPROVED", status: "APPROVED" }).eq("id", batchId);
+    await supabase.from("notifications").insert({
+      participant_id: "nexus-manufacturing-ltd",
+      title: "Batch ready for release",
+      message: `Batch ${batchId.slice(0, 8)} has all required approvals and is ready for release.`,
+      read: false,
+      notification_type: "BATCH_READY_FOR_RELEASE",
+      metadata: { batchId, assignedPersonaId: "batch-payments-processor" },
+    });
   }
 
   await writeAuditEvent({
@@ -479,7 +545,7 @@ export async function releaseApprovedBatch(batchId: string, actor: PersonaOption
     throw new Error("Batch cannot be released until all approvals are complete.");
   }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("payout_batches")
     .update({
       status: "COMPLETED",
@@ -487,8 +553,15 @@ export async function releaseApprovedBatch(batchId: string, actor: PersonaOption
       released_at: nowIso(),
       approval_status: approvals.length > 0 ? "APPROVED" : "NOT_REQUIRED",
     })
-    .eq("id", batchId);
+    .eq("id", batchId)
+    .eq("status", "APPROVED")
+    .is("released_at", null)
+    .select("*")
+    .maybeSingle();
   if (error) throw new Error(error.message);
+  if (!data) {
+    throw new Error("Batch is not eligible for release or has already been released.");
+  }
 
   await supabase.from("batch_transfers").update({ status: "DELIVERED" }).eq("batch_id", batchId);
 

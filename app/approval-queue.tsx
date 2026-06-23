@@ -3,21 +3,48 @@ import { Pressable, TextInput, View } from "react-native";
 
 import { CorporateCard, CorporateShell } from "../src/components/corporate/CorporateShell";
 import { AppText } from "../src/components/ui/AppText";
-import { decideApproval, loadApprovalQueue } from "../src/services/corporateGovernanceService";
+import { decideApproval, loadApprovalQueue, loadBatchApprovals, loadBatchTransfersForBatches, loadPayoutBatchesByIds } from "../src/services/corporateGovernanceService";
 import { usePersona } from "../src/state/PersonaContext";
 import { colors } from "../src/theme";
-import { BatchApprovalRecord } from "../src/types/multiEntity";
+import { BatchApprovalRecord, BatchTransferRecord, PayoutBatchRecord } from "../src/types/multiEntity";
+
+function money(value: number): string {
+  return `GBP ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
 
 export default function ApprovalQueueScreen() {
   const { selectedPersona } = usePersona();
   const [approvals, setApprovals] = useState<BatchApprovalRecord[]>([]);
   const [comments, setComments] = useState<Record<string, string>>({});
+  const [batchesById, setBatchesById] = useState<Record<string, PayoutBatchRecord>>({});
+  const [approvalsByBatchId, setApprovalsByBatchId] = useState<Record<string, BatchApprovalRecord[]>>({});
+  const [transfersByBatchId, setTransfersByBatchId] = useState<Record<string, BatchTransferRecord[]>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     const rows = await loadApprovalQueue(selectedPersona);
     setApprovals(rows);
+    const batchIds = Array.from(new Set(rows.map((row) => row.batchId)));
+    const [batchRows, transferRows, approvalGroups] = await Promise.all([
+      loadPayoutBatchesByIds(batchIds),
+      loadBatchTransfersForBatches(batchIds),
+      Promise.all(batchIds.map((batchId) => loadBatchApprovals(batchId))),
+    ]);
+
+    setBatchesById(Object.fromEntries(batchRows.map((batch) => [batch.id, batch])));
+
+    const nextApprovalsByBatchId: Record<string, BatchApprovalRecord[]> = {};
+    approvalGroups.forEach((group, index) => {
+      nextApprovalsByBatchId[batchIds[index]] = group.sort((a, b) => a.stageOrder - b.stageOrder);
+    });
+    setApprovalsByBatchId(nextApprovalsByBatchId);
+
+    const nextTransfersByBatchId: Record<string, BatchTransferRecord[]> = {};
+    for (const transfer of transferRows) {
+      nextTransfersByBatchId[transfer.batchId] = [...(nextTransfersByBatchId[transfer.batchId] ?? []), transfer];
+    }
+    setTransfersByBatchId(nextTransfersByBatchId);
   }, [selectedPersona]);
 
   useEffect(() => {
@@ -66,6 +93,9 @@ export default function ApprovalQueueScreen() {
 
       {approvals.map((approval) => {
         const pending = approval.decision === "PENDING";
+        const batch = batchesById[approval.batchId];
+        const batchApprovals = approvalsByBatchId[approval.batchId] ?? [approval];
+        const batchTransfers = transfersByBatchId[approval.batchId] ?? [];
         return (
           <CorporateCard key={approval.id}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
@@ -78,6 +108,30 @@ export default function ApprovalQueueScreen() {
                 </AppText>
               </View>
               <StatusPill label={approval.decision} />
+            </View>
+
+            <View style={{ borderTopWidth: 1, borderTopColor: "#E2E8F0", paddingTop: 10, gap: 5 }}>
+              <AppText color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
+                {batch ? money(batch.totalValue) : "Batch amount loading..."}
+              </AppText>
+              <AppText variant="caption" color={colors.textDarkSecondary}>
+                {batch?.paymentCategoryId ?? "unclassified"} - {batch?.paymentTypeId ?? "unclassified"} - {batchTransfers.length} recipient transfer(s)
+              </AppText>
+              <AppText variant="caption" color={colors.textDarkSecondary}>
+                Created by {batch?.createdByPersonaId ?? "unknown"} - Status {batch?.approvalStatus ?? "PENDING"}
+              </AppText>
+            </View>
+
+            <View style={{ gap: 5 }}>
+              <AppText variant="caption" color={colors.textDarkMuted}>Approval chain</AppText>
+              {batchApprovals.map((item) => (
+                <View key={item.id} style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
+                  <AppText variant="caption" color={colors.textDarkPrimary} style={{ fontWeight: "800", flex: 1 }}>
+                    Stage {item.stageOrder}: {item.approvalRoleId.replace(/_/g, " ")}
+                  </AppText>
+                  <StatusPill label={item.decision} />
+                </View>
+              ))}
             </View>
 
             {pending ? (
