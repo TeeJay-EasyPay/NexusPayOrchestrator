@@ -21,10 +21,17 @@ Validation:
 - Targeted ESLint passed for `src/components/navigation/AppDropdownMenu.tsx` with no warnings.
 
 Commit:
-- Pending.
+- `74b1b580954792469d7cabf5cc07b9e4f754e50b`
 
 OTA:
-- Pending.
+- Branch: `preview`
+- Update group: `3e19d68b-732f-42bb-98ab-5bf2dc6a743e`
+- Android update: `019ef1fe-b241-7992-95c9-1367b2f5b96b`
+- iOS update: `019ef1fe-b241-7262-afa0-a0006889745b`
+- Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/3e19d68b-732f-42bb-98ab-5bf2dc6a743e`
+
+Known Warnings:
+- Expo publish continued to show the existing `@noble/hashes/crypto.js` export warning. It did not block OTA.
 
 ## 2026-06-23 - Corporate User And Batch Processor Persona Split
 
