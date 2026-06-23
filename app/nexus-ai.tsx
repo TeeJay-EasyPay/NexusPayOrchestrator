@@ -12,17 +12,22 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { CorporateShell } from "../src/components/corporate/CorporateShell";
 import { AppDropdownMenu } from "../src/components/navigation/AppDropdownMenu";
 import { supabase } from "../src/lib/supabase";
+import { isCorporatePersona } from "../src/services/corporateAccessService";
 import {
     getNexusAISettings,
     NexusAISensitivity,
     NexusAISettings,
     updateNexusAISettings,
 } from "../src/services/nexusAISettingsService";
+import { usePersona } from "../src/state/PersonaContext";
 
 export default function NexusAIScreen() {
   const router = useRouter();
+  const { selectedPersona } = usePersona();
+  const corporate = isCorporatePersona(selectedPersona);
   const { width } = useWindowDimensions();
   const compactLayout = width < 500;
 
@@ -117,20 +122,35 @@ export default function NexusAIScreen() {
         : "Medium";
 
   if (loading || !settings) {
+    const loadingView = (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingTitle}>Loading Nexus AI settings...</Text>
+        <Text style={styles.loadingSubtitle}>{debugMessage}</Text>
+      </View>
+    );
+
+    if (corporate) {
+      return (
+        <CorporateShell
+          routeKey="nexus_ai"
+          title="Nexus AI"
+          subtitle="AI configuration, intelligence controls and sensitivity."
+        >
+          {loadingView}
+        </CorporateShell>
+      );
+    }
+
     return (
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingTitle}>Loading Nexus AI settings...</Text>
-          <Text style={styles.loadingSubtitle}>{debugMessage}</Text>
-        </View>
+        {loadingView}
       </SafeAreaView>
     );
   }
 
-  return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <AppDropdownMenu />
+  const content = (
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        {!corporate && <AppDropdownMenu />}
 
         <Text style={styles.title}>Nexus AI</Text>
         <Text style={styles.subtitle}>
@@ -374,6 +394,23 @@ export default function NexusAIScreen() {
           </View>
         </Modal>
       </ScrollView>
+  );
+
+  if (corporate) {
+    return (
+      <CorporateShell
+        routeKey="nexus_ai"
+        title="Nexus AI"
+        subtitle="AI configuration, intelligence controls and sensitivity."
+      >
+        {content}
+      </CorporateShell>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      {content}
     </SafeAreaView>
   );
 }
@@ -500,7 +537,6 @@ function ImpactMetric({
 }
 
 const NAVY = "#07111f";
-const GOLD = "#F4B63F";
 const TEAL = "#073F49";
 const TEXT_DARK = "#0F172A";
 const TEXT_MUTED = "#475569";

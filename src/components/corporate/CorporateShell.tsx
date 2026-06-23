@@ -11,6 +11,8 @@ import {
   getCorporateRouteKeys,
   getRoleLabel,
 } from "../../services/corporateAccessService";
+import { useAccount } from "../../state/AccountContext";
+import { useAuth } from "../../state/AuthContext";
 import { usePersona } from "../../state/PersonaContext";
 import { colors } from "../../theme";
 import { AppText } from "../ui/AppText";
@@ -30,7 +32,6 @@ const MENU_ITEMS: MenuItem[] = [
   { key: "recipients", label: "Recipients", route: "/business-recipients", icon: "users" },
   { key: "notifications", label: "Notifications", route: "/participant-notifications", icon: "bell" },
   { key: "corporate_governance", label: "Corporate Governance", route: "/corporate-governance", icon: "sliders" },
-  { key: "approval_governance", label: "Approval Governance", route: "/corporate-governance", icon: "check-square" },
   { key: "approval_rules", label: "Approval Rules", route: "/corporate-governance", icon: "list" },
   { key: "approval_queue", label: "Approval Queue", route: "/approval-queue", icon: "inbox" },
   { key: "reports", label: "Reports", route: "/corporate-reports", icon: "file-text" },
@@ -59,12 +60,23 @@ export function CorporateShell({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const { clearAccountScope } = useAccount();
+  const { signOut } = useAuth();
   const { selectedPersona } = usePersona();
   const [menuOpen, setMenuOpen] = useState(false);
   const role = getCorporateRole(selectedPersona);
   const allowedKeys = getCorporateRouteKeys(selectedPersona);
   const allowed = canAccessCorporateRoute(selectedPersona, routeKey);
-  const menuItems = MENU_ITEMS.filter((item) => allowedKeys.includes(item.key));
+  const menuItems = MENU_ITEMS
+    .filter((item) => allowedKeys.includes(item.key))
+    .filter((item, index, items) => items.findIndex((candidate) => candidate.route === item.route) === index);
+
+  async function handleSignOut() {
+    setMenuOpen(false);
+    await clearAccountScope();
+    await signOut();
+    router.replace("/multi-account-preview" as never);
+  }
 
   if (!allowed || !role) {
     return (
@@ -142,6 +154,13 @@ export function CorporateShell({
               >
                 <Feather name="repeat" size={16} color="#0B3F4A" />
                 <AppText color="#0F2239" style={styles.menuText}>Switch persona</AppText>
+              </Pressable>
+              <Pressable
+                onPress={handleSignOut}
+                style={[styles.menuItem, styles.signOutItem]}
+              >
+                <Feather name="log-out" size={16} color="#B91C1C" />
+                <AppText color="#B91C1C" style={styles.menuText}>Sign out</AppText>
               </Pressable>
             </ScrollView>
           </View>
@@ -262,6 +281,10 @@ const styles = StyleSheet.create({
   menuText: {
     fontWeight: "800",
     flex: 1,
+  },
+  signOutItem: {
+    backgroundColor: "#FFF1F2",
+    borderColor: "#FECDD3",
   },
   blocked: {
     flex: 1,

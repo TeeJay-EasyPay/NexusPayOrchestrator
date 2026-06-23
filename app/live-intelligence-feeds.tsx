@@ -10,19 +10,24 @@ import {
 } from "react-native";
 
 import { NexusAIToggleCard } from "../src/components/intelligence/NexusAIToggleCard";
+import { CorporateShell } from "../src/components/corporate/CorporateShell";
 import { AppDropdownMenu } from "../src/components/navigation/AppDropdownMenu";
 import { AppButton } from "../src/components/ui/AppButton";
 import { useNexusAIScreenSetting } from "../src/hooks/useNexusAISettings";
+import { isCorporatePersona } from "../src/services/corporateAccessService";
 import {
   getLiveIntelligenceFeeds,
   LiveIntelligenceFeeds,
 } from "../src/services/liveIntelligenceFeedService";
+import { usePersona } from "../src/state/PersonaContext";
 import { colors } from "../src/theme";
 
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function LiveIntelligenceFeedsScreen() {
   const router = useRouter();
+  const { selectedPersona } = usePersona();
+  const corporate = isCorporatePersona(selectedPersona);
   const {
     loading: nexusAILoading,
     enabled: corridorAIEnabled,
@@ -57,7 +62,7 @@ export default function LiveIntelligenceFeedsScreen() {
   }, [loadFeeds]);
 
   if (loading) {
-    return (
+    const loadingView = (
       <View style={styles.center}>
         <ActivityIndicator size="large" color={colors.gold} />
         <Text style={styles.loadingText}>
@@ -65,13 +70,25 @@ export default function LiveIntelligenceFeedsScreen() {
         </Text>
       </View>
     );
+
+    if (corporate) {
+      return (
+        <CorporateShell
+          routeKey="live_intelligence_feeds"
+          title="Live Intelligence Feeds"
+          subtitle="Live FX, corridor liquidity and market intelligence feeds."
+        >
+          {loadingView}
+        </CorporateShell>
+      );
+    }
+
+    return (
+      loadingView
+    );
   }
 
-  return (
-  <SafeAreaView
-    style={{ flex: 1, backgroundColor: "#07111F" }}
-    edges={["top"]}
-  >
+  const content = (
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
@@ -79,7 +96,7 @@ export default function LiveIntelligenceFeedsScreen() {
         <RefreshControl refreshing={refreshing} onRefresh={refreshFeeds} />
       }
     >
-      <AppDropdownMenu />
+      {!corporate && <AppDropdownMenu />}
 
       <View style={{ marginTop: 20, marginBottom: 24 }}>
         <Text style={styles.title}>Live Intelligence Feeds</Text>
@@ -233,9 +250,29 @@ export default function LiveIntelligenceFeedsScreen() {
           ? new Date(feeds.refreshedAt).toLocaleString()
           : ""}
       </Text>
-        </ScrollView>
-  </SafeAreaView>
-);
+    </ScrollView>
+  );
+
+  if (corporate) {
+    return (
+      <CorporateShell
+        routeKey="live_intelligence_feeds"
+        title="Live Intelligence Feeds"
+        subtitle="Live FX, corridor liquidity and market intelligence feeds."
+      >
+        {content}
+      </CorporateShell>
+    );
+  }
+
+  return (
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: "#07111F" }}
+      edges={["top"]}
+    >
+      {content}
+    </SafeAreaView>
+  );
 
 }
 

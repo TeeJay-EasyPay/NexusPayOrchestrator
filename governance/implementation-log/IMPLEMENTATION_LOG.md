@@ -2,6 +2,37 @@
 
 Purpose: durable record of meaningful implementation work, security/context fixes, validation, commits, and OTA deployments. New code changes should append an entry here before commit when practical.
 
+## 2026-06-23 - Corporate Shell Consistency For Demo-Origin Screens
+
+Prompt / Objective:
+Founder review showed that Corporate User navigation could open Nexus AI, Operations Command Centre, and related demo-origin screens in the old demo/root chrome. Also, the corporate drawer had duplicate same-destination entries and no Sign out action.
+
+Files Changed:
+- `app/operations-v2.tsx`
+- `app/nexus-ai.tsx`
+- `app/live-intelligence-feeds.tsx`
+- `src/components/corporate/CorporateShell.tsx`
+- `src/services/corporateAccessService.ts`
+- `governance/implementation-log/IMPLEMENTATION_LOG.md`
+
+Summary:
+- Made Operations Command Centre render inside `CorporateShell` when a corporate persona is active.
+- Made Nexus AI render inside `CorporateShell` when a corporate persona is active.
+- Made Live Intelligence Feeds render inside `CorporateShell` when a corporate persona is active.
+- Removed corporate drawer clutter by deduplicating menu entries that navigate to the same route.
+- Added Sign out to the corporate drawer.
+- Preserved non-corporate rendering for the same screens.
+
+Validation:
+- `npx tsc --noEmit` passed.
+- Targeted ESLint passed for changed files with no warnings.
+
+Commit:
+- Pending
+
+OTA:
+- Pending
+
 ## 2026-06-23 - Corporate Menu Restoration And Persona Selector Dropdowns
 
 Prompt / Objective:

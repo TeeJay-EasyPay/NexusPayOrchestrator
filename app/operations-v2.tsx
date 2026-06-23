@@ -1,13 +1,14 @@
 import React from "react";
 import {
-    ActivityIndicator,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    View,
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  View,
 } from "react-native";
 
+import { CorporateShell } from "../src/components/corporate/CorporateShell";
 import { ActiveAlertsCard } from "../src/components/operations-v2/ActiveAlertsCard";
 import { CorridorHealthCard } from "../src/components/operations-v2/CorridorHealthCard";
 import { GlobalFlowCard } from "../src/components/operations-v2/GlobalFlowCard";
@@ -22,10 +23,14 @@ import { TreasuryLiquidityCard } from "../src/components/operations-v2/TreasuryL
 import { AppText } from "../src/components/ui/AppText";
 import { Screen } from "../src/components/ui/Screen";
 import { useOperationsCommandCentre } from "../src/hooks/useOperationsCommandCentre";
+import { isCorporatePersona } from "../src/services/corporateAccessService";
+import { usePersona } from "../src/state/PersonaContext";
 import { colors } from "../src/theme";
 
 export default function OperationsV2Screen() {
   const state = useOperationsCommandCentre();
+  const { selectedPersona } = usePersona();
+  const corporate = isCorporatePersona(selectedPersona);
   const [showDataSources, setShowDataSources] = React.useState(true);
 
   const handleRefresh = async () => {
@@ -34,128 +39,152 @@ export default function OperationsV2Screen() {
   };
 
   if (state.loading) {
+    const loadingView = (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.gold} />
+        <AppText variant="caption" style={styles.loadingText}>
+          Loading Mission Control...
+        </AppText>
+      </View>
+    );
+
+    if (corporate) {
+      return (
+        <CorporateShell
+          routeKey="operations_command_centre"
+          title="Operations Command Centre"
+          subtitle="Mission Control operational intelligence with corporate navigation."
+        >
+          {loadingView}
+        </CorporateShell>
+      );
+    }
+
+    return <Screen>{loadingView}</Screen>;
+  }
+
+  const content = (
+    <ScrollView
+      style={styles.scroll}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={state.refreshing ?? false}
+          onRefresh={handleRefresh}
+          tintColor={colors.gold}
+          colors={[colors.gold]}
+        />
+      }
+    >
+      <OperationsHeader
+        realtimeStatus={state.realtimeStatus ?? "Connecting"}
+        lastUpdatedAt={state.lastUpdatedAt ?? new Date().toISOString()}
+        refreshing={state.refreshing ?? false}
+        onRefresh={handleRefresh}
+      />
+
+      <View style={styles.sourceToggleRow}>
+        <AppText variant="caption" style={styles.sourceToggleLabel}>
+          Show Data Sources
+        </AppText>
+        <Switch
+          value={showDataSources}
+          onValueChange={setShowDataSources}
+          trackColor={{ false: colors.cardBorder, true: "rgba(214,168,79,0.35)" }}
+          thumbColor={showDataSources ? colors.gold : colors.textMuted}
+          accessibilityLabel="Show data provenance badges"
+        />
+      </View>
+
+      <View style={styles.sectionGap} />
+
+      <MissionControlCard
+        missionStatus={state.missionStatus ?? null}
+        showDataSources={showDataSources}
+      />
+
+      <View style={styles.sectionGap} />
+
+      <KpiGrid kpis={state.kpis ?? []} showDataSources={showDataSources} />
+
+      <View style={styles.sectionGap} />
+
+      <QATestCentreCard showDataSources={showDataSources} />
+
+      <View style={styles.sectionGap} />
+
+      <ProviderSandboxCard showDataSources={showDataSources} />
+
+      <View style={styles.sectionGap} />
+
+      <CorridorHealthCard corridorRows={state.corridorRows ?? []} showDataSources={showDataSources} />
+
+      <View style={styles.sectionGap} />
+
+      <TreasuryLiquidityCard
+        treasurySummary={state.treasurySummary ?? null}
+        feedData={state.feedData ?? null}
+        showDataSources={showDataSources}
+      />
+
+      <View style={styles.sectionGap} />
+
+      <ActiveAlertsCard
+        events={state.events ?? []}
+        severityFilter={state.severityFilter ?? "ALL"}
+        setSeverityFilter={state.setSeverityFilter}
+        showDataSources={showDataSources}
+      />
+
+      <View style={styles.sectionGap} />
+
+      <GlobalFlowCard
+        activeTransfers={state.activeTransfers ?? []}
+        corridorRows={state.corridorRows ?? []}
+        showDataSources={showDataSources}
+      />
+
+      <View style={styles.sectionGap} />
+
+      <OperationalHealthCard serviceHealth={state.serviceHealth ?? []} showDataSources={showDataSources} />
+
+      <View style={styles.sectionGap} />
+
+      <NexusAISummaryCard
+        missionSummary={state.missionSummary ?? null}
+        missionSummaryLoading={state.missionSummaryLoading ?? false}
+        missionSummaryStatus={state.missionSummaryStatus ?? ""}
+        operationsAIEnabled={state.operationsAIEnabled ?? false}
+        nexusAILoading={state.nexusAILoading ?? false}
+        corridorRows={state.corridorRows ?? []}
+        treasurySummary={state.treasurySummary ?? null}
+        serviceHealth={state.serviceHealth ?? []}
+        kpis={state.kpis ?? []}
+        alertCount={state.events?.length ?? 0}
+        criticalAlertCount={
+          state.events?.filter((event) => event.severity === "FAILOVER" || event.severity === "DEGRADED").length ?? 0
+        }
+        showDataSources={showDataSources}
+      />
+
+      <View style={styles.bottomPad} />
+    </ScrollView>
+  );
+
+  if (corporate) {
     return (
-      <Screen>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.gold} />
-          <AppText variant="caption" style={styles.loadingText}>
-            Loading Mission Control…
-          </AppText>
-        </View>
-      </Screen>
+      <CorporateShell
+        routeKey="operations_command_centre"
+        title="Operations Command Centre"
+        subtitle="Mission Control operational intelligence with corporate navigation."
+      >
+        {content}
+      </CorporateShell>
     );
   }
 
-  return (
-    <Screen>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={state.refreshing ?? false}
-            onRefresh={handleRefresh}
-            tintColor={colors.gold}
-            colors={[colors.gold]}
-          />
-        }
-      >
-        <OperationsHeader
-          realtimeStatus={state.realtimeStatus ?? "Connecting"}
-          lastUpdatedAt={state.lastUpdatedAt ?? new Date().toISOString()}
-          refreshing={state.refreshing ?? false}
-          onRefresh={handleRefresh}
-        />
-
-        <View style={styles.sourceToggleRow}>
-          <AppText variant="caption" style={styles.sourceToggleLabel}>
-            Show Data Sources
-          </AppText>
-          <Switch
-            value={showDataSources}
-            onValueChange={setShowDataSources}
-            trackColor={{ false: colors.cardBorder, true: "rgba(214,168,79,0.35)" }}
-            thumbColor={showDataSources ? colors.gold : colors.textMuted}
-            accessibilityLabel="Show data provenance badges"
-          />
-        </View>
-
-        <View style={styles.sectionGap} />
-
-        <MissionControlCard
-          missionStatus={state.missionStatus ?? null}
-          showDataSources={showDataSources}
-        />
-
-        <View style={styles.sectionGap} />
-
-        <KpiGrid kpis={state.kpis ?? []} showDataSources={showDataSources} />
-
-        <View style={styles.sectionGap} />
-
-        <QATestCentreCard showDataSources={showDataSources} />
-
-        <View style={styles.sectionGap} />
-
-        <ProviderSandboxCard showDataSources={showDataSources} />
-
-        <View style={styles.sectionGap} />
-
-        <CorridorHealthCard corridorRows={state.corridorRows ?? []} showDataSources={showDataSources} />
-
-        <View style={styles.sectionGap} />
-
-        <TreasuryLiquidityCard
-          treasurySummary={state.treasurySummary ?? null}
-          feedData={state.feedData ?? null}
-          showDataSources={showDataSources}
-        />
-
-        <View style={styles.sectionGap} />
-
-        <ActiveAlertsCard
-          events={state.events ?? []}
-          severityFilter={state.severityFilter ?? "ALL"}
-          setSeverityFilter={state.setSeverityFilter}
-          showDataSources={showDataSources}
-        />
-
-        <View style={styles.sectionGap} />
-
-        <GlobalFlowCard
-          activeTransfers={state.activeTransfers ?? []}
-          corridorRows={state.corridorRows ?? []}
-          showDataSources={showDataSources}
-        />
-
-        <View style={styles.sectionGap} />
-
-        <OperationalHealthCard serviceHealth={state.serviceHealth ?? []} showDataSources={showDataSources} />
-
-        <View style={styles.sectionGap} />
-
-        <NexusAISummaryCard
-          missionSummary={state.missionSummary ?? null}
-          missionSummaryLoading={state.missionSummaryLoading ?? false}
-          missionSummaryStatus={state.missionSummaryStatus ?? ""}
-          operationsAIEnabled={state.operationsAIEnabled ?? false}
-          nexusAILoading={state.nexusAILoading ?? false}
-          corridorRows={state.corridorRows ?? []}
-          treasurySummary={state.treasurySummary ?? null}
-          serviceHealth={state.serviceHealth ?? []}
-          kpis={state.kpis ?? []}
-          alertCount={state.events?.length ?? 0}
-          criticalAlertCount={
-            state.events?.filter((e) => e.severity === "FAILOVER" || e.severity === "DEGRADED").length ?? 0
-          }
-          showDataSources={showDataSources}
-        />
-
-        <View style={styles.bottomPad} />
-      </ScrollView>
-    </Screen>
-  );
+  return <Screen>{content}</Screen>;
 }
 
 const styles = StyleSheet.create({
@@ -172,6 +201,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 14,
     backgroundColor: colors.background,
+    minHeight: 240,
   },
   loadingText: {
     color: colors.textMuted,
