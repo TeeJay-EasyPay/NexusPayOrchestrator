@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { View } from "react-native";
 
@@ -62,6 +62,7 @@ function timelineForStatus(status: string): TimelineStep[] {
 
 export default function ConsumerTrackScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const { transfer, completedTransfers, startTransfer, completeTransfer, hydrateTransfers } = useTransfer();
   const { enabled: trackingAIEnabled, settings: aiSettings } = useNexusAIScreenSetting("tracking_enabled");
   const [auditLines, setAuditLines] = useState<string[]>([]);
@@ -92,8 +93,16 @@ export default function ConsumerTrackScreen() {
     };
   }, [transfer?.id, transfer?.status]);
 
+  const requestedTransferId = Array.isArray(params.transferId) ? params.transferId[0] : params.transferId;
+  const requestedCompletedTransfer =
+    requestedTransferId
+      ? completedTransfers.find((item) => item.id === requestedTransferId) ?? null
+      : null;
   const latestCompleted = completedTransfers[0] ?? null;
-  const activeTransfer = transfer ?? latestCompleted;
+  const activeTransfer =
+    transfer?.id === requestedTransferId || (!requestedTransferId && transfer)
+      ? transfer
+      : requestedCompletedTransfer ?? transfer ?? latestCompleted;
 
   useEffect(() => {
     if (!activeTransfer?.id || activeTransfer.fundingMethod !== "OPEN_BANKING") {

@@ -2,6 +2,47 @@
 
 Purpose: durable record of meaningful implementation work, security/context fixes, validation, commits, and OTA deployments. New code changes should append an entry here before commit when practical.
 
+## 2026-06-25 - Track Screen Evidence Declutter And Private Tracking Return
+
+Prompt / Objective:
+Founder review found that private completed transfer details had no route back to tracking, and corporate Track showed overlapping Yapily flow, execution state, operational timeline and telemetry cards.
+
+Files Changed:
+- `app/track.tsx`
+- `app/consumer/track.tsx`
+- `app/consumer/transfers.tsx`
+- `app/consumer/success.tsx`
+- `governance/implementation-log/IMPLEMENTATION_LOG.md`
+
+Summary:
+- Removed the separate Yapily Open Banking payment-flow card from corporate Track because the same step evidence is already embedded in the execution state machine.
+- Removed the provider execution telemetry card from corporate Track because it is mostly execution metadata and not a necessary founder/operator surface.
+- Removed the Operational Timeline card from corporate Track to avoid confusion between runtime state and audit-log event rows.
+- Added `transferId` support to private-user Track so completed transfers can reopen their correct tracking summary.
+- Added `Track` / `View tracking` actions from private transfer history and success Open Banking evidence.
+
+Clarification:
+- Execution state machine = runtime execution model and current step state.
+- Operational timeline = persistent transaction audit-log events; some rows show `PENDING` because they record that an action started, while later rows record success. This remains useful for audit screens but was too noisy for the Track screen.
+
+Validation:
+- `npx tsc --noEmit` passed.
+- Targeted ESLint passed with no errors for changed files.
+- Existing React hook dependency warnings remain in `app/track.tsx`.
+
+Commit:
+- `36fbe230ac9b6e62efef0571508d362981dd33c3`
+
+OTA:
+- Branch: `preview`
+- Update group: `b8c5f291-382b-44d6-90ab-edc9f6060af7`
+- Android update: `019f0103-b5ad-70fc-b19b-28a5cebc470d`
+- iOS update: `019f0103-b5ad-75ea-9661-b540e5eb6e46`
+- Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/b8c5f291-382b-44d6-90ab-edc9f6060af7`
+
+Known Warnings:
+- Expo publish continued to show the existing `@noble/hashes/crypto.js` export warning. It did not block OTA.
+
 ## 2026-06-25 - Yapily Funding Source Visibility Correction
 
 Prompt / Objective:

@@ -84,6 +84,15 @@ export default function ConsumerTransfersScreen() {
     );
   }
 
+  function viewTracking(transfer: Transfer) {
+    router.push(
+      {
+        pathname: "/consumer/track",
+        params: { transferId: transfer.id },
+      } as never
+    );
+  }
+
   async function refreshRecipients() {
     const rows = await loadSavedRecipients();
     setSavedRecipients(rows);
@@ -268,6 +277,7 @@ export default function ConsumerTransfersScreen() {
               <AppText color={consumerColors.muted}>Bank: {transfer.recipient?.bankName ?? "Not captured"}</AppText>
               <AppText color={consumerColors.muted}>Sort code: {transfer.recipient?.bankCode ?? "Not captured"}</AppText>
               <AppText color={consumerColors.muted}>Account: {transfer.recipient?.accountNumber ?? "Not captured"}</AppText>
+              <ConsumerAction label="View tracking" icon="activity" secondary onPress={() => viewTracking(transfer)} />
             </View>
           ) : null}
 
@@ -278,6 +288,7 @@ export default function ConsumerTransfersScreen() {
               onPress={() => resendTransfer(transfer)}
             />
             <ConsumerAction label="Receipt" icon="file-text" secondary onPress={() => setOpenTransferId(transfer.id)} />
+            <ConsumerAction label="Track" icon="activity" secondary onPress={() => viewTracking(transfer)} />
           </View>
         </ConsumerCard>
       ))}

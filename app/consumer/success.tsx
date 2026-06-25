@@ -180,7 +180,19 @@ export default function ConsumerSuccessScreen() {
               ? `${openBankingFlow.steps.length} funding steps recorded. Status: ${openBankingFlow.status}.`
               : "The detailed steps remain available on Track."}
           </AppText>
-          <ConsumerAction label="View flow" icon="list" secondary onPress={() => router.push("/consumer/track" as never)} />
+          <ConsumerAction
+            label="View flow"
+            icon="list"
+            secondary
+            onPress={() =>
+              router.push(
+                {
+                  pathname: "/consumer/track",
+                  params: { transferId: transfer.id },
+                } as never
+              )
+            }
+          />
         </ConsumerCard>
       ) : null}
 

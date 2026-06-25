@@ -2,9 +2,7 @@ import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Linking, Pressable, ScrollView, View } from "react-native";
 
-import { OperationalTimelineCard } from "../src/components/audit/OperationalTimelineCard";
 import { NexusAIToggleCard } from "../src/components/intelligence/NexusAIToggleCard";
-import { OpenBankingFlowCard } from "../src/components/openBanking/OpenBankingFlowCard";
 import { AppButton } from "../src/components/ui/AppButton";
 import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
@@ -21,12 +19,10 @@ import {
     analyseTransfer,
     TransferAnalysisResult,
 } from "../src/services/nexusAIService";
-import { loadOpenBankingPaymentFlow } from "../src/services/openBankingPaymentFlowService";
 import { PayoutStatus } from "../src/services/payout/payoutTypes";
 import { useTransfer } from "../src/state/TransferContext";
 import { useWallet } from "../src/state/WalletContext";
 import { colors } from "../src/theme";
-import { OpenBankingPaymentFlow } from "../src/types/transfer";
 
 function formatCurrency(value: number | undefined, currency: string) {
   const safeValue = value ?? 0;
@@ -180,7 +176,6 @@ export default function TrackScreen() {
   const [realtimeStatus, setRealtimeStatus] = useState("Connecting");
   const [transferAnalysis, setTransferAnalysis] =
     useState<TransferAnalysisResult | null>(null);
-  const [openBankingFlow, setOpenBankingFlowState] = useState<OpenBankingPaymentFlow | null>(null);
 
   const hasStartedRef = useRef(false);
   const hasDebitedWalletRef = useRef(false);
@@ -230,28 +225,6 @@ export default function TrackScreen() {
       unsubscribe();
     };
   }, [transfer?.id]);
-
-  useEffect(() => {
-    if (!transfer?.id || transfer.fundingMethod !== "OPEN_BANKING") {
-      setOpenBankingFlowState(null);
-      return;
-    }
-
-    if (transfer.openBankingFlow) {
-      setOpenBankingFlowState(transfer.openBankingFlow);
-      return;
-    }
-
-    let mounted = true;
-    loadOpenBankingPaymentFlow(transfer.id).then((flow) => {
-      if (!mounted) return;
-      setOpenBankingFlowState(flow);
-    });
-
-    return () => {
-      mounted = false;
-    };
-  }, [transfer?.id, transfer?.fundingMethod, transfer?.openBankingFlow]);
 
   useEffect(() => {
   if (!transfer || !selectedRoute) return;
@@ -403,9 +376,6 @@ export default function TrackScreen() {
   const xrplProof = executionSnapshot?.xrplProof;
   const humanStatus = executionSnapshot?.humanStatus ?? "Preparing execution engine...";
   const executionTelemetry = executionSnapshot?.telemetry ?? {};
-  const telemetrySummary = metadataLines(executionTelemetry);
-  const visibleOpenBankingFlow =
-    executionSnapshot?.openBankingFlow ?? transfer.openBankingFlow ?? openBankingFlow;
 
   const payoutLabel = safeRecipient?.payoutMethod === "BANK"
     ? `${safeRecipient?.bankName ?? "Selected bank"} bank account`
@@ -554,10 +524,6 @@ export default function TrackScreen() {
                 </AppText>
               </View>
             </AppCard>
-          ) : null}
-
-          {transfer.fundingMethod === "OPEN_BANKING" ? (
-            <OpenBankingFlowCard flow={visibleOpenBankingFlow} />
           ) : null}
 
           <AppCard>
@@ -838,46 +804,10 @@ export default function TrackScreen() {
             </View>
           </AppCard>
 
-          <AppCard>
-            <View style={{ gap: 12 }}>
-              <View style={{ gap: 4 }}>
-                <AppText variant="subheading" color={colors.textDarkPrimary}>
-                  Provider execution telemetry
-                </AppText>
-                <AppText variant="caption" color={colors.textDarkSecondary}>
-                  Runtime metadata emitted by the execution engine for operational observability.
-                </AppText>
-              </View>
-
-              {telemetrySummary.length === 0 ? (
-                <AppText variant="caption" color={colors.textDarkSecondary}>
-                  Telemetry will appear once the execution engine emits its first snapshot.
-                </AppText>
-              ) : (
-                <View style={{ gap: 6 }}>
-                  {telemetrySummary.map((line) => (
-                    <View key={line} style={{ padding: 10, borderRadius: 14, backgroundColor: "#F8FAFC", borderWidth: 1, borderColor: "#E2E8F0" }}>
-                      <AppText variant="caption" color={colors.textDarkSecondary}>
-                        {line}
-                      </AppText>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
-          </AppCard>
-
           {isCompleted ? (
             <AppButton title="Back home" onPress={() => router.push("/")} />
           ) : null}
         </View>
-
-        {transfer?.id ? (
-          <OperationalTimelineCard
-            transactionId={transfer.id}
-            refreshKey={`${executionSnapshot?.state ?? "pending"}-${executionSnapshot?.progressPercent ?? 0}`}
-          />
-        ) : null}
       </ScrollView>
     </Screen>
   );
