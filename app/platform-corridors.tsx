@@ -26,14 +26,21 @@ export default function PlatformCorridorsScreen() {
         <AppText color={colors.textDarkSecondary}>Corridor readiness is derived from Platform Administration provider records.</AppText>
       </PlatformCard>
 
-      {(snapshot?.corridors ?? []).map((corridor) => (
+      {(snapshot?.supportedCorridors ?? []).map((corridor) => (
         <PlatformCard key={corridor.id}>
-          <AppText variant="subheading" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>{corridor.corridorName}</AppText>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
+            <View style={{ flex: 1 }}>
+              <AppText variant="subheading" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>{corridor.corridorCode}</AppText>
+              <AppText variant="caption" color={colors.textDarkSecondary}>{corridor.sourceCountry}{" -> "}{corridor.destinationCountry}</AppText>
+            </View>
+            <DataProvenanceBadge classification={corridor.provenance === "LIVE" ? "LIVE" : corridor.provenance === "NO_DATA" ? "NO_DATA" : "DERIVED"} />
+          </View>
           <Row label="Provider" value={providersById.get(corridor.providerId) ?? corridor.providerId} />
           <Row label="Currency Route" value={`${corridor.sourceCurrency} -> ${corridor.destinationCurrency}`} />
-          <Row label="Status" value={corridor.status} />
-          <Row label="Sandbox Readiness" value={corridor.sandboxReadiness} />
-          <Row label="Production Readiness" value={corridor.productionReadiness} />
+          <Row label="Capability" value={corridor.capabilityCode ?? "Not mapped"} />
+          <Row label="Environment" value={corridor.environment} />
+          <Row label="Readiness" value={corridor.readinessStatus} />
+          <Row label="Last Validated" value={corridor.lastValidatedAt ? new Date(corridor.lastValidatedAt).toLocaleString() : "Not validated"} />
           <AppText variant="caption" color={colors.textDarkSecondary}>{corridor.notes ?? "No notes recorded."}</AppText>
         </PlatformCard>
       ))}

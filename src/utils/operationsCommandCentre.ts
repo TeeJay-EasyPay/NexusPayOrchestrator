@@ -6,6 +6,7 @@ import {
   type PlatformHealthItem,
   type PlatformHealthSnapshot,
 } from "../services/platformHealthService";
+import type { PartnerConnectionTestRecord } from "../services/platformAdministrationService";
 import { RouteOperationalEventRow } from "../services/routeOperationalEventService";
 import { TreasuryLiquiditySnapshotRow } from "../services/treasuryIntelligenceService";
 import { Transfer } from "../types/transfer";
@@ -104,6 +105,7 @@ export type OperationsLiveState = {
   missionSummaryLoading: boolean;
   missionSummaryEnabled: boolean;
   realtimeStatus: string;
+  partnerConnectionTests?: PartnerConnectionTestRecord[];
 };
 
 function getPressureWeight(pressure: string) {
@@ -457,6 +459,7 @@ export function buildServiceHealth(params: {
   missionSummaryLoading: boolean;
   aiEnabled: boolean;
   realtimeStatus: string;
+  partnerConnectionTests?: PartnerConnectionTestRecord[];
 }): PlatformHealthSnapshot {
   return buildPlatformHealthSnapshot({
     events: params.events,
@@ -467,6 +470,7 @@ export function buildServiceHealth(params: {
     aiLoading: params.missionSummaryLoading,
     aiSummary: params.missionSummary,
     realtimeStatus: params.realtimeStatus,
+    partnerConnectionTests: params.partnerConnectionTests,
   });
 }
 
@@ -529,6 +533,7 @@ export function buildOperationsInsights(params: OperationsLiveState): Operations
     missionSummaryLoading: params.missionSummaryLoading,
     aiEnabled: params.missionSummaryEnabled,
     realtimeStatus: params.realtimeStatus,
+    partnerConnectionTests: params.partnerConnectionTests,
   });
   const serviceHealth = Object.values(platformHealth.domains);
   const missionStatus = buildMissionControlStatus({

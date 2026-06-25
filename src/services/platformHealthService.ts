@@ -12,6 +12,10 @@ import {
   loadRecentTreasurySnapshots,
   type TreasuryLiquiditySnapshotRow,
 } from "./treasuryIntelligenceService";
+import {
+  loadPartnerConnectionTests,
+  type PartnerConnectionTestRecord,
+} from "./platformAdministrationService";
 
 export type PlatformHealthStatus =
   | "HEALTHY"
@@ -29,7 +33,8 @@ export type PlatformHealthDomain =
   | "liquidity"
   | "ai"
   | "market"
-  | "settlement";
+  | "settlement"
+  | "partners";
 
 export type PlatformHealthItem = {
   domain: PlatformHealthDomain;
@@ -58,6 +63,7 @@ type BuildPlatformHealthInput = {
   aiLoading: boolean;
   aiSummary: unknown | null;
   realtimeStatus: string;
+  partnerConnectionTests?: PartnerConnectionTestRecord[];
   now?: string;
 };
 
@@ -126,6 +132,9 @@ export function buildPlatformHealthSnapshot(input: BuildPlatformHealthInput): Pl
   const latestSessionAt = latestTimestamp(...input.sessions.map((session) => session.updated_at ?? session.created_at));
   const marketOpenCount = input.feeds?.marketHours.filter((market) => market.status === "OPEN").length ?? 0;
   const fxFeedCount = input.feeds?.fx.length ?? 0;
+  const latestPartnerTest = [...(input.partnerConnectionTests ?? [])].sort(
+    (a, b) => new Date(b.testedAt).getTime() - new Date(a.testedAt).getTime()
+  )[0];
 
   const platform = input.realtimeStatus === "Live"
     ? item({
@@ -233,6 +242,27 @@ export function buildPlatformHealthSnapshot(input: BuildPlatformHealthInput): Pl
     lastUpdated: latestSessionAt ?? now,
   }, now);
 
+  const partners = item({
+    domain: "partners",
+    label: "Partner APIs",
+    status: !latestPartnerTest
+      ? "NO_DATA"
+      : latestPartnerTest.status === "SUCCESS"
+        ? "HEALTHY"
+        : latestPartnerTest.status === "SKIPPED"
+          ? "NO_DATA"
+          : "DEGRADED",
+    provenance: !latestPartnerTest ? "NO_DATA" : latestPartnerTest.status === "SUCCESS" ? "LIVE" : "DERIVED",
+    confidence: !latestPartnerTest ? "LOW" : latestPartnerTest.status === "SUCCESS" ? "HIGH" : "MEDIUM",
+    reason: !latestPartnerTest
+      ? "No partner connection tests have been recorded."
+      : latestPartnerTest.status === "SUCCESS"
+        ? `${latestPartnerTest.providerId} connection test succeeded in ${latestPartnerTest.responseTimeMs ?? 0}ms.`
+        : latestPartnerTest.responseSummary ?? latestPartnerTest.errorMessage ?? "Latest partner connection test did not confirm live connectivity.",
+    source: "partner_connection_tests",
+    lastUpdated: latestPartnerTest?.testedAt ?? now,
+  }, now);
+
   if (fxFeedCount === 0 && market.status === "HEALTHY") {
     market.reason = `${market.reason} FX feed rows are unavailable, so confidence remains low.`;
     market.confidence = "LOW";
@@ -246,18 +276,20 @@ export function buildPlatformHealthSnapshot(input: BuildPlatformHealthInput): Pl
       ai,
       market,
       settlement,
+      partners,
     },
     lastUpdated: now,
   };
 }
 
 export async function loadPlatformHealthSnapshot(options: LoadPlatformHealthOptions): Promise<PlatformHealthSnapshot> {
-  const [snapshots, events, recoverableSessions, recentSessions, feeds] = await Promise.all([
+  const [snapshots, events, recoverableSessions, recentSessions, feeds, partnerConnectionTests] = await Promise.all([
     loadRecentTreasurySnapshots(60),
     loadRecentRouteOperationalEvents(60),
     loadRecoverableExecutionSessions(),
     loadRecentExecutionSessions(60),
     getLiveIntelligenceFeeds(),
+    loadPartnerConnectionTests(10),
   ]);
 
   const sessionMap = new Map<string, PersistedExecutionSession>();
@@ -274,6 +306,7 @@ export async function loadPlatformHealthSnapshot(options: LoadPlatformHealthOpti
     aiLoading: options.aiLoading ?? false,
     aiSummary: options.aiSummary ?? null,
     realtimeStatus: options.realtimeStatus ?? "Diagnostic Mode",
+    partnerConnectionTests,
   });
 }
 

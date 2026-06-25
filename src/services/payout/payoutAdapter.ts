@@ -34,7 +34,7 @@ export async function createPayout(request: CreatePayoutRequest) {
     fallbackUsed: !usingRealProvider,
     providerMessage: usingRealProvider
       ? `Executing via Nium sandbox (${process.env.EXPO_PUBLIC_NIUM_BASE_URL})`
-      : `Selected ${selection.selectedProviderName} by payout routing engine. Executed through mock sandbox fallback until credentials are configured.`,
+      : `Selected ${selection.selectedProviderName} through the partner capability resolver. Executed through mock sandbox fallback until credentials are configured.`,
   };
 }
 

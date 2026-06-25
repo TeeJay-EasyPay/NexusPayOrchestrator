@@ -15,8 +15,8 @@ export default function PlatformPartnersScreen() {
   }, []);
 
   const corridorsByProvider = new Map<string, string[]>();
-  for (const corridor of snapshot?.corridors ?? []) {
-    corridorsByProvider.set(corridor.providerId, [...(corridorsByProvider.get(corridor.providerId) ?? []), corridor.corridorName]);
+  for (const corridor of snapshot?.supportedCorridors ?? []) {
+    corridorsByProvider.set(corridor.providerId, [...(corridorsByProvider.get(corridor.providerId) ?? []), corridor.corridorCode]);
   }
 
   return (
@@ -34,13 +34,19 @@ export default function PlatformPartnersScreen() {
           <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
             <View style={{ flex: 1 }}>
               <AppText variant="subheading" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>{provider.providerName}</AppText>
-              <AppText variant="caption" color={colors.textDarkSecondary}>{provider.providerCategory}</AppText>
+              <AppText variant="caption" color={colors.textDarkSecondary}>
+                {provider.providerCategory} • {provider.partnerType === "first_leg" ? "First-leg" : provider.partnerType === "last_leg" ? "Last-leg" : provider.partnerType ?? "Infrastructure"}
+              </AppText>
             </View>
             <Status label={provider.status} />
           </View>
+          <Row label="Readiness" value={`${provider.readinessScore}%`} />
+          <Row label="Environment" value={provider.environment ?? "sandbox"} />
           <Row label="Sandbox Connected" value={provider.sandboxEnabled ? "Yes" : "No"} />
           <Row label="Production Connected" value={provider.productionEnabled ? "Yes" : "No"} />
           <Row label="API Configured" value={provider.apiConfigured ? "Metadata configured" : "Not configured"} />
+          <Row label="Countries" value={provider.supportedCountries.length ? provider.supportedCountries.join(", ") : "Not recorded"} />
+          <Row label="Last Successful Test" value={provider.lastSuccessfulTestAt ? new Date(provider.lastSuccessfulTestAt).toLocaleString() : "No successful test recorded"} />
           <Row label="Last Updated" value={new Date(provider.updatedAt).toLocaleString()} />
           <AppText variant="caption" color={colors.textDarkSecondary}>{provider.notes ?? "No notes recorded."}</AppText>
           <AppText variant="caption" color={colors.textDarkPrimary} style={{ fontWeight: "800" }}>

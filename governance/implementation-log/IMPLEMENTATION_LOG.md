@@ -2,6 +2,56 @@
 
 Purpose: durable record of meaningful implementation work, security/context fixes, validation, commits, and OTA deployments. New code changes should append an entry here before commit when practical.
 
+## 2026-06-25 - Integration Sprint 1 Partner Framework And Yapily Connectivity
+
+Prompt / Objective:
+Build the first live infrastructure integration for NexusPay using Yapily while creating a reusable partner integration framework for future providers.
+
+Files Changed:
+- `app/platform-admin.tsx`
+- `app/platform-partners.tsx`
+- `app/platform-corridors.tsx`
+- `app/platform-providers.tsx`
+- `src/hooks/useOperationsCommandCentre.ts`
+- `src/services/partnerCapabilityResolver.ts`
+- `src/services/platformAdministrationService.ts`
+- `src/services/platformHealthService.ts`
+- `src/services/payout/payoutAdapter.ts`
+- `src/services/payout/payoutRoutingEngine.ts`
+- `src/utils/operationsCommandCentre.ts`
+- `supabase/functions/nexuspay-test-partner-connection/index.ts`
+- `supabase/migrations/20260625000100_integration_sprint_1_partner_framework.sql`
+- `governance/reports/INTEGRATION_SPRINT_1_DESIGN.md`
+- `governance/reports/FOUNDER_BRIEFING_INTEGRATION_SPRINT_1.md`
+- `governance/implementation-log/IMPLEMENTATION_LOG.md`
+
+Summary:
+- Added partner capability, supported corridor and connection-test database structures.
+- Enhanced partner provider metadata for partner type, environment, URLs, supported countries, successful test timestamp and readiness score.
+- Added `nexuspay-test-partner-connection` Edge Function for backend-only partner tests.
+- Stored Yapily credential values in Supabase Secrets, not in source code, Expo env, mobile app or database records.
+- Implemented Yapily backend authentication and institution-discovery connectivity check.
+- Added Platform Administration connection-test action and connection history visibility.
+- Added partner capability resolver and routed payout partner selection through capability resolution.
+- Added Partner APIs to the shared platform health model and OCC operational health surface.
+
+Validation:
+- `supabase db push` applied `20260625000100_integration_sprint_1_partner_framework.sql`.
+- `supabase functions deploy nexuspay-test-partner-connection` deployed the Edge Function.
+- Authenticated Yapily smoke test passed: `SUCCESS`, `LIVE`, HTTP `200`, response time `173ms`.
+- `npx tsc --noEmit` passed.
+- Targeted ESLint passed for changed app and service files with no warnings.
+
+Security Notes:
+- Yapily application UUID and secret are intentionally not reproduced in this log.
+- Database stores only credential metadata reference: `supabase-secrets:YAPILY_APPLICATION_UUID,YAPILY_APPLICATION_SECRET`.
+
+Commit:
+- Pending
+
+OTA:
+- Pending
+
 ## 2026-06-23 - Platform Administration Framework V1
 
 Prompt / Objective:

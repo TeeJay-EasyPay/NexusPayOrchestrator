@@ -22,13 +22,15 @@ export default function PlatformAdminScreen() {
 
   const summary = useMemo(() => {
     const providers = snapshot?.providers ?? [];
-    const corridors = snapshot?.corridors ?? [];
+    const corridors = snapshot?.supportedCorridors ?? [];
+    const latestSuccessfulTests = (snapshot?.connectionTests ?? []).filter((item) => item.status === "SUCCESS");
     return {
       providers: providers.length,
       sandbox: providers.filter((item) => item.sandboxEnabled).length,
       production: providers.filter((item) => item.productionEnabled).length,
       corridors: corridors.length,
       configured: providers.filter((item) => item.apiConfigured).length,
+      livePartnerTests: latestSuccessfulTests.length,
     };
   }, [snapshot]);
 
@@ -43,6 +45,7 @@ export default function PlatformAdminScreen() {
         <Metric label="Corridors" value={String(summary.corridors)} icon="map" />
         <Metric label="Sandbox Ready" value={String(summary.sandbox)} icon="server" />
         <Metric label="API Configured" value={String(summary.configured)} icon="key" />
+        <Metric label="Live Tests" value={String(summary.livePartnerTests)} icon="activity" />
       </View>
 
       <PlatformCard>
@@ -65,6 +68,7 @@ export default function PlatformAdminScreen() {
         <Header title="Provider Connectivity" badge="DERIVED" />
         <AppText color={colors.textDarkSecondary}>
           {summary.sandbox} sandbox connection(s), {summary.production} production connection(s), and {summary.configured} API metadata configuration(s) are visible.
+          {summary.livePartnerTests > 0 ? ` ${summary.livePartnerTests} live partner test result(s) have been captured.` : " No live partner test result has been captured yet."}
         </AppText>
       </PlatformCard>
 

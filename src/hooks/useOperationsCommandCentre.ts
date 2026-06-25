@@ -8,6 +8,10 @@ import {
 } from "../services/execution/executionPersistenceService";
 import { subscribeToRecentExecutionSessions } from "../services/execution/executionRealtimeService";
 import { getLiveIntelligenceFeeds, LiveIntelligenceFeeds } from "../services/liveIntelligenceFeedService";
+import {
+  loadPartnerConnectionTests,
+  type PartnerConnectionTestRecord,
+} from "../services/platformAdministrationService";
 import type { IntelligenceReportResult } from "../services/nexusAIService";
 import {
   loadRecentRouteOperationalEvents,
@@ -91,6 +95,7 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [sessions, setSessions] = useState<PersistedExecutionSession[]>([]);
   const [feeds, setFeeds] = useState<LiveIntelligenceFeeds | null>(null);
+  const [partnerConnectionTests, setPartnerConnectionTests] = useState<PartnerConnectionTestRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [realtimeStatus, setRealtimeStatus] = useState("Connecting");
@@ -151,13 +156,14 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
     setDebugStage("OPS_DEBUG: telemetry loading start");
 
     try {
-      const [snapshotData, eventData, recoverableSessionData, recentSessionData, transferData, feedData] = await Promise.all([
+      const [snapshotData, eventData, recoverableSessionData, recentSessionData, transferData, feedData, partnerTestData] = await Promise.all([
         loadRecentTreasurySnapshots(60),
         loadRecentRouteOperationalEvents(60),
         loadRecoverableExecutionSessions(),
         loadRecentExecutionSessions(60),
         loadCompletedTransfers(),
         getLiveIntelligenceFeeds(),
+        loadPartnerConnectionTests(10),
       ]);
       const sessionData = [...recoverableSessionData, ...recentSessionData].reduce(
         upsertSession,
@@ -172,6 +178,7 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
         sessions: sessionData.length,
         transfers: transferData.length,
         hasFeeds: Boolean(feedData),
+        partnerTests: partnerTestData.length,
       });
       setDebugStage(`OPS_DEBUG: telemetry loaded (snap=${snapshotData.length} ev=${eventData.length} sess=${sessionData.length} tx=${transferData.length})`);
 
@@ -180,6 +187,7 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
       setSessions((current) => sessionData.reduce(upsertSession, current));
       setTransfers(transferData);
       setFeeds(feedData ?? null);
+      setPartnerConnectionTests(partnerTestData);
       setFeedsRefreshedAt(feedData?.refreshedAt ?? null);
       setLastUpdatedAt(new Date().toISOString());
     } catch (error) {
@@ -232,6 +240,7 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
         missionSummaryLoading,
         missionSummaryEnabled: operationsAIEnabled,
         realtimeStatus,
+        partnerConnectionTests,
       });
 
       console.log("OPS_DEBUG: insights calculation complete", {
@@ -245,7 +254,7 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
       console.warn("OPS_DEBUG: insights calculation failed", error);
       throw error;
     }
-  }, [events, feeds, missionSummary, missionSummaryLoading, operationsAIEnabled, realtimeStatus, sessions, snapshots, transfers]);
+  }, [events, feeds, missionSummary, missionSummaryLoading, operationsAIEnabled, partnerConnectionTests, realtimeStatus, sessions, snapshots, transfers]);
 
   const corridorOptions = useMemo(() => {
     console.log("OPS_DEBUG: corridor options calculation start");
