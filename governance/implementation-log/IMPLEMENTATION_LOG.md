@@ -47,10 +47,17 @@ Security Notes:
 - Database stores only credential metadata reference: `supabase-secrets:YAPILY_APPLICATION_UUID,YAPILY_APPLICATION_SECRET`.
 
 Commit:
-- Pending
+- `4e1192bc30f3a1dcb21c36acbb997a6d090cf412`
 
 OTA:
-- Pending
+- Branch: `preview`
+- Update group: `44e85721-6610-45a4-b68c-611b77b7cc72`
+- Android update: `019f0038-a773-7a79-be88-762d4e9d7dcb`
+- iOS update: `019f0038-a773-7cc9-87f7-d336a1318e75`
+- Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/44e85721-6610-45a4-b68c-611b77b7cc72`
+
+Known Warnings:
+- Expo publish continued to show the existing `@noble/hashes/crypto.js` export warning. It did not block OTA.
 
 ## 2026-06-23 - Platform Administration Framework V1
 
