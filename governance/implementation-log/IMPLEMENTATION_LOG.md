@@ -53,10 +53,18 @@ Founder Briefing:
 - `governance/reports/FOUNDER_BRIEFING_OPEN_BANKING_PAYMENT_FLOW_V1.md`
 
 Commit:
-- Pending.
+- Implementation commit: `6915bacbe6139caaea3d19663ec5f912b58f0210`
+- Final log update commit: pending.
 
 OTA:
-- Pending.
+- Branch: `preview`
+- Update group: `d79b0660-0b44-4e75-9dc1-813223f3620d`
+- Android update: `019f0093-4e99-71a6-9d16-233d98be1f32`
+- iOS update: `019f0093-4e99-764d-b6df-135b907fa38f`
+- Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/d79b0660-0b44-4e75-9dc1-813223f3620d`
+
+Known Warnings:
+- Expo publish continued to show the existing `@noble/hashes/crypto.js` export warning. It did not block OTA.
 
 ## 2026-06-25 - Platform Partner Connectivity Honesty Correction
 
