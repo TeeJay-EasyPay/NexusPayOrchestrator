@@ -21,7 +21,7 @@ export default function PlatformCorridorsScreen() {
       <PlatformCard>
         <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
           <AppText variant="subheading" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>Supported Corridors</AppText>
-          <DataProvenanceBadge classification="DERIVED" />
+          <DataProvenanceBadge classification="NO_DATA" />
         </View>
         <AppText color={colors.textDarkSecondary}>Corridor readiness is derived from Platform Administration provider records.</AppText>
       </PlatformCard>
@@ -33,7 +33,7 @@ export default function PlatformCorridorsScreen() {
               <AppText variant="subheading" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>{corridor.corridorCode}</AppText>
               <AppText variant="caption" color={colors.textDarkSecondary}>{corridor.sourceCountry}{" -> "}{corridor.destinationCountry}</AppText>
             </View>
-            <DataProvenanceBadge classification={corridor.provenance === "LIVE" ? "LIVE" : corridor.provenance === "NO_DATA" ? "NO_DATA" : "DERIVED"} />
+            <DataProvenanceBadge classification={corridor.provenance === "LIVE" ? "LIVE" : "NO_DATA"} />
           </View>
           <Row label="Provider" value={providersById.get(corridor.providerId) ?? corridor.providerId} />
           <Row label="Currency Route" value={`${corridor.sourceCurrency} -> ${corridor.destinationCurrency}`} />

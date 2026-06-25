@@ -9,10 +9,10 @@ import {
   loadPlatformAdministrationSnapshot,
   runPartnerConnectionTest,
   type PartnerConnectionTestRecord,
+  type PartnerProviderRecord,
   type PlatformAdministrationSnapshot,
 } from "../src/services/platformAdministrationService";
 import { colors } from "../src/theme";
-import type { DataProvenanceClassification } from "../src/utils/operationsCommandCentre";
 
 export default function PlatformProvidersScreen() {
   const [snapshot, setSnapshot] = useState<PlatformAdministrationSnapshot | null>(null);
@@ -43,87 +43,112 @@ export default function PlatformProvidersScreen() {
   }
 
   return (
-    <PlatformShell routeKey="providers" title="Provider Configuration" subtitle="Credential metadata and connection status without storing secrets in database fields.">
+    <PlatformShell routeKey="providers" title="Provider Connectivity" subtitle="Live partner connectivity tests and credential metadata without storing secrets in database fields.">
       <PlatformCard>
         <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
-          <AppText variant="subheading" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>Credential Metadata</AppText>
-          <DataProvenanceBadge classification="DERIVED" />
+          <AppText variant="subheading" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>Live Connectivity Proof</AppText>
+          <DataProvenanceBadge classification="LIVE" />
         </View>
         <AppText color={colors.textDarkSecondary}>
-          Secrets remain in Supabase Secrets, environment variables or secure storage. Only configuration state is tracked here.
+          Use these tests to prove partner reachability. Candidate partners remain marked as NO DATA until a live adapter or endpoint test exists.
         </AppText>
+        <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+          <QuickTestButton
+            label="Test Yapily"
+            icon="shield"
+            loading={testingProvider === "yapily"}
+            disabled={testingProvider !== null}
+            onPress={() => handleTestConnection("yapily")}
+          />
+          <QuickTestButton
+            label="Test Ripple/XRPL"
+            icon="zap"
+            loading={testingProvider === "ripple"}
+            disabled={testingProvider !== null}
+            onPress={() => handleTestConnection("ripple")}
+          />
+        </View>
         {testMessage ? (
           <AppText variant="caption" color={colors.textDarkSecondary}>{testMessage}</AppText>
         ) : null}
       </PlatformCard>
 
-      {(snapshot?.providers ?? []).map((provider) => {
+      {(snapshot?.providers ?? []).sort(sortConnectableFirst).map((provider) => {
         const credentials = (snapshot?.credentials ?? []).filter((item) => item.providerId === provider.id);
         const connections = (snapshot?.connections ?? []).filter((item) => item.providerId === provider.id);
         const capabilities = (snapshot?.capabilities ?? []).filter((item) => item.providerId === provider.id);
         const latestTest = (snapshot?.connectionTests ?? []).find((item) => item.providerId === provider.id);
+        const connectable = isConnectableProvider(provider.id);
+        const liveVerified = latestTest?.status === "SUCCESS";
+
         return (
           <PlatformCard key={provider.id}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
               <View style={{ flex: 1 }}>
                 <AppText variant="subheading" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>{provider.providerName}</AppText>
-                <AppText variant="caption" color={colors.textDarkSecondary}>{provider.providerCategory} • {formatPartnerType(provider.partnerType)}</AppText>
+                <AppText variant="caption" color={colors.textDarkSecondary}>{provider.providerCategory} - {formatPartnerType(provider.partnerType)}</AppText>
               </View>
-              <Readiness score={provider.readinessScore} />
+              <ConnectivityBadge liveVerified={liveVerified} connectable={connectable} />
             </View>
-            <Row label="API Configured" value={provider.apiConfigured ? "Yes" : "No"} />
-            <Row label="Sandbox" value={provider.sandboxEnabled ? "Enabled" : "Not enabled"} />
-            <Row label="Production" value={provider.productionEnabled ? "Enabled" : "Not enabled"} />
-            <Row label="Sandbox URL" value={provider.sandboxUrl ?? "Not recorded"} />
+
+            <Row label="Connectivity" value={liveVerified ? "Live test passed" : connectable ? "Test available" : "No live connection"} />
+            <Row label="Credential Status" value={connectable && provider.apiConfigured ? "Secure backend reference configured" : "No live credential configured"} />
+            <Row label="Production" value={provider.productionEnabled ? "Live production enabled" : "Not enabled"} />
+            <Row label="Endpoint" value={provider.sandboxUrl ?? (provider.id === "ripple" ? "XRPL public testnet JSON-RPC" : "Not recorded")} />
             <Row label="Supported Countries" value={provider.supportedCountries.length ? provider.supportedCountries.join(", ") : "Not recorded"} />
+
             {credentials.map((credential) => (
               <View key={credential.id} style={{ borderTopWidth: 1, borderTopColor: "#E2E8F0", paddingTop: 8, gap: 4 }}>
-                <Row label={`${credential.environment} credential`} value={credential.configured ? "Configured" : "Not configured"} />
+                <Row label={`${credential.environment} credential`} value={connectable && credential.configured ? "Secure reference configured" : "No live credential"} />
                 <Row label="Reference" value={credential.credentialReference ?? "No reference recorded"} />
               </View>
             ))}
+
             {capabilities.length > 0 ? (
               <View style={{ borderTopWidth: 1, borderTopColor: "#E2E8F0", paddingTop: 8, gap: 8 }}>
                 <AppText variant="caption" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>Capabilities</AppText>
                 {capabilities.map((capability) => (
                   <View key={capability.id} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                     <AppText variant="caption" color={colors.textDarkPrimary} style={{ flex: 1, fontWeight: "800" }}>{capability.capabilityName}</AppText>
-                    <DataProvenanceBadge classification={toProvenance(capability.provenance)} />
-                    <AppText variant="caption" color={capability.enabled ? "#0F8A5F" : colors.textDarkMuted} style={{ fontWeight: "900" }}>
-                      {capability.readinessStatus}
+                    <DataProvenanceBadge classification={liveVerified && connectable ? "LIVE" : "NO_DATA"} />
+                    <AppText variant="caption" color={liveVerified ? "#0F8A5F" : colors.textDarkMuted} style={{ fontWeight: "900" }}>
+                      {liveVerified && connectable ? "Verified" : capability.readinessStatus}
                     </AppText>
                   </View>
                 ))}
               </View>
             ) : null}
+
             {connections.map((connection) => (
               <Row key={connection.id} label={`${connection.environment} connection`} value={`${connection.status} - ${connection.lastResult ?? "No result"}`} />
             ))}
+
             {latestTest ? <ConnectionTestSummary test={latestTest} /> : null}
+
             <Pressable
               onPress={() => handleTestConnection(provider.id)}
-              disabled={testingProvider !== null}
+              disabled={testingProvider !== null || !connectable}
               style={{
                 minHeight: 42,
                 borderRadius: 10,
-                backgroundColor: provider.id === "yapily" ? "#087C89" : "#F8FAFC",
+                backgroundColor: connectable ? "#087C89" : "#F8FAFC",
                 borderWidth: 1,
-                borderColor: provider.id === "yapily" ? "#087C89" : "#DDE6EE",
+                borderColor: connectable ? "#087C89" : "#DDE6EE",
                 paddingHorizontal: 12,
                 flexDirection: "row",
                 alignItems: "center",
                 justifyContent: "center",
                 gap: 8,
-                opacity: testingProvider && testingProvider !== provider.id ? 0.55 : 1,
+                opacity: !connectable || (testingProvider !== null && testingProvider !== provider.id) ? 0.55 : 1,
               }}
             >
               {testingProvider === provider.id ? (
-                <ActivityIndicator size="small" color={provider.id === "yapily" ? "#FFFFFF" : "#087C89"} />
+                <ActivityIndicator size="small" color={connectable ? "#FFFFFF" : "#087C89"} />
               ) : (
-                <Feather name="activity" size={16} color={provider.id === "yapily" ? "#FFFFFF" : "#087C89"} />
+                <Feather name={connectable ? "activity" : "lock"} size={16} color={connectable ? "#FFFFFF" : colors.textDarkMuted} />
               )}
-              <AppText color={provider.id === "yapily" ? "#FFFFFF" : colors.textDarkPrimary} style={{ fontWeight: "900" }}>
-                Test Connection
+              <AppText color={connectable ? "#FFFFFF" : colors.textDarkMuted} style={{ fontWeight: "900" }}>
+                {connectable ? "Test Connection" : "No Live Test Adapter"}
               </AppText>
             </Pressable>
           </PlatformCard>
@@ -133,6 +158,16 @@ export default function PlatformProvidersScreen() {
   );
 }
 
+function isConnectableProvider(providerId: string) {
+  return providerId === "yapily" || providerId === "ripple";
+}
+
+function sortConnectableFirst(a: PartnerProviderRecord, b: PartnerProviderRecord) {
+  const aRank = isConnectableProvider(a.id) ? 0 : 1;
+  const bRank = isConnectableProvider(b.id) ? 0 : 1;
+  return aRank - bRank || a.providerName.localeCompare(b.providerName);
+}
+
 function formatPartnerType(value?: string | null) {
   if (value === "first_leg") return "First-leg partner";
   if (value === "last_leg") return "Last-leg partner";
@@ -140,17 +175,49 @@ function formatPartnerType(value?: string | null) {
   return "Infrastructure partner";
 }
 
-function toProvenance(value: string): DataProvenanceClassification {
-  const allowed: DataProvenanceClassification[] = ["LIVE", "DERIVED", "SIMULATED", "MOCK", "FALLBACK", "NO_DATA", "DIAGNOSTIC", "DISABLED"];
-  return allowed.includes(value as DataProvenanceClassification) ? value as DataProvenanceClassification : "DERIVED";
-}
-
-function Readiness({ score }: { score: number }) {
-  const color = score >= 75 ? "#0F8A5F" : score >= 45 ? "#D97706" : "#64748B";
+function ConnectivityBadge({ liveVerified, connectable }: { liveVerified: boolean; connectable: boolean }) {
+  const color = liveVerified ? "#0F8A5F" : connectable ? "#087C89" : "#64748B";
+  const label = liveVerified ? "LIVE" : connectable ? "TESTABLE" : "NO DATA";
   return (
     <View style={{ borderRadius: 999, backgroundColor: `${color}14`, borderColor: `${color}30`, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 6 }}>
-      <AppText variant="caption" color={color} style={{ fontWeight: "900" }}>{score}% Ready</AppText>
+      <AppText variant="caption" color={color} style={{ fontWeight: "900" }}>{label}</AppText>
     </View>
+  );
+}
+
+function QuickTestButton({
+  label,
+  icon,
+  loading,
+  disabled,
+  onPress,
+}: {
+  label: string;
+  icon: keyof typeof Feather.glyphMap;
+  loading: boolean;
+  disabled: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={{
+        minHeight: 42,
+        borderRadius: 10,
+        backgroundColor: "#087C89",
+        paddingHorizontal: 12,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        opacity: disabled && !loading ? 0.55 : 1,
+        flexGrow: 1,
+      }}
+    >
+      {loading ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Feather name={icon} size={16} color="#FFFFFF" />}
+      <AppText color="#FFFFFF" style={{ fontWeight: "900" }}>{label}</AppText>
+    </Pressable>
   );
 }
 
@@ -158,9 +225,10 @@ function ConnectionTestSummary({ test }: { test: PartnerConnectionTestRecord }) 
   const statusColor = test.status === "SUCCESS" ? "#0F8A5F" : "#DC2626";
   return (
     <View style={{ borderTopWidth: 1, borderTopColor: "#E2E8F0", paddingTop: 8, gap: 4 }}>
-      <Row label="Last Test" value={`${test.status} • ${new Date(test.testedAt).toLocaleString()}`} />
+      <Row label="Last Test" value={`${test.status} - ${new Date(test.testedAt).toLocaleString()}`} />
       <Row label="Response Time" value={test.responseTimeMs == null ? "Not recorded" : `${test.responseTimeMs}ms`} />
-      <Row label="Institutions" value={test.institutionCount == null ? "Not recorded" : String(test.institutionCount)} />
+      <Row label="HTTP Status" value={test.httpStatus == null ? "Not recorded" : String(test.httpStatus)} />
+      <Row label="Institutions" value={test.institutionCount == null ? "Not applicable" : String(test.institutionCount)} />
       <AppText variant="caption" color={statusColor} style={{ fontWeight: "800" }}>
         {test.responseSummary ?? test.errorMessage ?? test.readiness}
       </AppText>

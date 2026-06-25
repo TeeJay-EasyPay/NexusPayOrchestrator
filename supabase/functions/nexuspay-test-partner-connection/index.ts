@@ -215,6 +215,80 @@ async function runUnsupportedProviderTest(providerId: string, environment: strin
   return { test };
 }
 
+async function runRippleTest(providerId: string, environment: string, createdBy: string | null) {
+  const endpoint = getEnv('XRPL_JSON_RPC_URL') || 'https://s.altnet.rippletest.net:51234';
+  const started = Date.now();
+
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        method: 'server_info',
+        params: [{}],
+      }),
+    });
+    const responseTimeMs = Date.now() - started;
+    const text = await response.text();
+    let payload: Record<string, unknown> | null = null;
+    try {
+      payload = text ? JSON.parse(text) : null;
+    } catch {
+      payload = null;
+    }
+
+    const serverState =
+      typeof payload?.result === 'object' && payload.result
+        ? String((payload.result as Record<string, unknown>).info && typeof (payload.result as Record<string, unknown>).info === 'object'
+          ? ((payload.result as Record<string, Record<string, unknown>>).info.server_state ?? 'unknown')
+          : 'unknown')
+        : 'unknown';
+    const success = response.ok && Boolean(payload?.result);
+
+    const test = await persistTest({
+      providerId,
+      environment,
+      testType: 'xrpl_server_info',
+      status: success ? 'SUCCESS' : 'FAILED',
+      readiness: success ? 'LIVE' : 'DIAGNOSTIC',
+      responseTimeMs,
+      httpStatus: response.status,
+      institutionCount: null,
+      capabilityCount: success ? 1 : 0,
+      responseSummary: success
+        ? `XRPL testnet responded with server state ${serverState}.`
+        : `XRPL testnet connectivity failed with HTTP ${response.status}.`,
+      errorCode: success ? null : `HTTP_${response.status}`,
+      errorMessage: success ? null : text.slice(0, 500),
+      createdBy,
+      metadata: {
+        provider: 'ripple',
+        endpoint: 'xrpl-testnet-json-rpc',
+        serverState,
+      },
+    });
+    return { test };
+  } catch (error) {
+    const test = await persistTest({
+      providerId,
+      environment,
+      testType: 'xrpl_server_info',
+      status: 'FAILED',
+      readiness: 'DIAGNOSTIC',
+      responseTimeMs: Date.now() - started,
+      responseSummary: 'XRPL testnet connectivity failed before receiving a response.',
+      errorCode: 'XRPL_CONNECTION_FAILED',
+      errorMessage: error instanceof Error ? error.message : String(error),
+      createdBy,
+      metadata: { provider: 'ripple', endpoint: 'xrpl-testnet-json-rpc' },
+    });
+    return { test };
+  }
+}
+
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -246,6 +320,10 @@ serve(async (req: Request) => {
 
     if (providerId === 'yapily') {
       return json(await runYapilyTest(providerId, environment, user.id));
+    }
+
+    if (providerId === 'ripple') {
+      return json(await runRippleTest(providerId, environment, user.id));
     }
 
     return json(await runUnsupportedProviderTest(providerId, environment, user.id));

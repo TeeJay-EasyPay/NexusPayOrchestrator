@@ -2,6 +2,48 @@
 
 Purpose: durable record of meaningful implementation work, security/context fixes, validation, commits, and OTA deployments. New code changes should append an entry here before commit when practical.
 
+## 2026-06-25 - Platform Partner Connectivity Honesty Correction
+
+Prompt / Objective:
+Founder review found that Platform Administration did not make the Yapily test action visible enough and still implied Nium/Tranglo were configured even though only Yapily and Ripple/XRPL have actual connectivity paths.
+
+Files Changed:
+- `app/platform-admin.tsx`
+- `app/platform-partners.tsx`
+- `app/platform-corridors.tsx`
+- `app/platform-providers.tsx`
+- `src/services/platformAdministrationService.ts`
+- `supabase/functions/nexuspay-test-partner-connection/index.ts`
+- `supabase/migrations/20260625000200_partner_connectivity_honesty_cleanup.sql`
+- `governance/implementation-log/IMPLEMENTATION_LOG.md`
+
+Summary:
+- Renamed Provider Configuration presentation around live Provider Connectivity.
+- Added prominent `Test Yapily` and `Test Ripple/XRPL` buttons at the top of the provider screen.
+- Restricted partner connectivity labels to `LIVE`, `TESTABLE`, or `NO DATA`; removed partner-facing derived connectivity language.
+- Changed Nium and Tranglo from configured/sandbox-ready metadata to candidate providers with no live connection.
+- Added Ripple/XRPL backend connection testing through the existing partner test Edge Function.
+- Updated Platform Administration summary cards to count `Testable` and `Live Verified` instead of metadata configuration.
+
+Validation:
+- `npx tsc --noEmit` passed.
+- Targeted ESLint passed for changed app and service files with no warnings.
+- `supabase db push` applied `20260625000200_partner_connectivity_honesty_cleanup.sql`.
+- `supabase functions deploy nexuspay-test-partner-connection` redeployed the function.
+- Yapily smoke test passed: `SUCCESS`, `LIVE`, HTTP `200`, response time `176ms`.
+- Ripple/XRPL smoke test passed: `SUCCESS`, `LIVE`, HTTP `200`, response time `563ms`, server state `full`.
+- Authenticated database readback confirmed:
+  - `yapily`: sandbox enabled, API configured, readiness 82.
+  - `ripple`: sandbox enabled, API configured, readiness 82.
+  - `nium`: sandbox disabled, API not configured, readiness 0.
+  - `tranglo`: sandbox disabled, API not configured, readiness 0.
+
+Commit:
+- Pending
+
+OTA:
+- Pending
+
 ## 2026-06-25 - Integration Sprint 1 Partner Framework And Yapily Connectivity
 
 Prompt / Objective:

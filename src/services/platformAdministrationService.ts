@@ -127,11 +127,11 @@ export type PlatformAdministrationSnapshot = {
 
 const fallbackProviders: PartnerProviderRecord[] = [
   provider("thunes", "Thunes", "Payment Network", "Researching", false, false, false, "Global payout network candidate."),
-  provider("tranglo", "Tranglo", "Payment Network", "Sandbox Active", true, false, true, "Candidate for UK to Philippines corridor testing."),
-  provider("nium", "Nium", "Payment Network", "Testing", true, false, true, "Candidate for UK to Malaysia corridor testing."),
+  provider("tranglo", "Tranglo", "Payment Network", "Researching", false, false, false, "Candidate provider. No live NexusPay connectivity configured yet."),
+  provider("nium", "Nium", "Payment Network", "Researching", false, false, false, "Candidate provider. No live NexusPay connectivity configured yet."),
   provider("yapily", "Yapily", "Open Banking", "Sandbox Active", true, false, true, "Open banking connectivity candidate."),
   provider("truelayer", "TrueLayer", "Open Banking", "Researching", false, false, false, "Open banking alternative under review."),
-  provider("ripple", "Ripple", "Settlement Network", "Testing", true, false, true, "XRPL/RLUSD settlement candidate."),
+  provider("ripple", "Ripple", "Settlement Network", "Testing", true, false, true, "XRPL testnet connectivity candidate."),
   provider("coins-ph", "Coins.ph", "Wallet / Local Payout", "Contacted", false, false, false, "Philippines wallet and payout candidate."),
   provider("gcash", "GCash", "Wallet / Local Payout", "Researching", false, false, false, "Philippines wallet payout candidate."),
   provider("maya", "Maya", "Wallet / Local Payout", "Researching", false, false, false, "Philippines wallet payout candidate."),

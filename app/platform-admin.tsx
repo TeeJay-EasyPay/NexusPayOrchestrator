@@ -23,14 +23,13 @@ export default function PlatformAdminScreen() {
   const summary = useMemo(() => {
     const providers = snapshot?.providers ?? [];
     const corridors = snapshot?.supportedCorridors ?? [];
-    const latestSuccessfulTests = (snapshot?.connectionTests ?? []).filter((item) => item.status === "SUCCESS");
+    const liveProviderIds = new Set((snapshot?.connectionTests ?? []).filter((item) => item.status === "SUCCESS").map((item) => item.providerId));
     return {
       providers: providers.length,
-      sandbox: providers.filter((item) => item.sandboxEnabled).length,
+      testable: providers.filter((item) => item.id === "yapily" || item.id === "ripple").length,
       production: providers.filter((item) => item.productionEnabled).length,
       corridors: corridors.length,
-      configured: providers.filter((item) => item.apiConfigured).length,
-      livePartnerTests: latestSuccessfulTests.length,
+      livePartners: liveProviderIds.size,
     };
   }, [snapshot]);
 
@@ -43,32 +42,30 @@ export default function PlatformAdminScreen() {
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
         <Metric label="Partners" value={String(summary.providers)} icon="share-2" />
         <Metric label="Corridors" value={String(summary.corridors)} icon="map" />
-        <Metric label="Sandbox Ready" value={String(summary.sandbox)} icon="server" />
-        <Metric label="API Configured" value={String(summary.configured)} icon="key" />
-        <Metric label="Live Tests" value={String(summary.livePartnerTests)} icon="activity" />
+        <Metric label="Testable" value={String(summary.testable)} icon="server" />
+        <Metric label="Live Verified" value={String(summary.livePartners)} icon="activity" />
       </View>
 
       <PlatformCard>
-        <Header title="Partner Ecosystem" badge="DERIVED" />
+        <Header title="Partner Ecosystem" badge="NO_DATA" />
         <AppText color={colors.textDarkSecondary}>
-          {summary.providers} external provider records are tracked across payment networks, open banking, settlement rails and local payout partners.
+          {summary.providers} partner records are tracked. Only partners with successful connection tests are treated as live.
         </AppText>
         <Action label="Open Partner Ecosystem" icon="arrow-right" onPress={() => router.push("/platform-partners" as never)} />
       </PlatformCard>
 
       <PlatformCard>
-        <Header title="Corridor Coverage" badge="DERIVED" />
+        <Header title="Corridor Coverage" badge="NO_DATA" />
         <AppText color={colors.textDarkSecondary}>
-          {summary.corridors} provider corridors are recorded with sandbox and production readiness status.
+          {summary.corridors} candidate corridors are recorded. Corridor readiness remains NO DATA until the connected partner is tested.
         </AppText>
         <Action label="Open Corridor Management" icon="arrow-right" onPress={() => router.push("/platform-corridors" as never)} />
       </PlatformCard>
 
       <PlatformCard>
-        <Header title="Provider Connectivity" badge="DERIVED" />
+        <Header title="Provider Connectivity" badge={summary.livePartners > 0 ? "LIVE" : "NO_DATA"} />
         <AppText color={colors.textDarkSecondary}>
-          {summary.sandbox} sandbox connection(s), {summary.production} production connection(s), and {summary.configured} API metadata configuration(s) are visible.
-          {summary.livePartnerTests > 0 ? ` ${summary.livePartnerTests} live partner test result(s) have been captured.` : " No live partner test result has been captured yet."}
+          Yapily and Ripple/XRPL are testable. {summary.livePartners} partner(s) currently have a successful live connectivity test.
         </AppText>
       </PlatformCard>
 
@@ -107,7 +104,7 @@ export default function PlatformAdminScreen() {
   );
 }
 
-function Header({ title, badge }: { title: string; badge: "LIVE" | "DERIVED" | "SIMULATED" | "MOCK" | "FALLBACK" }) {
+function Header({ title, badge }: { title: string; badge: "LIVE" | "DERIVED" | "SIMULATED" | "MOCK" | "FALLBACK" | "NO_DATA" }) {
   return (
     <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
       <AppText variant="subheading" color={colors.textDarkPrimary} style={{ fontWeight: "900", flex: 1 }}>{title}</AppText>
