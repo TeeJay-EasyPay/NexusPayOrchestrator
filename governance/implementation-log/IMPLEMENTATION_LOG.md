@@ -2,6 +2,45 @@
 
 Purpose: durable record of meaningful implementation work, security/context fixes, validation, commits, and OTA deployments. New code changes should append an entry here before commit when practical.
 
+## 2026-06-25 - Yapily Funding Source Visibility Correction
+
+Prompt / Objective:
+Founder review found that Yapily was visible in the payment-flow evidence but not clearly visible when selecting funding sources, and that private-user flow evidence disappeared after completion.
+
+Files Changed:
+- `app/funding.tsx`
+- `app/consumer/send.tsx`
+- `app/consumer/success.tsx`
+- `src/data/mockPaymentMethods.ts`
+- `governance/implementation-log/IMPLEMENTATION_LOG.md`
+
+Summary:
+- Renamed corporate Pay by Bank funding source presentation to `Pay by Bank via Yapily`.
+- Replaced generic/open-banking/TrueLayer-style saved bank metadata with Yapily sandbox bank source labels.
+- Added Yapily sandbox bank choices for private-user funding selection.
+- Added a compact private-user success-screen Open Banking evidence card showing flow provenance, step count and status.
+- Kept detailed step-by-step Yapily evidence available on Track via the existing flow card.
+
+Validation:
+- `npx tsc --noEmit` passed.
+- Targeted ESLint passed for changed files with no warnings.
+
+Known Limitations:
+- The bank source options are explicit Yapily sandbox options, not live bank account enumeration from Yapily. The current Yapily institution discovery smoke test returns HTTP `200` with `0` institutions, so live institution selection is not yet available from the current sandbox/application configuration.
+
+Commit:
+- `bde773cdf2c7338cf2566aaf57ce5ff1791893f4`
+
+OTA:
+- Branch: `preview`
+- Update group: `9ab659da-3b9a-4fa5-9dd0-e94ba2e977d9`
+- Android update: `019f00da-6d61-7945-a0f2-4fc03c2156f5`
+- iOS update: `019f00da-6d61-7e47-a469-ff65c4033238`
+- Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/9ab659da-3b9a-4fa5-9dd0-e94ba2e977d9`
+
+Known Warnings:
+- Expo publish continued to show the existing `@noble/hashes/crypto.js` export warning. It did not block OTA.
+
 ## 2026-06-25 - Open Banking Payment Flow V1
 
 Prompt / Objective:

@@ -12,7 +12,9 @@ import {
 import { AppText } from "../../src/components/ui/AppText";
 import { useNexusAIScreenSetting } from "../../src/hooks/useNexusAISettings";
 import { analyseTransfer, TransferAnalysisResult } from "../../src/services/nexusAIService";
+import { loadOpenBankingPaymentFlow } from "../../src/services/openBankingPaymentFlowService";
 import { useTransfer } from "../../src/state/TransferContext";
+import { OpenBankingPaymentFlow } from "../../src/types/transfer";
 
 function asString(value: string | string[] | undefined) {
   if (Array.isArray(value)) {
@@ -35,6 +37,7 @@ export default function ConsumerSuccessScreen() {
   const { completedTransfers } = useTransfer();
   const { enabled: trackingAIEnabled, settings: aiSettings } = useNexusAIScreenSetting("tracking_enabled");
   const [recap, setRecap] = useState<TransferAnalysisResult | null>(null);
+  const [openBankingFlow, setOpenBankingFlow] = useState<OpenBankingPaymentFlow | null>(null);
 
   const transferId = asString(params.transferId);
 
@@ -82,6 +85,28 @@ export default function ConsumerSuccessScreen() {
       active = false;
     };
   }, [aiSettings?.sensitivity, trackingAIEnabled, transfer]);
+
+  useEffect(() => {
+    if (!transfer?.id || transfer.fundingMethod !== "OPEN_BANKING") {
+      setOpenBankingFlow(null);
+      return;
+    }
+
+    if (transfer.openBankingFlow) {
+      setOpenBankingFlow(transfer.openBankingFlow);
+      return;
+    }
+
+    let mounted = true;
+    loadOpenBankingPaymentFlow(transfer.id).then((flow) => {
+      if (!mounted) return;
+      setOpenBankingFlow(flow);
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, [transfer?.id, transfer?.fundingMethod, transfer?.openBankingFlow]);
 
   if (!transfer) {
     return (
@@ -134,6 +159,30 @@ export default function ConsumerSuccessScreen() {
         <AppText color={consumerColors.muted}>Funding: {transfer.fundingMethod ?? "Not captured"}</AppText>
         <AppText color={consumerColors.muted}>Funding reference: {transfer.fundingReference ?? "Not captured"}</AppText>
       </ConsumerCard>
+
+      {transfer.fundingMethod === "OPEN_BANKING" ? (
+        <ConsumerCard>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+            <View style={{ flex: 1 }}>
+              <AppText color={consumerColors.text} style={{ fontSize: 18, fontWeight: "900" }}>
+                Open Banking evidence
+              </AppText>
+              <AppText color={consumerColors.muted}>
+                {openBankingFlow
+                  ? `${openBankingFlow.providerId.toUpperCase()} ${openBankingFlow.environment} flow captured`
+                  : "Loading Yapily flow evidence..."}
+              </AppText>
+            </View>
+            <ConsumerPill label={openBankingFlow?.provenance ?? "SANDBOX"} tone="gold" />
+          </View>
+          <AppText color={consumerColors.muted}>
+            {openBankingFlow
+              ? `${openBankingFlow.steps.length} funding steps recorded. Status: ${openBankingFlow.status}.`
+              : "The detailed steps remain available on Track."}
+          </AppText>
+          <ConsumerAction label="View flow" icon="list" secondary onPress={() => router.push("/consumer/track" as never)} />
+        </ConsumerCard>
+      ) : null}
 
       {trackingAIEnabled ? (
         <ConsumerCard>

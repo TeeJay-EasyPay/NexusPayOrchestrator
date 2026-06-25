@@ -21,7 +21,7 @@ function methodMeta(method: SavedPaymentMethod) {
   if (method.type === "OPEN_BANKING") {
     return {
       icon: "🏦",
-      label: "Pay by Bank",
+      label: "Pay by Bank via Yapily",
       note: "Lower fees • Strong customer authentication",
     };
   }
@@ -45,6 +45,10 @@ function PaymentMethodOption({
   onPress: () => void;
 }) {
   const meta = methodMeta(method);
+  const noteText =
+    method.type === "OPEN_BANKING"
+      ? "Yapily sandbox bank authorisation - visible flow evidence"
+      : "Fast simulated authorisation - higher processing cost";
 
   return (
     <Pressable onPress={onPress}>
@@ -115,7 +119,7 @@ function PaymentMethodOption({
             }}
           >
             <AppText variant="caption" color={colors.textDarkSecondary}>
-              {meta.note}
+              {noteText}
             </AppText>
 
             <AppText variant="caption" color={colors.textDarkMuted}>
@@ -213,7 +217,7 @@ export default function FundingScreen() {
             </AppText>
 
             <AppText variant="body" color={colors.textSecondary}>
-              Select a saved bank or card source to authorise this transfer before payout execution.
+              Select a card or Yapily sandbox bank source to authorise this transfer before payout execution.
             </AppText>
           </View>
 

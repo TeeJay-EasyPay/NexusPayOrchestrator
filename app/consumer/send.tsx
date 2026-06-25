@@ -571,14 +571,15 @@ export default function ConsumerSendScreen() {
         ) : (
           <>
             <AppText color={consumerColors.muted}>
-              Select how this transfer is funded before execution.
+              Select a card or Yapily sandbox bank source before execution.
             </AppText>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
               {[
                 { id: "Visa **** 4242", method: "CARD" as FundingMethod },
                 { id: "Visa **** 1088", method: "CARD" as FundingMethod },
-                { id: "Barclays UK • Main", method: "OPEN_BANKING" as FundingMethod },
-                { id: "HSBC UK • Current", method: "OPEN_BANKING" as FundingMethod },
+                { id: "Yapily Sandbox - Barclays UK", method: "OPEN_BANKING" as FundingMethod },
+                { id: "Yapily Sandbox - HSBC UK", method: "OPEN_BANKING" as FundingMethod },
+                { id: "Yapily Sandbox - Lloyds UK", method: "OPEN_BANKING" as FundingMethod },
               ].map((source) => {
                 const active = fundingReference === source.id;
                 return (
