@@ -39,10 +39,17 @@ Validation:
   - `tranglo`: sandbox disabled, API not configured, readiness 0.
 
 Commit:
-- Pending
+- `e5289c55c4a32cc322bd01017b57be616cb8042e`
 
 OTA:
-- Pending
+- Branch: `preview`
+- Update group: `7fb9a19a-dba1-4dc7-b2f4-60b1b405e89e`
+- Android update: `019f0053-4ca9-7114-a053-cacf0ef700ec`
+- iOS update: `019f0053-4ca9-747f-a2d9-92c328dc85c9`
+- Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/7fb9a19a-dba1-4dc7-b2f4-60b1b405e89e`
+
+Known Warnings:
+- Expo publish continued to show the existing `@noble/hashes/crypto.js` export warning. It did not block OTA.
 
 ## 2026-06-25 - Integration Sprint 1 Partner Framework And Yapily Connectivity
 
