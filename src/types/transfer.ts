@@ -21,6 +21,8 @@ export type PayoutMethod = "BANK" | "MOBILE_WALLET";
 
 export type FundingMethod = "OPEN_BANKING" | "CARD";
 export type AccountScope = "demo" | "personal";
+export type OpenBankingStepStatus = "PENDING" | "DONE" | "FAILED";
+export type OpenBankingProvenance = "LIVE" | "SANDBOX" | "DERIVED" | "FALLBACK" | "NO_DATA";
 
 export type FundingStatus =
   | "NOT_STARTED"
@@ -172,6 +174,42 @@ export interface RouteQuote {
   steps: string[];
 }
 
+export interface OpenBankingPaymentFlowStep {
+  id: string;
+  flowId: string;
+  transferId: string;
+  stepKey: string;
+  label: string;
+  status: OpenBankingStepStatus;
+  provider: string;
+  provenance: OpenBankingProvenance;
+  sequence: number;
+  responseTimeMs?: number | null;
+  httpStatus?: number | null;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface OpenBankingPaymentFlow {
+  id: string;
+  transferId: string;
+  providerId: string;
+  environment: string;
+  institutionId?: string | null;
+  institutionName?: string | null;
+  paymentRequestId?: string | null;
+  consentId?: string | null;
+  authorizationUrl?: string | null;
+  status: string;
+  amount: number;
+  currency: Currency;
+  fundingReference?: string | null;
+  provenance: OpenBankingProvenance;
+  createdAt: string;
+  updatedAt: string;
+  steps: OpenBankingPaymentFlowStep[];
+}
+
 export interface Transfer {
   id: string;
   senderCurrency: Currency;
@@ -183,6 +221,7 @@ export interface Transfer {
   fundingStatus?: FundingStatus;
   fundingReference?: string;
   fundingAuthorisedAt?: number;
+  openBankingFlow?: OpenBankingPaymentFlow;
   status: TransferStatus;
   createdAt: number;
   accountScope?: AccountScope;

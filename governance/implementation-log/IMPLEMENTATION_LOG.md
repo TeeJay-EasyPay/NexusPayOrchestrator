@@ -2,6 +2,62 @@
 
 Purpose: durable record of meaningful implementation work, security/context fixes, validation, commits, and OTA deployments. New code changes should append an entry here before commit when practical.
 
+## 2026-06-25 - Open Banking Payment Flow V1
+
+Prompt / Objective:
+Run Open Banking Payment Flow V1 so all personas/users can see the full sender-visible Yapily payment flow, update Supabase if needed, create a high-level founder briefing, and append the implementation log.
+
+Files Changed:
+- `app/funding.tsx`
+- `app/track.tsx`
+- `app/consumer/send.tsx`
+- `app/consumer/track.tsx`
+- `src/components/openBanking/OpenBankingFlowCard.tsx`
+- `src/services/execution/executionEngine.ts`
+- `src/services/openBankingPaymentFlowService.ts`
+- `src/services/transferService.ts`
+- `src/state/TransferContext.tsx`
+- `src/types/transfer.ts`
+- `supabase/functions/nexuspay-open-banking-payment-flow/index.ts`
+- `supabase/migrations/20260625000300_open_banking_payment_flow_v1.sql`
+- `governance/reports/FOUNDER_BRIEFING_OPEN_BANKING_PAYMENT_FLOW_V1.md`
+- `governance/implementation-log/IMPLEMENTATION_LOG.md`
+
+Summary:
+- Added Open Banking Payment Flow V1 database structures for flow headers and ordered flow steps.
+- Added backend-only `nexuspay-open-banking-payment-flow` Edge Function.
+- The function calls Yapily institution discovery using Supabase Edge Function secrets, stores live HTTP status/response time evidence, and records sandbox authorisation steps with explicit provenance.
+- Corporate/demo Pay by Bank funding now starts the Yapily Open Banking flow before Track.
+- Private/consumer Open Banking sends now start the same flow before Track.
+- Track screens now display a Yapily Open Banking payment-flow card showing each step and its provenance.
+- Execution snapshots now include Open Banking flow steps before route execution, bridge settlement and payout verification.
+- Transfer persistence now records funding method/status/reference and Open Banking flow linkage.
+
+Validation:
+- `npx tsc --noEmit` passed.
+- Targeted ESLint passed with no errors for changed app/service/type/component files.
+- ESLint still reports existing React hook dependency warnings in `app/track.tsx`; no new lint errors were introduced.
+- `supabase db push` applied `20260625000300_open_banking_payment_flow_v1.sql`.
+- `supabase functions deploy nexuspay-open-banking-payment-flow` deployed the backend function.
+- Authenticated smoke test passed:
+  - Transfer: `SMOKE-OB-20260625215359`
+  - Flow: `d8ae3d7d-bb52-4a6d-b1c2-bf58fd70d706`
+  - Status: `READY_FOR_EXECUTION`
+  - Provenance: `SANDBOX`
+  - Provider: `yapily`
+  - Step count: `7`
+  - Yapily institution discovery HTTP status: `200`
+  - Institution count: `0`
+
+Founder Briefing:
+- `governance/reports/FOUNDER_BRIEFING_OPEN_BANKING_PAYMENT_FLOW_V1.md`
+
+Commit:
+- Pending.
+
+OTA:
+- Pending.
+
 ## 2026-06-25 - Platform Partner Connectivity Honesty Correction
 
 Prompt / Objective:

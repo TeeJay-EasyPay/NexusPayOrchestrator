@@ -7,6 +7,7 @@ import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
 import { Screen } from "../src/components/ui/Screen";
 import { SavedPaymentMethod } from "../src/data/mockPaymentMethods";
+import { startOpenBankingPaymentFlow } from "../src/services/openBankingPaymentFlowService";
 import { usePaymentMethods } from "../src/state/PaymentMethodsContext";
 import { useTransfer } from "../src/state/TransferContext";
 import { colors } from "../src/theme";
@@ -128,7 +129,7 @@ function PaymentMethodOption({
 }
 
 export default function FundingScreen() {
-  const { transfer, setFundingMethod, setFundingStatus } = useTransfer();
+  const { transfer, setFundingMethod, setFundingStatus, setOpenBankingFlow } = useTransfer();
   const { paymentMethods, primaryMethodId, primaryMethod } = usePaymentMethods();
 
   const [selectedMethodId, setSelectedMethodId] = useState(primaryMethodId);
@@ -149,7 +150,24 @@ export default function FundingScreen() {
     setFundingMethod(fundingMethod, selectedMethod.reference);
     setFundingStatus("AUTHORISING");
 
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    if (fundingMethod === "OPEN_BANKING" && transfer) {
+      try {
+        const flow = await startOpenBankingPaymentFlow({
+          transferId: transfer.id,
+          amount: transfer.senderAmount,
+          currency: transfer.senderCurrency,
+          fundingReference: selectedMethod.reference,
+        });
+        setOpenBankingFlow(flow);
+      } catch (error) {
+        console.warn("Open banking payment flow failed", error instanceof Error ? error.message : String(error));
+        setFundingStatus("FAILED");
+        setBusy(false);
+        return;
+      }
+    } else {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
 
     setFundingStatus("AUTHORISED");
     setBusy(false);
@@ -245,7 +263,7 @@ export default function FundingScreen() {
               </AppText>
 
               <AppText variant="caption" color={colors.textDarkSecondary}>
-                This simulates card/open banking payment authorisation. NexusPay does not hold an in-app balance.
+                Card authorisation remains simulated. Open banking authorisation records a Yapily sandbox payment flow with visible step evidence on Track.
               </AppText>
 
               <AppButton

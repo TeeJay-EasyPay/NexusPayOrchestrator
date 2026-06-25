@@ -1,5 +1,5 @@
 import { executeXrplTestnetSettlement, XrplSettlementResult } from "../../lib/xrplSettlement";
-import { RouteQuote, Transfer, TransferStatus } from "../../types/transfer";
+import { OpenBankingPaymentFlow, RouteQuote, Transfer, TransferStatus } from "../../types/transfer";
 import { createPayout, getPayoutStatus } from "../payout/payoutAdapter";
 import { PayoutResult, PayoutStatus } from "../payout/payoutTypes";
 import { writeTransactionAuditLog } from "../transactionAuditService";
@@ -50,6 +50,7 @@ export type ExecutionSnapshot = {
   payoutStatus: PayoutStatus;
   xrplStatus: "NOT_REQUIRED" | "PENDING" | "COMPLETED" | "FAILED";
   xrplProof?: XrplSettlementResult;
+  openBankingFlow?: OpenBankingPaymentFlow;
   steps: ExecutionStep[];
   telemetry: Record<string, unknown>;
   error?: string;
@@ -127,8 +128,34 @@ function findFailoverRoute(transfer: Transfer, selectedRoute: RouteQuote) {
     .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))[0];
 }
 
-function buildSteps(route: RouteQuote): ExecutionStep[] {
+function buildOpenBankingSteps(flow?: OpenBankingPaymentFlow): ExecutionStep[] {
+  if (!flow?.steps?.length) {
+    return [];
+  }
+
+  return flow.steps.map((step): ExecutionStep => ({
+    id: `open_banking_${step.stepKey}`,
+    title: step.label,
+    description: `${step.provider} ${flow.environment} flow step (${step.provenance}).`,
+    status: step.status === "DONE" ? "DONE" : step.status === "FAILED" ? "FAILED" : "PENDING",
+    attempt: step.status === "DONE" ? 1 : 0,
+    provider: step.provider,
+    startedAt: new Date(step.createdAt).getTime(),
+    completedAt: step.status === "DONE" ? new Date(step.createdAt).getTime() : undefined,
+    telemetry: {
+      open_banking_flow_id: flow.id,
+      provider: step.provider,
+      provenance: step.provenance,
+      http_status: step.httpStatus ?? null,
+      response_time_ms: step.responseTimeMs ?? null,
+      ...step.metadata,
+    },
+  }));
+}
+
+function buildSteps(route: RouteQuote, openBankingFlow?: OpenBankingPaymentFlow): ExecutionStep[] {
   return [
+    ...buildOpenBankingSteps(openBankingFlow),
     {
       id: "idempotency",
       title: "Execution lock created",
@@ -268,7 +295,7 @@ export async function runTransferExecution({
   let failoverUsed = resumeFromSnapshot?.failoverUsed ?? false;
   let steps = resumeFromSnapshot?.steps?.length
     ? normalizeRunningSteps(resumeFromSnapshot.steps)
-    : buildSteps(activeRoute);
+    : buildSteps(activeRoute, transfer.openBankingFlow);
   let payout: PayoutResult | undefined = resumeFromSnapshot?.payout;
   let payoutStatus: PayoutStatus = resumeFromSnapshot?.payoutStatus ?? "NOT_STARTED";
   let xrplStatus: ExecutionSnapshot["xrplStatus"] =
@@ -292,6 +319,7 @@ export async function runTransferExecution({
       payoutStatus,
       xrplStatus,
       xrplProof,
+      openBankingFlow: transfer.openBankingFlow,
       steps,
       telemetry: {
         provider: activeRoute.provider,
@@ -303,6 +331,9 @@ export async function runTransferExecution({
         orchestration_safety_status: activeRoute.orchestrationSafetyStatus ?? null,
         failover_recommended: activeRoute.failoverRecommended ?? false,
         recovery_run: isRecoveryRun,
+        open_banking_flow_id: transfer.openBankingFlow?.id ?? null,
+        open_banking_provider: transfer.openBankingFlow?.providerId ?? null,
+        open_banking_status: transfer.openBankingFlow?.status ?? null,
         execution_checkpoint: steps[activeIndexForSteps(steps)]?.id ?? null,
         ...extraTelemetry,
       },
@@ -664,7 +695,7 @@ export async function runTransferExecution({
       xrplProof = undefined;
       xrplStatus = activeRoute.rail === "HYBRID" ? "PENDING" : "NOT_REQUIRED";
       error = undefined;
-      steps = buildSteps(activeRoute);
+      steps = buildSteps(activeRoute, transfer.openBankingFlow);
       steps = completeStep(steps, "idempotency", {
         idempotency_key: idempotencyKey,
         failover_lock_reused: true,

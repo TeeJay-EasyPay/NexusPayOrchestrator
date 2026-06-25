@@ -7,6 +7,7 @@ import { loadCompletedTransfers, saveCompletedTransfer } from "../services/trans
 import {
     FundingMethod,
     FundingStatus,
+    OpenBankingPaymentFlow,
     Recipient,
     RouteQuote,
     Transfer,
@@ -29,6 +30,7 @@ interface TransferContextType {
       fundingMethod?: FundingMethod;
       fundingReference?: string;
       fundingStatus?: FundingStatus;
+      openBankingFlow?: OpenBankingPaymentFlow;
     }
   ) => Transfer;
   setRecipient: (recipient: Recipient) => void;
@@ -36,6 +38,7 @@ interface TransferContextType {
   selectRoute: (route: RouteQuote) => void;
   setFundingMethod: (method: FundingMethod, fundingReference?: string) => void;
   setFundingStatus: (status: FundingStatus) => void;
+  setOpenBankingFlow: (flow: OpenBankingPaymentFlow, transferFallback?: Transfer) => void;
   startTransfer: () => void;
   completeTransfer: () => void;
   resetTransfer: () => void;
@@ -91,6 +94,7 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
       fundingMethod?: FundingMethod;
       fundingReference?: string;
       fundingStatus?: FundingStatus;
+      openBankingFlow?: OpenBankingPaymentFlow;
     }
   ) => {
     const newTransfer: Transfer = {
@@ -103,6 +107,7 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
       fundingMethod: options?.fundingMethod,
       fundingReference: options?.fundingReference,
       fundingStatus: options?.fundingStatus ?? "NOT_STARTED",
+      openBankingFlow: options?.openBankingFlow,
       status: options?.selectedRoute
         ? "ROUTE_SELECTED"
         : options?.routes?.length
@@ -281,6 +286,33 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  const setOpenBankingFlow = (flow: OpenBankingPaymentFlow, transferFallback?: Transfer) => {
+    setTransfer((currentTransfer) => {
+      const targetTransfer = currentTransfer ?? transferFallback;
+
+      if (!targetTransfer) return currentTransfer;
+
+      void writeTransactionAuditLog({
+        transactionId: targetTransfer.id,
+        eventType: "FUNDING_AUTHORISED",
+        status: "SUCCESS",
+        message: "Yapily open banking payment flow recorded for sender-visible tracking.",
+        metadata: {
+          provider: flow.providerId,
+          environment: flow.environment,
+          provenance: flow.provenance,
+          flow_status: flow.status,
+          step_count: flow.steps.length,
+        },
+      });
+
+      return {
+        ...targetTransfer,
+        openBankingFlow: flow,
+      };
+    });
+  };
+
   const startTransfer = () => {
     setTransfer((currentTransfer) => {
       if (!currentTransfer) return currentTransfer;
@@ -353,6 +385,7 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
         selectRoute,
         setFundingMethod,
         setFundingStatus,
+        setOpenBankingFlow,
         startTransfer,
         completeTransfer,
         resetTransfer,

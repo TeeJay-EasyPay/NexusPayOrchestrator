@@ -1,7 +1,7 @@
 import { supabase } from "../lib/supabase";
 import { getStoredAccountScope } from "../state/AccountContext";
 import { getStoredPersonaId } from "../state/PersonaContext";
-import { Currency, PayoutMethod, Recipient, RouteQuote, Transfer } from "../types/transfer";
+import { Currency, FundingMethod, FundingStatus, PayoutMethod, Recipient, RouteQuote, Transfer } from "../types/transfer";
 
 function toNumber(value: unknown, fallback = 0) {
   const parsed = Number(value);
@@ -31,6 +31,15 @@ function toCurrency(value: unknown, fallback: Currency = "PHP"): Currency {
 
 function toPayoutMethod(value: unknown, fallback: PayoutMethod = "BANK"): PayoutMethod {
   return value === "BANK" || value === "MOBILE_WALLET" ? value : fallback;
+}
+
+function toFundingMethod(value: unknown): FundingMethod | undefined {
+  return value === "OPEN_BANKING" || value === "CARD" ? value : undefined;
+}
+
+function toFundingStatus(value: unknown): FundingStatus | undefined {
+  const allowed: FundingStatus[] = ["NOT_STARTED", "AUTHORISING", "AUTHORISED", "SETTLED", "FAILED"];
+  return allowed.includes(value as FundingStatus) ? (value as FundingStatus) : undefined;
 }
 
 function toCleanString(value: unknown) {
@@ -153,7 +162,16 @@ export async function saveTransferProgress(transfer: Transfer) {
         ? recipient.bankName ?? null
         : recipient.mobileWalletProvider ?? null,
     selected_route: routePayload,
+    funding_method: transfer.fundingMethod ?? null,
+    funding_status: transfer.fundingStatus ?? null,
+    funding_reference: transfer.fundingReference ?? null,
+    funding_authorised_at: transfer.fundingAuthorisedAt
+      ? new Date(transfer.fundingAuthorisedAt).toISOString()
+      : null,
     status: transfer.status,
+    open_banking_flow_id: transfer.openBankingFlow?.id ?? null,
+    open_banking_provider: transfer.openBankingFlow?.providerId ?? null,
+    open_banking_status: transfer.openBankingFlow?.status ?? null,
     updated_at: now,
     completed_at: transfer.status === "COMPLETED" ? now : null,
   });
@@ -212,6 +230,10 @@ export async function loadCompletedTransfers(): Promise<Transfer[]> {
       recipient: normalizeRecipient(row),
       routes: selectedRoute ? [selectedRoute] : [],
       selectedRoute,
+      fundingMethod: toFundingMethod(row.funding_method),
+      fundingStatus: toFundingStatus(row.funding_status),
+      fundingReference: row.funding_reference ?? undefined,
+      fundingAuthorisedAt: row.funding_authorised_at ? new Date(row.funding_authorised_at).getTime() : undefined,
       status: row.status ?? "COMPLETED",
       createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
       accountScope: rowScope,

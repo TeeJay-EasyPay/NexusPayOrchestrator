@@ -9,14 +9,17 @@ import {
     ConsumerPill,
     ConsumerShell,
 } from "../../src/components/consumer/ConsumerShell";
+import { OpenBankingFlowCard } from "../../src/components/openBanking/OpenBankingFlowCard";
 import { AppText } from "../../src/components/ui/AppText";
 import { useNexusAIScreenSetting } from "../../src/hooks/useNexusAISettings";
 import {
     analyseTransfer,
     TransferAnalysisResult,
 } from "../../src/services/nexusAIService";
+import { loadOpenBankingPaymentFlow } from "../../src/services/openBankingPaymentFlowService";
 import { loadTransactionAuditLogs } from "../../src/services/transactionAuditService";
 import { useTransfer } from "../../src/state/TransferContext";
+import { OpenBankingPaymentFlow } from "../../src/types/transfer";
 
 type TimelineStep = {
   title: string;
@@ -63,6 +66,7 @@ export default function ConsumerTrackScreen() {
   const { enabled: trackingAIEnabled, settings: aiSettings } = useNexusAIScreenSetting("tracking_enabled");
   const [auditLines, setAuditLines] = useState<string[]>([]);
   const [aiUpdate, setAiUpdate] = useState<TransferAnalysisResult | null>(null);
+  const [openBankingFlow, setOpenBankingFlowState] = useState<OpenBankingPaymentFlow | null>(null);
   const autoCompleteForTransferRef = useRef<string | null>(null);
   const startedTransferRef = useRef<string | null>(null);
   const successNavigationRef = useRef<string | null>(null);
@@ -90,6 +94,28 @@ export default function ConsumerTrackScreen() {
 
   const latestCompleted = completedTransfers[0] ?? null;
   const activeTransfer = transfer ?? latestCompleted;
+
+  useEffect(() => {
+    if (!activeTransfer?.id || activeTransfer.fundingMethod !== "OPEN_BANKING") {
+      setOpenBankingFlowState(null);
+      return;
+    }
+
+    if (activeTransfer.openBankingFlow) {
+      setOpenBankingFlowState(activeTransfer.openBankingFlow);
+      return;
+    }
+
+    let mounted = true;
+    loadOpenBankingPaymentFlow(activeTransfer.id).then((flow) => {
+      if (!mounted) return;
+      setOpenBankingFlowState(flow);
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, [activeTransfer?.id, activeTransfer?.fundingMethod, activeTransfer?.openBankingFlow]);
 
   const timeline = useMemo(
     () => timelineForStatus(activeTransfer?.status ?? "CREATED"),
@@ -269,6 +295,10 @@ export default function ConsumerTrackScreen() {
             {aiUpdate?.progressAnalysis ?? "Nexus AI is preparing transfer commentary."}
           </AppText>
         </ConsumerCard>
+      ) : null}
+
+      {activeTransfer.fundingMethod === "OPEN_BANKING" ? (
+        <OpenBankingFlowCard flow={activeTransfer.openBankingFlow ?? openBankingFlow} />
       ) : null}
 
       <ConsumerCard>

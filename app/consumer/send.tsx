@@ -14,6 +14,7 @@ import { corridors } from "../../src/data/corridors";
 import { useNexusAIScreenSetting } from "../../src/hooks/useNexusAISettings";
 import { buildOrchestratedRouteQuotes } from "../../src/lib/settlementOrchestrator";
 import { explainRoute } from "../../src/services/nexusAIService";
+import { startOpenBankingPaymentFlow } from "../../src/services/openBankingPaymentFlowService";
 import { useTransfer } from "../../src/state/TransferContext";
 import { useWallet } from "../../src/state/WalletContext";
 import { Currency, FundingMethod, Recipient, RouteQuote } from "../../src/types/transfer";
@@ -43,7 +44,7 @@ export default function ConsumerSendScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { simulatedRlusdBalance } = useWallet();
-  const { transfer, createTransfer, startTransfer } = useTransfer();
+  const { transfer, createTransfer, startTransfer, setOpenBankingFlow } = useTransfer();
   const { enabled: routeAIEnabled, settings: aiSettings } = useNexusAIScreenSetting("route_enabled");
 
   const [amount, setAmount] = useState(asString(params.amount) || "250");
@@ -67,6 +68,7 @@ export default function ConsumerSendScreen() {
   const [routeAiSummary, setRouteAiSummary] = useState<string | null>(null);
   const [routeAiLoading, setRouteAiLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const selectedCorridor = useMemo(
     () => corridors.find((item) => item.country === manualCountry),
@@ -260,7 +262,11 @@ export default function ConsumerSendScreen() {
     };
   }, [aiSettings?.sensitivity, recipient, routeAIEnabled, selectedRoute]);
 
-  function submitTransfer() {
+  async function submitTransfer() {
+    if (submitting) {
+      return;
+    }
+
     if (!recipient) {
       setErrorMessage("Enter recipient name, country, sort code, and account number.");
       setCurrentStep(1);
@@ -315,7 +321,9 @@ export default function ConsumerSendScreen() {
       return;
     }
 
-    createTransfer(sendAmount, {
+    setSubmitting(true);
+
+    const newTransfer = createTransfer(sendAmount, {
       recipient,
       routes,
       selectedRoute,
@@ -323,6 +331,22 @@ export default function ConsumerSendScreen() {
       fundingReference,
       fundingStatus: "AUTHORISED",
     });
+
+    if (fundingMethod === "OPEN_BANKING") {
+      try {
+        const flow = await startOpenBankingPaymentFlow({
+          transferId: newTransfer.id,
+          amount: newTransfer.senderAmount,
+          currency: newTransfer.senderCurrency,
+          fundingReference,
+        });
+        setOpenBankingFlow(flow, newTransfer);
+      } catch (error) {
+        setErrorMessage(error instanceof Error ? error.message : "Open banking payment flow failed.");
+        setSubmitting(false);
+        return;
+      }
+    }
 
     startTransfer();
 
@@ -696,7 +720,7 @@ export default function ConsumerSendScreen() {
             {errorMessage}
           </AppText>
         ) : null}
-        <ConsumerAction label="Send" icon="arrow-right" onPress={submitTransfer} />
+        <ConsumerAction label={submitting ? "Preparing flow..." : "Send"} icon="arrow-right" onPress={submitTransfer} />
       </ConsumerCard>
       ) : null}
     </ConsumerShell>

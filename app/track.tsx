@@ -4,6 +4,7 @@ import { Linking, Pressable, ScrollView, View } from "react-native";
 
 import { OperationalTimelineCard } from "../src/components/audit/OperationalTimelineCard";
 import { NexusAIToggleCard } from "../src/components/intelligence/NexusAIToggleCard";
+import { OpenBankingFlowCard } from "../src/components/openBanking/OpenBankingFlowCard";
 import { AppButton } from "../src/components/ui/AppButton";
 import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
@@ -20,10 +21,12 @@ import {
     analyseTransfer,
     TransferAnalysisResult,
 } from "../src/services/nexusAIService";
+import { loadOpenBankingPaymentFlow } from "../src/services/openBankingPaymentFlowService";
 import { PayoutStatus } from "../src/services/payout/payoutTypes";
 import { useTransfer } from "../src/state/TransferContext";
 import { useWallet } from "../src/state/WalletContext";
 import { colors } from "../src/theme";
+import { OpenBankingPaymentFlow } from "../src/types/transfer";
 
 function formatCurrency(value: number | undefined, currency: string) {
   const safeValue = value ?? 0;
@@ -177,6 +180,7 @@ export default function TrackScreen() {
   const [realtimeStatus, setRealtimeStatus] = useState("Connecting");
   const [transferAnalysis, setTransferAnalysis] =
     useState<TransferAnalysisResult | null>(null);
+  const [openBankingFlow, setOpenBankingFlowState] = useState<OpenBankingPaymentFlow | null>(null);
 
   const hasStartedRef = useRef(false);
   const hasDebitedWalletRef = useRef(false);
@@ -226,6 +230,28 @@ export default function TrackScreen() {
       unsubscribe();
     };
   }, [transfer?.id]);
+
+  useEffect(() => {
+    if (!transfer?.id || transfer.fundingMethod !== "OPEN_BANKING") {
+      setOpenBankingFlowState(null);
+      return;
+    }
+
+    if (transfer.openBankingFlow) {
+      setOpenBankingFlowState(transfer.openBankingFlow);
+      return;
+    }
+
+    let mounted = true;
+    loadOpenBankingPaymentFlow(transfer.id).then((flow) => {
+      if (!mounted) return;
+      setOpenBankingFlowState(flow);
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, [transfer?.id, transfer?.fundingMethod, transfer?.openBankingFlow]);
 
   useEffect(() => {
   if (!transfer || !selectedRoute) return;
@@ -378,6 +404,8 @@ export default function TrackScreen() {
   const humanStatus = executionSnapshot?.humanStatus ?? "Preparing execution engine...";
   const executionTelemetry = executionSnapshot?.telemetry ?? {};
   const telemetrySummary = metadataLines(executionTelemetry);
+  const visibleOpenBankingFlow =
+    executionSnapshot?.openBankingFlow ?? transfer.openBankingFlow ?? openBankingFlow;
 
   const payoutLabel = safeRecipient?.payoutMethod === "BANK"
     ? `${safeRecipient?.bankName ?? "Selected bank"} bank account`
@@ -526,6 +554,10 @@ export default function TrackScreen() {
                 </AppText>
               </View>
             </AppCard>
+          ) : null}
+
+          {transfer.fundingMethod === "OPEN_BANKING" ? (
+            <OpenBankingFlowCard flow={visibleOpenBankingFlow} />
           ) : null}
 
           <AppCard>
