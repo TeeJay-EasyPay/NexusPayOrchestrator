@@ -40,10 +40,12 @@ Build Note:
 - Launcher icon and native splash changes require a new native build/install. They will not appear on an already-installed app through OTA alone.
 
 Commit:
-- Pending.
+- `2f231d6cd3e5a3d9e195f7d69ef9dca0b3f3a295`
 
 Build / OTA:
-- Pending.
+- Android preview build started with `npx eas build --platform android --profile preview --non-interactive --no-wait`.
+- Build URL: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/builds/27ad2642-729e-41be-8d99-c3a52828f32a`
+- No OTA was published for the branding change because launcher icons and native splash screens require a native build/install.
 
 ## 2026-06-25 - Track Screen Evidence Declutter And Private Tracking Return
 
