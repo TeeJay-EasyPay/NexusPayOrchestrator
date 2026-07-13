@@ -94,6 +94,7 @@ export default function ConsumerTrackScreen() {
   }, [transfer?.id, transfer?.status]);
 
   const requestedTransferId = Array.isArray(params.transferId) ? params.transferId[0] : params.transferId;
+  const isTransferDetailView = Boolean(requestedTransferId);
   const requestedCompletedTransfer =
     requestedTransferId
       ? completedTransfers.find((item) => item.id === requestedTransferId) ?? null
@@ -356,6 +357,15 @@ export default function ConsumerTrackScreen() {
           ))
         )}
       </ConsumerCard>
+
+      {isTransferDetailView ? (
+        <ConsumerAction
+          label="Back to summary"
+          icon="arrow-left"
+          secondary
+          onPress={() => router.push("/consumer/transfers" as never)}
+        />
+      ) : null}
 
       {transfer && transfer.status !== "COMPLETED" ? (
         <ConsumerAction label="Mark delivered" icon="check-circle" onPress={markDelivered} />

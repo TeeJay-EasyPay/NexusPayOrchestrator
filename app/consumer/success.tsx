@@ -213,6 +213,19 @@ export default function ConsumerSuccessScreen() {
       <ConsumerCard>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
           <ConsumerAction
+            label="Track transfer"
+            icon="activity"
+            secondary
+            onPress={() =>
+              router.push(
+                {
+                  pathname: "/consumer/track",
+                  params: { transferId: transfer.id },
+                } as never
+              )
+            }
+          />
+          <ConsumerAction
             label="Send again"
             icon="repeat"
             onPress={() =>

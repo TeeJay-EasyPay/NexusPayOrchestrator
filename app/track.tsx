@@ -180,6 +180,7 @@ export default function TrackScreen() {
   const hasStartedRef = useRef(false);
   const hasDebitedWalletRef = useRef(false);
   const hasCompletedRef = useRef(false);
+  const persistedSnapshotRef = useRef<ExecutionSnapshot | null>(null);
 
   const selectedRoute = transfer?.selectedRoute;
 
@@ -204,6 +205,7 @@ export default function TrackScreen() {
     const persisted = await loadExecutionSession(transferId);
 
     if (mounted && persisted?.snapshot) {
+      persistedSnapshotRef.current = persisted.snapshot;
       applyExecutionSnapshot(persisted.snapshot);
     }
   }
@@ -248,6 +250,7 @@ export default function TrackScreen() {
       selectedRoute: currentRoute,
       refreshXrpBalance,
       onSnapshot: applyExecutionSnapshot,
+      resumeFromSnapshot: persistedSnapshotRef.current,
     });
 
     if (result.completed && !hasCompletedRef.current) {
