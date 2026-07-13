@@ -1,8 +1,8 @@
 import "react-native-get-random-values";
 
 import { Stack } from "expo-router";
-import { useEffect } from "react";
-import { Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import { ImageBackground, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -19,8 +19,11 @@ import { TransferProvider } from "../src/state/TransferContext";
 import { WalletProvider } from "../src/state/WalletContext";
 
 const ROOT_DEBUG_VISUAL = false;
+const BRAND_SPLASH_DURATION_MS = 1400;
 
 export default function Layout() {
+  const [showBrandSplash, setShowBrandSplash] = useState(true);
+
   useEffect(() => {
     void beginStartupEvidenceLaunch();
 
@@ -35,6 +38,12 @@ export default function Layout() {
     // When EXPO_PUBLIC_PROVIDER_MODE=sandbox|live, real providers
     // are registered instead via their respective init functions.
     initMockProviders();
+
+    const timer = setTimeout(() => {
+      setShowBrandSplash(false);
+    }, BRAND_SPLASH_DURATION_MS);
+
+    return () => clearTimeout(timer);
   }, []);
 
   return (
@@ -87,6 +96,28 @@ export default function Layout() {
             <Text style={{ color: "#00E5FF", fontWeight: "900", fontSize: 16 }}>
               ROOT LAYOUT LOADED
             </Text>
+          </View>
+        ) : null}
+
+        {showBrandSplash ? (
+          <View
+            pointerEvents="none"
+            style={{
+              position: "absolute",
+              top: 0,
+              right: 0,
+              bottom: 0,
+              left: 0,
+              zIndex: 10000,
+              elevation: 10000,
+              backgroundColor: "#07111F",
+            }}
+          >
+            <ImageBackground
+              source={require("../assets/images/splash-icon.png")}
+              resizeMode="cover"
+              style={{ flex: 1 }}
+            />
           </View>
         ) : null}
       </View>

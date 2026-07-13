@@ -2,6 +2,37 @@
 
 Purpose: durable record of meaningful implementation work, security/context fixes, validation, commits, and OTA deployments. New code changes should append an entry here before commit when practical.
 
+## 2026-07-13 - Full Screen In-App Splash Overlay
+
+Prompt / Objective:
+Founder testing confirmed the native Android splash shows only a small centered image on the dark background. Make the supplied NexusPay splash artwork visible as a full-screen splash experience.
+
+Files Changed:
+- `app/_layout.tsx`
+- `governance/implementation-log/IMPLEMENTATION_LOG.md`
+
+Summary:
+- Added a short full-screen in-app splash overlay using `assets/images/splash-icon.png`.
+- The overlay appears immediately after native launch and remains visible for `1400ms`.
+- This complements Android's native centered-icon splash behavior, which cannot reliably present the supplied poster-style artwork as a full-screen native background.
+
+Validation:
+- `npx tsc --noEmit` passed.
+- `npx eslint app/_layout.tsx` passed.
+
+Commit:
+- `6002f789e243ce9c348d492cd00aec090f161e1b`
+
+OTA:
+- Branch: `preview`
+- Update group: `2f616d15-de42-44b8-8918-84c2a71cc99e`
+- Android update: `019f5d7d-aadf-716e-9efd-0d70c1d6a892`
+- iOS update: `019f5d7d-aadf-7676-9d1a-6bc227fc5b65`
+- Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/2f616d15-de42-44b8-8918-84c2a71cc99e`
+
+Known Warnings:
+- Expo publish continued to show the existing `@noble/hashes/crypto.js` export warning. It did not block OTA.
+
 ## 2026-07-13 - NexusPay App Icon And Splash Branding
 
 Prompt / Objective:
