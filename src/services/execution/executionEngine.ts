@@ -1,7 +1,8 @@
 import { executeXrplTestnetSettlement, XrplSettlementResult } from "../../lib/xrplSettlement";
 import { OpenBankingPaymentFlow, RouteQuote, Transfer, TransferStatus } from "../../types/transfer";
 import { createPayout, getPayoutStatus } from "../payout/payoutAdapter";
-import { PayoutResult, PayoutStatus, ProviderJourneyStep } from "../payout/payoutTypes";
+import { selectBestPayoutPartner } from "../payout/payoutRoutingEngine";
+import { PayoutProviderError, PayoutResult, PayoutStatus, ProviderJourneyStep } from "../payout/payoutTypes";
 import { writeTransactionAuditLog } from "../transactionAuditService";
 import { saveTransferProgress } from "../transferService";
 import { persistExecutionSnapshot } from "./executionPersistenceService";
@@ -522,6 +523,16 @@ export async function runTransferExecution({
 
     if (!payoutExecutionDone || !payout) {
       state = "EXECUTING_PAYOUT";
+      const payoutRequest = {
+        transferId,
+        amount: activeRoute.receiveAmount,
+        currency: transfer.recipient.currency,
+        country: transfer.recipient.country,
+        recipient: transfer.recipient,
+        payoutMethod: transfer.recipient.payoutMethod,
+        payoutProviderName: activeRoute.provider,
+      };
+      const payoutPartner = selectBestPayoutPartner(payoutRequest);
       const maxRetries = getMaxRetries(activeRoute);
       const totalAttempts = maxRetries + 1;
 
@@ -530,10 +541,12 @@ export async function runTransferExecution({
           status: "RUNNING",
           attempt,
           startedAt: Date.now(),
-          provider: activeRoute.provider,
+          provider: payoutPartner.selectedProviderName,
+          title: `${payoutPartner.selectedProviderName} payout submission`,
+          description: `Submitting the final-leg payout through ${payoutPartner.selectedProviderName}.`,
         });
         payoutStatus = attempt === 1 ? "NOT_STARTED" : payoutStatus;
-        await emit(`Submitting payout via ${activeRoute.provider}...`, {
+        await emit(`Submitting payout via ${payoutPartner.selectedProviderName}...`, {
           payout_attempt: attempt,
           payout_total_attempts: totalAttempts,
         });
@@ -544,15 +557,7 @@ export async function runTransferExecution({
 
         try {
           payout = await withTimeout(
-            createPayout({
-              transferId,
-              amount: activeRoute.receiveAmount,
-              currency: transfer.recipient.currency,
-              country: transfer.recipient.country,
-              recipient: transfer.recipient,
-              payoutMethod: transfer.recipient.payoutMethod,
-              payoutProviderName: activeRoute.provider,
-            }),
+            createPayout(payoutRequest),
             getPayoutTimeoutMs(activeRoute),
             `${activeRoute.provider} payout submission`
           );
@@ -577,8 +582,17 @@ export async function runTransferExecution({
           break;
         } catch (caughtError) {
           const payoutError = getErrorMessage(caughtError);
+          const providerError = caughtError instanceof PayoutProviderError ? caughtError : null;
+          const failedProviderName = providerError?.providerName ?? payoutPartner.selectedProviderName;
+          const retryable = providerError?.retryable ?? true;
 
-          if (attempt < totalAttempts) {
+          steps = updateStep(steps, "payout_execution", {
+            provider: failedProviderName,
+            title: `${failedProviderName} payout submission`,
+            description: payoutError,
+          });
+
+          if (retryable && attempt < totalAttempts) {
             const backoffMs = getRetryBackoffMs(activeRoute, attempt);
             await audit("RETRY_SCHEDULED", "INFO", "Provider payout submission retry scheduled.", {
               attempt,
@@ -586,7 +600,7 @@ export async function runTransferExecution({
               backoff_ms: backoffMs,
               error: payoutError,
             });
-            await emit(`Provider submission attempt ${attempt} failed. Retrying safely...`, {
+            await emit(`${failedProviderName} submission attempt ${attempt} failed. Retrying safely...`, {
               payout_attempt: attempt,
               retry_backoff_ms: backoffMs,
               error: payoutError,
@@ -599,8 +613,12 @@ export async function runTransferExecution({
           steps = failStep(steps, "payout_execution", {
             attempt,
             error: payoutError,
+            provider_id: providerError?.providerId ?? payoutPartner.selectedProviderId,
+            provider_error_code: providerError?.code ?? null,
+            provider_operation: providerError?.operation ?? null,
+            retryable,
           });
-          throw new Error(`Payout submission failed: ${payoutError}`);
+          throw new Error(`${failedProviderName} payout submission failed: ${payoutError}`);
         }
       }
     }
@@ -629,11 +647,21 @@ export async function runTransferExecution({
         payout_reference: payout.payoutReference,
       });
 
-      payoutStatus = await withTimeout(
-        getPayoutStatus(payout.payoutReference),
-        getPayoutTimeoutMs(activeRoute),
-        `${activeRoute.provider} payout verification`
-      );
+      for (let verificationAttempt = 1; verificationAttempt <= 3; verificationAttempt += 1) {
+        payoutStatus = await withTimeout(
+          getPayoutStatus(payout.payoutReference),
+          getPayoutTimeoutMs(activeRoute),
+          `${payout.providerName} payout verification`
+        );
+        if (payoutStatus === "PAID_OUT" || payoutStatus === "FAILED") break;
+
+        await emit(`${payout.providerName} payout is ${payoutStatus.toLowerCase()}; reconciling the same provider transfer...`, {
+          payout_reference: payout.payoutReference,
+          payout_verification_attempt: verificationAttempt,
+          payout_status: payoutStatus,
+        });
+        await wait(verificationAttempt * 2000);
+      }
 
       if (payoutStatus !== "PAID_OUT") {
         steps = failStep(steps, "payout_verification", {
@@ -641,6 +669,24 @@ export async function runTransferExecution({
           payout_status: payoutStatus,
         });
         throw new Error(`Payout verification returned ${payoutStatus}.`);
+      }
+
+      if (payout.providerId === "AIRWALLEX_SANDBOX") {
+        payout = await withTimeout(
+          createPayout({
+            transferId,
+            amount: activeRoute.receiveAmount,
+            currency: transfer.recipient.currency,
+            country: transfer.recipient.country,
+            recipient: transfer.recipient,
+            payoutMethod: transfer.recipient.payoutMethod,
+            payoutProviderName: activeRoute.provider,
+          }),
+          getPayoutTimeoutMs(activeRoute),
+          "Airwallex payout evidence refresh"
+        );
+        payoutStatus = payout.status;
+        steps = mergeProviderJourneySteps(steps, payout.providerJourney);
       }
 
       payout = {

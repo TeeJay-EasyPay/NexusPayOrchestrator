@@ -132,6 +132,17 @@ Redacted:
 - Actual Airwallex webhook subscription/delivery remains to be configured or confirmed in the Airwallex dashboard.
 - Deno CLI is not installed locally; Edge Function checks relied on successful Supabase deployment and runtime smoke tests.
 
+## Malaysia Corridor Remediation
+
+Founder testing identified a genuine Airwallex beneficiary validation failure on the MYR/Maybank corridor. Database evidence showed HTTP `400 validation_failed` for missing `beneficiary.bank_details.swift_code` and `beneficiary.address.state`.
+
+- Corrected beneficiary schema: PASS.
+- Non-retryable validation handling: PASS; HTTP 400 errors now stop without three identical submissions.
+- Provider identity in Corporate Track: PASS; Airwallex is named before a result is returned.
+- Sandbox transition order: PASS using `SCHEDULED -> PROCESSING -> SENT -> PAID`.
+- Durable reconciliation: PASS; verification advances the existing Airwallex reference and does not create a duplicate transfer.
+- Fresh MYR evidence: NexusPay `d9f60fb2-08a4-495a-848b-68c7cbbcd8f9`; Airwallex `debd10ac-ec53-4c97-a681-67b158f0a8f0`; terminal provider `PAID`; canonical `PAID_OUT`.
+
 ## Recommended Next Steps
 
 1. Configure a real Airwallex webhook subscription against the deployed `nexuspay-provider-webhook` endpoint.

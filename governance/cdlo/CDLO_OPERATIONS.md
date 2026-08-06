@@ -104,6 +104,7 @@ Recipient Bank
 - Supabase migrations and Edge Functions deployed after project reactivation.
 - Founder-expanded API scope now permits balance, beneficiary and transfer operations.
 - Terminal sandbox payout certification passed through Airwallex beneficiary creation, transfer submission, `SENT`, and `PAID`.
+- Malaysia/Maybank sandbox payout certification passed after aligning beneficiary fields and lifecycle transitions with Airwallex's corridor requirements.
 - NexusPay stores redacted provider references, attempts, timestamps and journey evidence and exposes the stages in Corporate payment tracking.
 - Webhook signature verification is implemented and synthetically tested; actual Airwallex webhook delivery remains pending.
 

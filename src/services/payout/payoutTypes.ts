@@ -28,6 +28,20 @@ export type ProviderJourneyStep = {
   occurredAt?: string;
 };
 
+export class PayoutProviderError extends Error {
+  constructor(
+    message: string,
+    public readonly providerId: PayoutProviderId,
+    public readonly providerName: string,
+    public readonly retryable: boolean,
+    public readonly code?: string,
+    public readonly operation?: string,
+  ) {
+    super(message);
+    this.name = "PayoutProviderError";
+  }
+}
+
 export interface CreatePayoutRequest {
   transferId: string;
   providerId?: PayoutProviderId;

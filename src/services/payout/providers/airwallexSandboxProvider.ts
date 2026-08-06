@@ -2,6 +2,7 @@ import { supabase } from "../../../lib/supabase";
 import {
   CreatePayoutRequest,
   PayoutProvider,
+  PayoutProviderError,
   PayoutResult,
   PayoutStatus,
   ProviderJourneyStep,
@@ -29,6 +30,45 @@ type EdgePayoutResponse = {
   evidenceSummary?: string;
   providerJourney?: ProviderJourneyStep[];
 };
+
+type EdgePayoutError = {
+  error?: string;
+  code?: string;
+  operation?: string;
+  providerId?: string;
+  providerName?: string;
+  retryable?: boolean;
+  fieldSources?: string[];
+};
+
+async function toProviderError(error: unknown) {
+  let payload: EdgePayoutError | null = null;
+  const context = error && typeof error === "object" && "context" in error
+    ? (error as { context?: unknown }).context
+    : null;
+
+  if (context instanceof Response) {
+    payload = await context.clone().json().catch(() => null) as EdgePayoutError | null;
+  }
+
+  const fields = payload?.fieldSources?.length
+    ? ` Required fields: ${payload.fieldSources.join(", ")}.`
+    : "";
+  const message = payload?.error
+    ? `${payload.error}${fields}`
+    : error instanceof Error
+      ? error.message
+      : "Airwallex sandbox request failed.";
+
+  return new PayoutProviderError(
+    message,
+    "AIRWALLEX_SANDBOX",
+    payload?.providerName ?? "Airwallex Sandbox",
+    payload?.retryable ?? true,
+    payload?.code,
+    payload?.operation,
+  );
+}
 
 function assertEdgeResult(data: EdgePayoutResponse | null): PayoutResult {
   if (!data?.payoutReference || !data.providerId || !data.status) {
@@ -81,7 +121,7 @@ export const airwallexSandboxProvider: PayoutProvider = {
     });
 
     if (error) {
-      throw new Error(error.message);
+      throw await toProviderError(error);
     }
 
     return assertEdgeResult(data ?? null);
@@ -98,7 +138,7 @@ export const airwallexSandboxProvider: PayoutProvider = {
     });
 
     if (error) {
-      throw new Error(error.message);
+      throw await toProviderError(error);
     }
 
     return data?.status ?? "PROCESSING";

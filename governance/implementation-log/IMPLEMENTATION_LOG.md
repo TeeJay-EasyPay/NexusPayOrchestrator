@@ -2,6 +2,38 @@
 
 Purpose: durable record of meaningful implementation work, security/context fixes, validation, commits, and OTA deployments. New code changes should append an entry here before commit when practical.
 
+## 2026-08-06 - Airwallex Malaysia Payout And Tracking Remediation
+
+Prompt / Objective:
+Resolve the Corporate MYR payment failure shown in Founder screenshots and ensure the ordinary Track screen names Airwallex and displays genuine provider progress or a redacted actionable failure.
+
+Root Cause:
+- Airwallex rejected the Malaysia beneficiary at `beneficiary_validate` with HTTP `400 validation_failed` because `beneficiary.bank_details.swift_code` and `beneficiary.address.state` were absent.
+- The client discarded the structured provider response, retried the non-retryable validation error, and displayed the route name rather than Airwallex.
+- The sandbox lifecycle used an incomplete transition sequence and treated a temporary `SCHEDULED`/`PROCESSING` state as failure.
+
+Remediation:
+- Added corridor-specific SWIFT identifiers for the Malaysian and Philippine banks currently offered by NexusPay and supplied the sandbox address state required by Airwallex's beneficiary schema.
+- Added structured, redacted Airwallex errors with provider, operation, code, field sources, and retryability.
+- Prevented HTTP 400 validation failures from being retried.
+- Aligned sandbox state reconciliation to `SCHEDULED -> PROCESSING -> SENT -> PAID` and reconciled the same durable provider transfer instead of creating another payout.
+- Updated Corporate execution and payout cards to name `Airwallex Sandbox` before submission and show the real failure reason when no payout result exists.
+- Hydrated the execution state machine with reconciled Airwallex journey evidence after terminal verification.
+
+Evidence:
+- Original failed NexusPay transfer: `b0cd0a35-9f46-42fb-a9bd-47cfa9c73a25`.
+- Corrected original Airwallex transfer: `da9b969b-a921-481e-87e6-155073add934`, terminal `PAID`.
+- Fresh MYR certification transfer: `d9f60fb2-08a4-495a-848b-68c7cbbcd8f9`.
+- Fresh Airwallex transfer: `debd10ac-ec53-4c97-a681-67b158f0a8f0`.
+- Fresh lifecycle: create returned `SCHEDULED`; first idempotent verification reconciled to `PAID`; NexusPay returned `PAID_OUT`.
+
+Validation:
+- `npx tsc --noEmit`: PASS.
+- `npx expo lint`: PASS with 38 pre-existing warnings and zero errors.
+- Android Expo export: PASS; existing `@noble/hashes` package export warning remains non-blocking.
+- `deno check`: NOT RUN because Deno is not installed locally.
+- Deployed Edge Function runtime certification: PASS.
+
 ## 2026-08-06 - Airwallex Sandbox Last-Leg Payout Provider
 
 Prompt / Objective:

@@ -25,6 +25,12 @@ NexusPay has now completed a genuine Airwallex sandbox provider payout from bene
 
 The remaining gap is actual Airwallex webhook delivery. NexusPay's webhook verification, invalid-signature rejection and duplicate protection are synthetically proven, but the terminal certification transfer did not arrive through a configured Airwallex webhook subscription.
 
+## Malaysia Payment Fix
+
+The failed Malaysia payment was a real Airwallex attempt. Airwallex rejected the Maybank beneficiary because two country-specific fields were missing. NexusPay now supplies those required fields, identifies Airwallex throughout tracking, and does not repeat validation errors that cannot succeed without corrected data.
+
+A fresh MYR sandbox payment was created and reconciled through Airwallex's actual sandbox states: scheduled, processing, sent, and paid. The same provider transfer reference was used throughout, proving duplicate payout creation was avoided.
+
 ## Business Value
 
 This moves NexusPay closer to proving the full journey:

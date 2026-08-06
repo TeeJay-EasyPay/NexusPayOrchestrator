@@ -86,6 +86,10 @@ Approved and deployed for sandbox use. Terminal Airwallex provider certification
 2. Rerun actual Airwallex webhook delivery or Airwallex test-event delivery.
 3. Complete and retain the ordinary Corporate payment emulator acceptance evidence.
 
+## 2026-08-06 MYR Implementation Note
+
+Malaysia beneficiary handling now follows Airwallex's required SWIFT and address-state schema. Provider business-validation failures are non-retryable, and asynchronous sandbox transfers are reconciled against the original idempotent transfer through `SCHEDULED`, `PROCESSING`, `SENT`, and `PAID`.
+
 ## Reference Documents
 - [Airwallex Sandbox Payout Integration Checkpoint](../reports/AIRWALLEX_SANDBOX_PAYOUT_INTEGRATION_CHECKPOINT.md)
 - [Founder Briefing: Airwallex Sandbox Payout Integration](../reports/FOUNDER_BRIEFING_AIRWALLEX_SANDBOX_PAYOUT.md)

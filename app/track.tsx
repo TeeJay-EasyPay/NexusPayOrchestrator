@@ -782,7 +782,11 @@ export default function TrackScreen() {
               {!payout ? (
                 <View style={{ padding: 14, borderRadius: 18, backgroundColor: "#F8FAFC", borderWidth: 1, borderColor: "#E2E8F0" }}>
                   <AppText variant="caption" color={colors.textDarkSecondary}>
-                    Waiting for final-leg payout trigger from the execution engine...
+                    {payoutStatus === "FAILED"
+                      ? executionSnapshot?.steps.find((step) => step.id === "payout_execution")?.description
+                        ?? executionSnapshot?.error
+                        ?? "The final-leg payout provider rejected the request."
+                      : "Waiting for final-leg payout trigger from the execution engine..."}
                   </AppText>
                 </View>
               ) : (
