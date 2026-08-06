@@ -2,6 +2,46 @@
 
 Purpose: durable record of meaningful implementation work, security/context fixes, validation, commits, and OTA deployments. New code changes should append an entry here before commit when practical.
 
+## 2026-08-06 - Canonical Route Intelligence Transformation V1
+
+Prompt / Objective:
+Replace demonstration route preview, ranking and execution-selection paths with one versioned, evidence-driven Route Plan used by Corporate, Consumer, Tracking and Nexus AI.
+
+Implementation:
+- Added the Route Plan V1 contract, canonical evidence loader/ranker, shared hook, comparison component and route-history component.
+- Added and remotely applied migration `20260806000500_canonical_route_intelligence.sql` for owner-scoped plans and immutable decision events.
+- Migrated Send, Quote, Routes, Corporate Track and Consumer Send/Track to canonical plans.
+- Removed the active hard-coded RLUSD preview, static quote routes, settlement route generator, AI demo scoring table and demo provider route catalogue.
+- Bound payout provider selection to the persisted approved Route Plan and added recorded failover transitions.
+- Replaced Consumer timer-based completion with the persisted resumable execution engine.
+- Fixed Frankfurter V2 rate parsing and excluded compile-time FX fallbacks from canonical approval.
+- Removed the Home nested-list runtime warning encountered during Pixel 9 validation.
+
+Operational Truth:
+- Live FX and Airwallex sandbox evidence load successfully.
+- Direct routing is currently ineligible because genuine Yapily payment initiation is not validated.
+- XRPL/RLUSD is currently ineligible because path/depth/slippage/fee evidence and an RLUSD executor do not exist.
+- No score is displayed for either blocked route.
+
+Validation:
+- `npx tsc --noEmit`: PASS.
+- `npm run lint`: PASS with zero errors and pre-existing warnings.
+- `npm run route-intelligence:validate`: PASS.
+- Route Plan persistence, transition events and anonymous-read isolation: PASS.
+- Supabase local/remote migration parity and index inspection: PASS.
+- Expo public config and Android export: PASS.
+- Pixel 9 Corporate preview: PASS; provenance and the blocking reason are visible.
+
+Governance:
+- Architecture: `governance/governance-core/ROUTE_INTELLIGENCE_ARCHITECTURE_V1.md`.
+- Report: `governance/reports/ROUTE_INTELLIGENCE_TRANSFORMATION_IMPLEMENTATION_REPORT.md`.
+- Founder briefing: `governance/founder-briefings/briefings/FOUNDER_BRIEFING_ROUTE_INTELLIGENCE_TRANSFORMATION_2026-08-06.md`.
+- Decision: D-015.
+
+Release:
+- Status: PARTIAL PASS; not production-ready.
+- Commit and OTA fields remain pending final repository closure.
+
 ## 2026-08-06 - Airwallex Malaysia Payout And Tracking Remediation
 
 Prompt / Objective:

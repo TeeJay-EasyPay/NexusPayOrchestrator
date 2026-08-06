@@ -2,7 +2,8 @@ import { executeXrplTestnetSettlement, XrplSettlementResult } from "../../lib/xr
 import { OpenBankingPaymentFlow, RouteQuote, Transfer, TransferStatus } from "../../types/transfer";
 import { createPayout, getPayoutStatus } from "../payout/payoutAdapter";
 import { selectBestPayoutPartner } from "../payout/payoutRoutingEngine";
-import { PayoutProviderError, PayoutResult, PayoutStatus, ProviderJourneyStep } from "../payout/payoutTypes";
+import { PayoutProviderError, PayoutProviderId, PayoutResult, PayoutStatus, ProviderJourneyStep } from "../payout/payoutTypes";
+import { transitionRoutePlan } from "../routePlanService";
 import { writeTransactionAuditLog } from "../transactionAuditService";
 import { saveTransferProgress } from "../transferService";
 import { persistExecutionSnapshot } from "./executionPersistenceService";
@@ -311,6 +312,15 @@ async function writeExecutionAudit(
   });
 }
 
+function withRoutePlanStatus(
+  route: RouteQuote,
+  status: NonNullable<RouteQuote["routePlan"]>["status"],
+) {
+  return route.routePlan
+    ? { ...route, routePlan: { ...route.routePlan, status } }
+    : route;
+}
+
 export async function runTransferExecution({
   transfer,
   selectedRoute,
@@ -397,6 +407,19 @@ export async function runTransferExecution({
       recovery_run: isRecoveryRun,
       ...metadata,
     });
+  }
+
+  async function requireRouteTransition(
+    route: RouteQuote,
+    status: NonNullable<RouteQuote["routePlan"]>["status"],
+    reason: string,
+    replacement?: RouteQuote,
+  ) {
+    if (!route.routePlan) return;
+    const persisted = await transitionRoutePlan(route, status, reason, replacement);
+    if (!persisted) {
+      throw new Error(`Route Plan ${route.routePlan.id} could not transition to ${status}.`);
+    }
   }
 
   async function runRecoveryPrelude() {
@@ -531,8 +554,14 @@ export async function runTransferExecution({
         recipient: transfer.recipient,
         payoutMethod: transfer.recipient.payoutMethod,
         payoutProviderName: activeRoute.provider,
+        providerId: activeRoute.routePlan?.payout.provider.providerId as PayoutProviderId | undefined,
       };
-      const payoutPartner = selectBestPayoutPartner(payoutRequest);
+      const payoutPartner = activeRoute.routePlan
+        ? {
+            selectedProviderId: payoutRequest.providerId!,
+            selectedProviderName: activeRoute.routePlan.payout.provider.providerName,
+          }
+        : selectBestPayoutPartner(payoutRequest);
       const maxRetries = getMaxRetries(activeRoute);
       const totalAttempts = maxRetries + 1;
 
@@ -681,6 +710,7 @@ export async function runTransferExecution({
             recipient: transfer.recipient,
             payoutMethod: transfer.recipient.payoutMethod,
             payoutProviderName: activeRoute.provider,
+            providerId: activeRoute.routePlan?.payout.provider.providerId as PayoutProviderId | undefined,
           }),
           getPayoutTimeoutMs(activeRoute),
           "Airwallex payout evidence refresh"
@@ -710,6 +740,7 @@ export async function runTransferExecution({
   }
 
   if (completedTransfers.has(transferId)) {
+    activeRoute = withRoutePlanStatus(activeRoute, "COMPLETED");
     state = "VERIFYING_STATUS";
     await emit("Transfer was already completed. Verifying persisted terminal state before rendering completion.");
     state = "COMPLETED";
@@ -733,6 +764,18 @@ export async function runTransferExecution({
   runningTransfers.add(transferId);
 
   try {
+    const approvedPlan = selectedRoute.routePlan;
+    if (approvedPlan) {
+      if (!approvedPlan.eligible || approvedPlan.status !== "APPROVED") {
+        throw new Error("Canonical route plan is not approved for execution.");
+      }
+      if (!isRecoveryRun && Date.now() >= Date.parse(approvedPlan.quoteExpiresAt)) {
+        throw new Error("Canonical route quote expired before execution. Recalculate and approve a current route.");
+      }
+      await requireRouteTransition(selectedRoute, "EXECUTING", "Execution started for the approved route plan version.");
+      activeRoute = withRoutePlanStatus(activeRoute, "EXECUTING");
+    }
+
     await runRecoveryPrelude();
 
     state = "VALIDATING_IDEMPOTENCY";
@@ -762,6 +805,8 @@ export async function runTransferExecution({
         throw primaryError;
       }
 
+      await requireRouteTransition(activeRoute, "FAILED", primaryErrorMessage, failoverRoute);
+      activeRoute = withRoutePlanStatus(activeRoute, "FAILED");
       state = "FAILOVER_EVALUATION";
       error = primaryErrorMessage;
       await emit("Primary route failed. Evaluating safe failover route...", {
@@ -773,9 +818,11 @@ export async function runTransferExecution({
         failover_route_id: failoverRoute.id,
         primary_error: primaryErrorMessage,
       });
+      await requireRouteTransition(failoverRoute, "APPROVED", "Approved automatically as the recorded safe failover replacement.");
 
       await wait(500);
-      activeRoute = failoverRoute;
+      await requireRouteTransition(failoverRoute, "EXECUTING", "Failover replacement route began execution.");
+      activeRoute = withRoutePlanStatus(failoverRoute, "EXECUTING");
       failoverUsed = true;
       payout = undefined;
       payoutStatus = "NOT_STARTED";
@@ -790,13 +837,14 @@ export async function runTransferExecution({
       await emit(`Failover activated. Continuing via ${activeRoute.provider}...`, {
         failover_route_id: activeRoute.id,
       });
-
       await runRouteLifecycle();
     }
 
     assertNoUnresolvedStepsBeforeCompletion(steps);
     state = "COMPLETED";
     completedTransfers.add(transferId);
+    await requireRouteTransition(activeRoute, "COMPLETED", "Settlement and final payout completed.");
+    activeRoute = withRoutePlanStatus(activeRoute, "COMPLETED");
     await emit("Transfer completed. Settlement and payout lifecycle finished.");
     await audit("ROUTE_EXECUTION_COMPLETED", "SUCCESS", "Route execution completed.", {
       active_route_id: activeRoute.id,
@@ -808,7 +856,6 @@ export async function runTransferExecution({
       xrpl_tx_hash: xrplProof?.txHash ?? null,
       failover_used: failoverUsed,
     });
-
     return { completed: true, duplicate: false };
   } catch (caughtError) {
     error = getErrorMessage(caughtError);
@@ -820,6 +867,8 @@ export async function runTransferExecution({
       steps = failStep(steps, activeStep.id, { error });
     }
 
+    await transitionRoutePlan(activeRoute, "FAILED", error);
+    activeRoute = withRoutePlanStatus(activeRoute, "FAILED");
     await emit("Transfer execution failed safely. Duplicate payout protection remains active.");
 
     await audit("TRANSFER_FAILED", "FAILED", "Execution state machine failed safely.", {
@@ -827,7 +876,6 @@ export async function runTransferExecution({
       payout_status: payoutStatus,
       xrpl_status: xrplStatus,
     });
-
     return { completed: false, duplicate: false };
   } finally {
     runningTransfers.delete(transferId);

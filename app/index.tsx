@@ -4,7 +4,6 @@ import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
-    FlatList,
     Pressable,
     ScrollView,
     useWindowDimensions,
@@ -1028,15 +1027,10 @@ export default function HomeScreen() {
                   No completed transfers yet.
                 </AppText>
               ) : (
-                <View style={{ height: 342 }}>
-                  <FlatList
-                    data={recentTransactions}
-                    keyExtractor={(item) => item.id}
-                    nestedScrollEnabled
-                    showsVerticalScrollIndicator
-                    contentContainerStyle={{ gap: 10, paddingRight: 4 }}
-                    renderItem={({ item }) => (
+                <View style={{ gap: 10 }}>
+                  {recentTransactions.map((item) => (
                       <View
+                        key={item.id}
                         style={{
                           flexDirection: "row",
                           alignItems: "flex-start",
@@ -1082,8 +1076,7 @@ export default function HomeScreen() {
                           </AppText>
                         </Pressable>
                       </View>
-                    )}
-                  />
+                  ))}
                 </View>
               )}
             </View>

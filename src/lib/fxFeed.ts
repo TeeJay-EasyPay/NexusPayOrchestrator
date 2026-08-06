@@ -137,13 +137,13 @@ const MOCK_RATES: Record<string, FxRate> = {
 
 async function fetchFromFrankfurter(from: string, to: string): Promise<FxRate> {
   const response = await fetch(
-    `https://api.frankfurter.dev/v2/rates?base=${from}&quotes=${to}`
+    `https://api.frankfurter.dev/v2/rate/${from}/${to}`
   );
 
   if (!response.ok) throw new Error("Frankfurter unavailable");
 
   const data = await response.json();
-  const rate = data?.rates?.[to];
+  const rate = data?.rate;
 
   if (typeof rate !== "number") throw new Error("Frankfurter rate missing");
 
@@ -346,9 +346,7 @@ async function fetchFromCurrencyLayer(
   };
 }
 
-export async function fetchFxRate(from: string, to: string): Promise<FxRate> {
-  const key = `${from}-${to}`;
-
+export async function fetchLiveFxRate(from: string, to: string): Promise<FxRate> {
   logStartupInfo({
     event: "fx-rate-fetch-start",
     stage: "fx-provider-init",
@@ -399,6 +397,18 @@ export async function fetchFxRate(from: string, to: string): Promise<FxRate> {
         },
       });
     }
+  }
+
+  throw new Error(`All live FX providers failed for ${from}/${to}.`);
+}
+
+export async function fetchFxRate(from: string, to: string): Promise<FxRate> {
+  const key = `${from}-${to}`;
+
+  try {
+    return await fetchLiveFxRate(from, to);
+  } catch {
+    // Legacy non-routing screens retain an explicitly labelled mock fallback.
   }
 
   logStartupWarn({

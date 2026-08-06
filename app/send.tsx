@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, TextInput, View } from "react-native";
 
 import { NexusAIToggleCard } from "../src/components/intelligence/NexusAIToggleCard";
+import { DataProvenanceBadge } from "../src/components/operations-v2/DataProvenanceBadge";
 import { SavedRecipientsCard } from "../src/components/recipients/SavedRecipientsCard";
 import { AppButton } from "../src/components/ui/AppButton";
 import { AppCard } from "../src/components/ui/AppCard";
@@ -11,6 +12,7 @@ import { Screen } from "../src/components/ui/Screen";
 
 import { corridors } from "../src/data/corridors";
 import { useNexusAIScreenSetting } from "../src/hooks/useNexusAISettings";
+import { useCanonicalRouteQuotes } from "../src/hooks/useCanonicalRouteQuotes";
 import { writeAuditLog } from "../src/services/auditLog";
 import {
     loadSavedRecipients,
@@ -20,7 +22,7 @@ import { useTransfer } from "../src/state/TransferContext";
 import { useWallet } from "../src/state/WalletContext";
 import { colors } from "../src/theme";
 import { SavedRecipient } from "../src/types/recipient";
-import { PayoutMethod, Recipient } from "../src/types/transfer";
+import { PayoutMethod, Recipient, RouteQuote } from "../src/types/transfer";
 
 function formatCurrency(value: number) {
   return value.toLocaleString(undefined, {
@@ -29,164 +31,9 @@ function formatCurrency(value: number) {
   });
 }
 
-function getPayoutLabel(method: PayoutMethod) {
-  return method === "BANK" ? "Bank account" : "Mobile wallet";
-}
-
 function getStringParam(value: string | string[] | undefined) {
   if (Array.isArray(value)) return value[0] ?? "";
   return value ?? "";
-}
-
-function getCorridorSignal(country: string) {
-  const corridorSignals: Record<
-    string,
-    {
-      confidence: number;
-      liquidity: string;
-      delivery: string;
-      rail: string;
-      receiveRate: number;
-      fee: string;
-      save: string;
-    }
-  > = {
-    Philippines: {
-      confidence: 92,
-      liquidity: "High",
-      delivery: "Minutes",
-      rail: "GBP → RLUSD → PHP",
-      receiveRate: 72.4,
-      fee: "£3.20",
-      save: "£12.40",
-    },
-    Malaysia: {
-      confidence: 86,
-      liquidity: "Healthy",
-      delivery: "Minutes",
-      rail: "GBP → RLUSD → MYR",
-      receiveRate: 5.92,
-      fee: "£2.85",
-      save: "£8.10",
-    },
-    UAE: {
-      confidence: 90,
-      liquidity: "High",
-      delivery: "Minutes",
-      rail: "GBP → RLUSD → AED",
-      receiveRate: 4.65,
-      fee: "£2.95",
-      save: "£9.30",
-    },
-    "Saudi Arabia": {
-      confidence: 85,
-      liquidity: "Stable",
-      delivery: "Minutes",
-      rail: "GBP → RLUSD → SAR",
-      receiveRate: 4.77,
-      fee: "£3.05",
-      save: "£7.40",
-    },
-    Qatar: {
-      confidence: 84,
-      liquidity: "Stable",
-      delivery: "Minutes",
-      rail: "GBP → RLUSD → QAR",
-      receiveRate: 4.61,
-      fee: "£3.10",
-      save: "£7.10",
-    },
-    Kuwait: {
-      confidence: 83,
-      liquidity: "Balanced",
-      delivery: "Minutes",
-      rail: "GBP → RLUSD → KWD",
-      receiveRate: 0.38,
-      fee: "£3.20",
-      save: "£6.80",
-    },
-    Bahrain: {
-      confidence: 82,
-      liquidity: "Balanced",
-      delivery: "Minutes",
-      rail: "GBP → RLUSD → BHD",
-      receiveRate: 0.47,
-      fee: "£3.15",
-      save: "£6.40",
-    },
-    Oman: {
-      confidence: 80,
-      liquidity: "Monitored",
-      delivery: "Minutes",
-      rail: "GBP → RLUSD → OMR",
-      receiveRate: 0.49,
-      fee: "£3.25",
-      save: "£5.90",
-    },
-    Singapore: {
-      confidence: 93,
-      liquidity: "Very High",
-      delivery: "Minutes",
-      rail: "GBP → RLUSD → SGD",
-      receiveRate: 1.72,
-      fee: "£2.70",
-      save: "£10.20",
-    },
-    Thailand: {
-      confidence: 84,
-      liquidity: "Stable",
-      delivery: "Minutes",
-      rail: "GBP → RLUSD → THB",
-      receiveRate: 45.21,
-      fee: "£3.05",
-      save: "£7.20",
-    },
-    Indonesia: {
-      confidence: 82,
-      liquidity: "Monitored",
-      delivery: "Minutes",
-      rail: "GBP → RLUSD → IDR",
-      receiveRate: 20840,
-      fee: "£3.30",
-      save: "£6.30",
-    },
-    Vietnam: {
-      confidence: 81,
-      liquidity: "Monitored",
-      delivery: "Minutes",
-      rail: "GBP → RLUSD → VND",
-      receiveRate: 31980,
-      fee: "£3.35",
-      save: "£6.10",
-    },
-  };
-
-  const signal = corridorSignals[country];
-  if (signal) {
-    return signal;
-  }
-
-  if (country === "Philippines") {
-    return {
-      confidence: 92,
-      liquidity: "High",
-      delivery: "Minutes",
-      rail: "GBP → RLUSD → PHP",
-      receiveRate: 72.4,
-      fee: "£3.20",
-      save: "£12.40",
-    };
-  }
-
-  return {
-    confidence: 86,
-    liquidity: "Healthy",
-    delivery: "Minutes",
-    rail: "GBP → RLUSD → MYR",
-    receiveRate: 5.92,
-    fee: "£2.85",
-    save: "£8.10",
-  };
 }
 
 function InputField({
@@ -289,154 +136,77 @@ function InfoPill({ label, value, accent = false }: { label: string; value: stri
   );
 }
 
-function RoutePreviewCard({
-  selectedCountry,
+function CanonicalRoutePreviewCard({
+  route,
   currency,
-  amount,
-  provider,
-  payoutMethod,
+  loading,
+  error,
 }: {
-  selectedCountry: string;
+  route?: RouteQuote;
   currency?: string;
-  amount: number;
-  provider: string;
-  payoutMethod: PayoutMethod;
+  loading: boolean;
+  error: string | null;
 }) {
-  const signal = getCorridorSignal(selectedCountry);
-  const estimatedReceive = amount > 0 ? amount * signal.receiveRate : 0;
+  const plan = route?.routePlan;
+  const fx = plan?.economics.fxRate;
+  const recipient = plan?.economics.estimatedRecipientAmount;
 
   return (
     <AppCard>
-      <View style={{ gap: 16 }}>
+      <View style={{ gap: 14 }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
           <View style={{ gap: 4, flex: 1 }}>
-            <AppText variant="subheading" color={colors.textDarkPrimary}>
-              Route preview
-            </AppText>
+            <AppText variant="subheading" color={colors.textDarkPrimary}>Route preview</AppText>
             <AppText variant="caption" color={colors.textDarkSecondary}>
-              Best route candidate based on speed, cost, liquidity and payout reliability.
+              Generated by the canonical route engine from current provider evidence.
             </AppText>
           </View>
-
-          <View
-            style={{
-              paddingHorizontal: 11,
-              paddingVertical: 7,
-              borderRadius: 999,
-              backgroundColor: colors.goldSoft,
-              borderWidth: 1,
-              borderColor: "#F1D99B",
-              alignSelf: "flex-start",
-            }}
-          >
-            <AppText variant="caption" color={colors.gold} style={{ fontWeight: "900" }}>
-              Best route
-            </AppText>
-          </View>
+          {plan ? <DataProvenanceBadge classification={plan.eligible ? "DERIVED" : "UNAVAILABLE"} /> : null}
         </View>
 
-        <View
-          style={{
-            padding: 16,
-            borderRadius: 22,
-            backgroundColor: "#F8FAFC",
-            borderWidth: 1,
-            borderColor: "#E6ECF2",
-            gap: 14,
-          }}
-        >
-          <View style={{ gap: 7 }}>
-            <AppText variant="caption" color={colors.textDarkMuted}>
-              Orchestration rail
-            </AppText>
-            <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-              {signal.rail.split(" → ").map((step, index, list) => (
-                <View key={`${step}-${index}`} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                  <View
-                    style={{
-                      paddingVertical: 8,
-                      paddingHorizontal: 11,
-                      borderRadius: 999,
-                      backgroundColor: index === 1 ? colors.goldSoft : "#FFFFFF",
-                      borderWidth: 1,
-                      borderColor: index === 1 ? "#F1D99B" : "#E6ECF2",
-                    }}
-                  >
-                    <AppText
-                      variant="caption"
-                      color={index === 1 ? colors.gold : colors.textDarkPrimary}
-                      style={{ fontWeight: "900" }}
-                    >
-                      {step}
-                    </AppText>
-                  </View>
-                  {index < list.length - 1 ? (
-                    <AppText color={colors.textDarkMuted} style={{ fontWeight: "900" }}>
-                      →
-                    </AppText>
-                  ) : null}
-                </View>
-              ))}
-            </View>
-          </View>
-
-          <View style={{ flexDirection: "row", gap: 8 }}>
-            <InfoPill label="ETA" value={signal.delivery} />
-            <InfoPill label="Fee" value={signal.fee} accent />
-            <InfoPill label="You save" value={signal.save} />
-          </View>
-
-          <View style={{ gap: 8 }}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <AppText variant="caption" color={colors.textDarkMuted}>
-                Confidence
+        {loading ? (
+          <AppText variant="body" color={colors.textDarkSecondary}>Checking live route evidence...</AppText>
+        ) : error ? (
+          <AppText variant="body" color="#B91C1C">{error}</AppText>
+        ) : !plan ? (
+          <AppText variant="body" color={colors.textDarkSecondary}>Enter an amount to calculate routes.</AppText>
+        ) : (
+          <>
+            <View style={{ padding: 15, borderRadius: 8, backgroundColor: "#F8FAFC", borderWidth: 1, borderColor: "#E2E8F0", gap: 8 }}>
+              <AppText variant="caption" color={colors.textDarkMuted}>Canonical route</AppText>
+              <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
+                {plan.funding.provider.providerName} → {plan.bridge.required ? `${plan.bridge.provider?.providerName} → ` : ""}{plan.payout.provider.providerName}
               </AppText>
-              <AppText variant="caption" color={colors.gold} style={{ fontWeight: "900" }}>
-                {signal.confidence}%
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+                <DataProvenanceBadge classification="SANDBOX" />
+                {fx ? <DataProvenanceBadge classification={fx.provenance} /> : null}
+                {recipient ? <DataProvenanceBadge classification={recipient.provenance} /> : null}
+              </View>
+            </View>
+
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <InfoPill label="Score" value={plan.score.value === null ? "Unavailable" : `${plan.score.value}/100`} />
+              <InfoPill label="ETA" value={plan.intelligence.etaMinutes.value === null ? "Unavailable" : `${Math.round(plan.intelligence.etaMinutes.value)} min`} />
+              <InfoPill label="Cost" value={plan.economics.totalCost.value === null ? "Unavailable" : `£${plan.economics.totalCost.value.toFixed(2)}`} accent />
+            </View>
+
+            <View style={{ padding: 15, borderRadius: 8, backgroundColor: plan.eligible ? colors.goldSoft : "#F1F5F9", borderWidth: 1, borderColor: plan.eligible ? "#F1D99B" : "#CBD5E1", gap: 5 }}>
+              <AppText variant="caption" color={colors.textDarkMuted}>Estimated recipient amount</AppText>
+              <AppText variant="title" color={colors.textDarkPrimary}>
+                {recipient?.value == null ? "Unavailable" : `${formatCurrency(recipient.value)} ${currency ?? ""}`}
+              </AppText>
+              <AppText variant="caption" color={colors.textDarkSecondary}>
+                {fx?.value == null ? "Live FX unavailable" : `1 GBP ≈ ${fx.value.toFixed(4)} ${currency ?? ""} via ${fx.source}`}
               </AppText>
             </View>
-            <View
-              style={{
-                height: 10,
-                borderRadius: 999,
-                backgroundColor: "#E6ECF2",
-                overflow: "hidden",
-              }}
-            >
-              <View
-                style={{
-                  width: `${signal.confidence}%`,
-                  height: "100%",
-                  backgroundColor: colors.gold,
-                }}
-              />
-            </View>
-          </View>
-        </View>
 
-        <View
-          style={{
-            padding: 16,
-            borderRadius: 22,
-            backgroundColor: colors.goldSoft,
-            borderWidth: 1,
-            borderColor: "#F1D99B",
-            gap: 7,
-          }}
-        >
-          <AppText variant="caption" color={colors.gold}>
-            Estimated receive amount
-          </AppText>
-
-          <AppText variant="title" color={colors.textDarkPrimary}>
-            {estimatedReceive > 0 ? formatCurrency(estimatedReceive) : "0.00"}{" "}
-            {currency ?? ""}
-          </AppText>
-
-          <AppText variant="caption" color={colors.textDarkSecondary}>
-            {getPayoutLabel(payoutMethod)} via {provider || "provider"}
-          </AppText>
-        </View>
+            {!plan.eligible ? (
+              <AppText variant="caption" color="#B91C1C">
+                {plan.eligibilityReasons.join(" ")}
+              </AppText>
+            ) : null}
+          </>
+        )}
       </View>
     </AppCard>
   );
@@ -444,8 +214,8 @@ function RoutePreviewCard({
 
 export default function SendScreen() {
   const params = useLocalSearchParams();
-  const { gbpBalance } = useWallet();
-  const { createTransfer, setRecipient } = useTransfer();
+  const { gbpBalance, rlusdBalance } = useWallet();
+  const { createTransfer } = useTransfer();
   const {
     loading: nexusAILoading,
     enabled: sendAIEnabled,
@@ -545,6 +315,16 @@ export default function SendScreen() {
   );
 
   const availablePayoutMethods = selectedCorridor?.payoutMethods ?? [];
+  const canonicalRouteResult = useCanonicalRouteQuotes({
+    amount: safeAmount,
+    destinationCurrency: selectedCorridor?.currency,
+    destinationCountry: selectedCorridor?.country,
+    payoutMethod: selectedPayoutMethod,
+    fundingMethod: "OPEN_BANKING",
+    actualRlusdBalance: rlusdBalance,
+  });
+  const previewRoute = canonicalRouteResult.routes.find((route) => route.routePlan?.eligible)
+    ?? canonicalRouteResult.routes[0];
 
   const selectedPayoutConfig = useMemo(
     () => availablePayoutMethods.find((method) => method.type === selectedPayoutMethod),
@@ -701,8 +481,17 @@ export default function SendScreen() {
         selectedPayoutMethod === "MOBILE_WALLET" ? mobileNumber.trim() : undefined,
     };
 
-    createTransfer(numericAmount);
-    setRecipient(recipient);
+    const eligibleRoutes = canonicalRouteResult.routes.filter((route) => route.routePlan?.eligible);
+    if (canonicalRouteResult.loading) {
+      Alert.alert("Routes still loading", "Wait for current provider evidence before continuing.");
+      return;
+    }
+    if (eligibleRoutes.length === 0) {
+      Alert.alert("No executable route", previewRoute?.routePlan?.eligibilityReasons.join(" ") || "No evidence-supported route is currently available.");
+      return;
+    }
+
+    createTransfer(numericAmount, { recipient, routes: canonicalRouteResult.routes });
     router.push("/routes");
   };
 
@@ -808,12 +597,11 @@ export default function SendScreen() {
             </View>
           </AppCard>
 
-          <RoutePreviewCard
-            selectedCountry={selectedCountry}
+          <CanonicalRoutePreviewCard
+            route={previewRoute}
             currency={selectedCorridor?.currency}
-            amount={safeAmount}
-            provider={selectedProvider}
-            payoutMethod={selectedPayoutMethod}
+            loading={canonicalRouteResult.loading}
+            error={canonicalRouteResult.error}
           />
 
           <AppCard>

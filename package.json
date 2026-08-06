@@ -10,6 +10,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "startup:validate": "tsx governance/automation/scripts/runStartupDeterminismValidation.ts",
+    "route-intelligence:validate": "tsx governance/automation/scripts/validateCanonicalRouteIntelligence.ts",
     "certification:pilot": "tsx governance/automation/scripts/runPilotCertification.ts",
     "certification:pilot:ps": "powershell -ExecutionPolicy Bypass -File governance/automation/scripts/run-pilot-certification.ps1"
   },

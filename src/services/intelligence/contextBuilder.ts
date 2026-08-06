@@ -165,14 +165,16 @@ export async function buildRouteIntelligenceContext(
   route: RouteQuote,
   sensitivity: NexusAISensitivity
 ): Promise<RouteIntelligenceContext> {
-  // Get treasury signal for this corridor
-  const treasurySignal = await getTreasurySignal(
-    route.treasuryCorridor ?? "GBP→PHP",
-    route.sendAmount ?? 1000
-  );
+  const canonicalPlan = route.routePlan;
+  const treasurySignal = canonicalPlan
+    ? null
+    : await getTreasurySignal(
+        route.treasuryCorridor ?? "GBP→PHP",
+        route.sendAmount ?? 1000
+      );
 
   // Get recent operational events for this corridor
-  const allEvents = await loadRecentRouteOperationalEvents(50);
+  const allEvents = canonicalPlan ? [] : await loadRecentRouteOperationalEvents(50);
   const corridorEvents = allEvents.filter(
     (e) => e.corridor === route.treasuryCorridor || e.corridor === route.treasuryCorridor
   );
@@ -193,8 +195,8 @@ export async function buildRouteIntelligenceContext(
     },
 
     treasuryContext: {
-      treasuryScore: route.treasuryScore ?? 0,
-      treasurePressurePenalty: route.treasuryPressurePenalty ?? 0,
+      treasuryScore: canonicalPlan?.intelligence.capacity.value ?? route.treasuryScore ?? 0,
+      treasurePressurePenalty: canonicalPlan ? 0 : route.treasuryPressurePenalty ?? 0,
       corridorLiquidityDepth:
         (route.treasuryCorridorLiquidityDepth as
           | "HIGH"
@@ -202,18 +204,18 @@ export async function buildRouteIntelligenceContext(
           | "LOW"
           | "CONSTRAINED") ?? "MEDIUM",
       corridorPressure: (route.treasuryCorridorPressure as "LOW" | "MEDIUM" | "HIGH" | "CRITICAL") ?? "MEDIUM",
-      corridorCapacityScore: route.treasuryCorridorCapacityScore ?? 0,
-      partnerCapacityScore: route.treasuryPartnerCapacityScore ?? 0,
-      railCapacityScore: route.treasuryRailCapacityScore ?? 0,
+      corridorCapacityScore: canonicalPlan?.intelligence.capacity.value ?? route.treasuryCorridorCapacityScore ?? 0,
+      partnerCapacityScore: canonicalPlan?.intelligence.capacity.value ?? route.treasuryPartnerCapacityScore ?? 0,
+      railCapacityScore: canonicalPlan?.intelligence.liquidity.value ?? route.treasuryRailCapacityScore ?? 0,
       preferredRail: route.treasuryCorridorPreferredRail,
       preferredBridgeAsset: route.treasuryCorridorPreferredBridgeAsset,
-      decision: treasurySignal?.corridor?.insight ?? "Route meets capacity requirements",
+      decision: canonicalPlan?.intelligence.decisionFactors.join(" ") ?? treasurySignal?.corridor?.insight ?? "Route evidence unavailable",
     },
 
     settlementContext: {
       estimatedTime: route.estimatedTime ?? "2-4 hours",
       settlementStages: route.settlementStages ?? ["Initiate", "Settle", "Notify"],
-      marketConditions: "OPEN",
+      marketConditions: canonicalPlan ? "UNAVAILABLE" : "OPEN",
       expectedChallenges: corridorEvents
         .filter((e) => e.severity === "WATCH" || e.severity === "DEGRADED")
         .map((e) => e.message)
@@ -223,14 +225,14 @@ export async function buildRouteIntelligenceContext(
     costMetrics: {
       fee: route.fee ?? 0,
       fxRate: route.fxRate ?? 0,
-      estimatedTotalCost: (route.fee ?? 0) + ((route.sendAmount ?? 0) - (route.receiveAmount ?? 0)),
+      estimatedTotalCost: canonicalPlan?.economics.totalCost.value ?? route.fee ?? 0,
       costComparison: (route.costScore ?? 0) >= 80 ? "LOWEST" : (route.costScore ?? 0) >= 60 ? "COMPETITIVE" : "PREMIUM",
     },
 
     routeHealth: {
-      partnerHealth: route.partnerHealth ?? "GOOD",
-      partnerUptime: route.partnerUptime ?? 99.5,
-      historicalSuccessRate: route.providerHistoricalSuccessRate ?? 99.2,
+      partnerHealth: canonicalPlan?.eligible ? "GOOD" : route.partnerHealth ?? "DEGRADED",
+      partnerUptime: canonicalPlan ? 0 : route.partnerUptime ?? 0,
+      historicalSuccessRate: canonicalPlan?.intelligence.historicalSuccessRate.value ?? route.providerHistoricalSuccessRate ?? 0,
       recentTrend: route.providerRecentTrend ?? "STABLE",
       degradationScore: corridorEvents
         .filter((e) => e.severity === "DEGRADED")
@@ -239,9 +241,9 @@ export async function buildRouteIntelligenceContext(
 
     liquidityAssessment: {
       requiredRlusd: route.liquidityRequiredRlusd,
-      available: route.liquidityAvailable ?? true,
-      liquidityStatus: route.liquidityStatus ?? "AVAILABLE",
-      liquidityRecommendation: treasurySignal?.corridor?.insight ?? "Liquidity conditions support this route",
+      available: canonicalPlan ? canonicalPlan.intelligence.liquidity.value !== null : route.liquidityAvailable ?? false,
+      liquidityStatus: canonicalPlan?.intelligence.liquidity.value == null ? "UNAVAILABLE" : route.liquidityStatus ?? "AVAILABLE",
+      liquidityRecommendation: canonicalPlan?.intelligence.liquidity.reason ?? treasurySignal?.corridor?.insight ?? "Liquidity evidence unavailable",
     },
 
     operationalEvents: corridorEvents
@@ -275,16 +277,13 @@ export async function buildTransferIntelligenceContext(
 ): Promise<TransferIntelligenceContext> {
   const selectedRoute = transfer.selectedRoute ?? transfer.routes?.[0];
   const activeRoute = executionSnapshot?.activeRoute ?? selectedRoute;
+  const canonicalPlan = selectedRoute?.routePlan;
   const now = new Date().toISOString();
 
-  // Get treasury signal
-  const treasurySignal = await getTreasurySignal(
-    selectedRoute?.treasuryCorridor ?? "GBP→PHP",
-    transfer.senderAmount
-  );
-
-  // Get corridor operational events
-  const allEvents = await loadRecentRouteOperationalEvents(50);
+  const treasurySignal = canonicalPlan
+    ? null
+    : await getTreasurySignal(selectedRoute?.treasuryCorridor ?? "GBP→PHP", transfer.senderAmount);
+  const allEvents = canonicalPlan ? [] : await loadRecentRouteOperationalEvents(50);
   const corridorEvents = allEvents.filter(
     (e) => e.corridor === selectedRoute?.treasuryCorridor
   );
@@ -310,7 +309,9 @@ export async function buildTransferIntelligenceContext(
       estimatedCompletion:
         transfer.status === "COMPLETED"
           ? "Completed"
-          : selectedRoute?.estimatedTime ?? "2-4 hours",
+          : canonicalPlan?.intelligence.etaMinutes.value == null
+            ? "Unavailable"
+            : selectedRoute?.estimatedTime ?? "Unavailable",
     },
 
     routeContext: {
@@ -323,11 +324,20 @@ export async function buildTransferIntelligenceContext(
     settlementContext: {
       settlementState: transfer.status,
       settlementCommentary:
-        executionSnapshot?.selectedRoute?.corridorInsight ??
-        "Settlement proceeds through standard channels with monitoring active",
-      expectedSettlementTime: selectedRoute?.estimatedTime ?? "2-4 hours",
+        canonicalPlan?.intelligence.decisionFactors.join(" ")
+        ?? executionSnapshot?.selectedRoute?.corridorInsight
+        ?? "Settlement evidence is unavailable.",
+      expectedSettlementTime: canonicalPlan?.intelligence.etaMinutes.value == null
+        ? "Unavailable"
+        : selectedRoute?.estimatedTime ?? "Unavailable",
       settlementRisk:
-        corridorEvents.some((e) => e.severity === "DEGRADED") ||
+        canonicalPlan
+          ? canonicalPlan.intelligence.risk.value >= 67
+            ? "HIGH"
+            : canonicalPlan.intelligence.risk.value >= 34
+              ? "MEDIUM"
+              : "LOW"
+          : corridorEvents.some((e) => e.severity === "DEGRADED") ||
         (treasurySignal?.corridor?.pressure === "HIGH" ||
           treasurySignal?.corridor?.pressure === "CRITICAL")
           ? "HIGH"
@@ -339,7 +349,7 @@ export async function buildTransferIntelligenceContext(
 
     treasuryStateSnapshot: {
       treasuryStatus:
-        treasurySignal?.corridor?.pressure === "CRITICAL"
+        canonicalPlan ? "UNAVAILABLE" : treasurySignal?.corridor?.pressure === "CRITICAL"
           ? "CRITICAL"
           : treasurySignal?.corridor?.pressure === "HIGH"
             ? "WATCH"
@@ -347,18 +357,18 @@ export async function buildTransferIntelligenceContext(
               ? "HEALTHY"
               : "OPTIMAL",
       corridorLiquidity:
-        treasurySignal?.corridor?.liquidityDepth === "HIGH"
+        canonicalPlan ? "UNAVAILABLE" : treasurySignal?.corridor?.liquidityDepth === "HIGH"
           ? "STRONG"
           : treasurySignal?.corridor?.liquidityDepth === "MEDIUM"
             ? "ADEQUATE"
             : "LOW",
-      corridorPressure: treasurySignal?.corridor?.pressure ?? "MEDIUM",
+      corridorPressure: canonicalPlan ? "UNAVAILABLE" : treasurySignal?.corridor?.pressure ?? "MEDIUM",
     },
 
     fxSnapshot: {
       pair: `${transfer.senderCurrency}/${transfer.recipient.currency}`,
       rate: selectedRoute?.fxRate ?? 0,
-      volatilityAtExecution:
+      volatilityAtExecution: canonicalPlan ? "UNAVAILABLE" :
         Math.abs((selectedRoute?.fxRate ?? 50) - 50) > 5
           ? "EXTREME"
           : Math.abs((selectedRoute?.fxRate ?? 50) - 50) > 2
@@ -387,10 +397,13 @@ export async function buildTransferIntelligenceContext(
     financial: {
       senderAmount: transfer.senderAmount,
       senderCurrency: transfer.senderCurrency,
-      expectedReceiveAmount: selectedRoute?.receiveAmount ?? transfer.senderAmount,
+      expectedReceiveAmount: canonicalPlan?.economics.estimatedRecipientAmount.value
+        ?? (canonicalPlan ? null : selectedRoute?.receiveAmount ?? transfer.senderAmount),
       recipientCurrency: transfer.recipient.currency,
-      feeAmount: selectedRoute?.fee ?? 0,
-      exchangeRate: selectedRoute?.fxRate ?? 0,
+      feeAmount: canonicalPlan?.economics.providerFees.value
+        ?? (canonicalPlan ? null : selectedRoute?.fee ?? 0),
+      exchangeRate: canonicalPlan?.economics.fxRate.value
+        ?? (canonicalPlan ? null : selectedRoute?.fxRate ?? 0),
     },
 
     sensitivity,

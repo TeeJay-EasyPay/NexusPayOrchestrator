@@ -1,41 +1,24 @@
 import { router } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 
 import { NexusAIToggleCard } from "../src/components/intelligence/NexusAIToggleCard";
+import { DataProvenanceBadge } from "../src/components/operations-v2/DataProvenanceBadge";
+import { RoutePlanComparison } from "../src/components/routes/RoutePlanComparison";
 import { AppButton } from "../src/components/ui/AppButton";
 import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
 import { Screen } from "../src/components/ui/Screen";
 import { useNexusAIScreenSetting } from "../src/hooks/useNexusAISettings";
-import {
-    buildRouteOperationalEvent,
-} from "../src/lib/routeOperationalState";
-import { buildOrchestratedRouteQuotes } from "../src/lib/settlementOrchestrator";
+import { useCanonicalRouteQuotes } from "../src/hooks/useCanonicalRouteQuotes";
 import {
     explainRoute,
     RouteExplanationResult,
 } from "../src/services/nexusAIService";
-import {
-    writeRouteOperationalEvent,
-} from "../src/services/routeOperationalEventService";
-import { writeTreasuryLiquiditySnapshot } from "../src/services/treasuryIntelligenceService";
 import { useTransfer } from "../src/state/TransferContext";
 import { useWallet } from "../src/state/WalletContext";
 import { colors } from "../src/theme";
 import { Currency, RouteQuote } from "../src/types/transfer";
-
-function buildRouteQuotes(
-  amount: number,
-  currency: Currency,
-  simulatedRlusdBalance: number
-): RouteQuote[] {
-  return buildOrchestratedRouteQuotes({
-    amount,
-    currency,
-    simulatedRlusdBalance,
-  });
-}
 
 function formatMoney(value: number) {
   return value.toLocaleString(undefined, {
@@ -137,14 +120,14 @@ function RouteOptionCard({
   isSelected: boolean;
   onPress: () => void;
   showIntelligence: boolean;
-  routeExplanation?: RouteExplanationResult;
+  routeExplanation?: { data: RouteExplanationResult; source: "edge_function" | "fallback" };
 }) {
-  const isRecommended = index === 0;
+  const isRecommended = route.routePlan?.eligible === true && route.routePlan.rank === 1;
   const borderColor = isSelected ? colors.gold : isRecommended ? "#BFE7D0" : "#E2E8F0";
   const backgroundColor = isSelected ? "#FFF8E1" : "#FFFFFF";
 
   return (
-    <Pressable onPress={onPress}>
+    <Pressable onPress={onPress} disabled={route.routePlan?.eligible === false} style={{ opacity: route.routePlan?.eligible === false ? 0.72 : 1 }}>
       <AppCard
         style={{
           borderWidth: 1,
@@ -182,13 +165,22 @@ function RouteOptionCard({
                 {route.score}
               </AppText>
 
-              <AppText variant="caption" color={colors.textDarkMuted}>
-                /100 AI score
-              </AppText>
+                <AppText variant="caption" color={colors.textDarkMuted}>/100 evidence score</AppText>
             </View>
           </View>
 
           <ScoreBar value={route.score} />
+
+          {route.routePlan ? (
+            <View style={{ gap: 10 }}>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+                {route.routePlan.sourceProvenance.map((source) => (
+                  <DataProvenanceBadge key={`${route.id}-${source}`} classification={source} />
+                ))}
+              </View>
+              <RoutePlanComparison plan={route.routePlan} />
+            </View>
+          ) : null}
 
           <View
             style={{
@@ -207,14 +199,14 @@ function RouteOptionCard({
             </AppText>
 
             <AppText variant="caption" color="#BFEAF1">
-              FX: 1 GBP ≈ {route.fxRate.toFixed(2)} {recipientCurrency} • Fee £{route.fee.toFixed(2)}
+              FX: 1 GBP ≈ {route.fxRate.toFixed(4)} {recipientCurrency} • Fee {route.routePlan?.economics.providerFees.value == null ? "Unavailable" : `£${route.fee.toFixed(2)}`}
             </AppText>
           </View>
 
           <View style={{ flexDirection: "row", gap: 8 }}>
             <MiniStat label="Speed" value={route.estimatedTime} />
-            <MiniStat label="Fee" value={`£${route.fee.toFixed(2)}`} />
-            <MiniStat label="AI Confidence" value={`${route.aiConfidence ?? 0}/100`} />
+            <MiniStat label="Fee" value={route.routePlan?.economics.providerFees.value == null ? "Unavailable" : `£${route.fee.toFixed(2)}`} />
+            <MiniStat label="Confidence" value={`${route.routePlan?.intelligence.confidence.value ?? 0}/100`} />
           </View>
 
           {showIntelligence ? (
@@ -230,14 +222,14 @@ function RouteOptionCard({
                 }}
               >
                 <AppText variant="caption" color={colors.textDarkMuted}>
-                  AI route intelligence
+                  Route decision evidence
                 </AppText>
 
                 <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
-                  {routeExplanation?.title ?? route.aiRecommendation}
+                  {routeExplanation?.data.title ?? route.aiRecommendation}
                 </AppText>
 
-                {(routeExplanation?.bullets ?? [route.corridorInsight]).filter(Boolean).map((line, lineIndex) => (
+                {(routeExplanation?.data.bullets ?? route.routePlan?.intelligence.decisionFactors ?? [route.corridorInsight]).filter(Boolean).map((line, lineIndex) => (
                   <AppText
                     key={`${route.id}-explain-${lineIndex}`}
                     variant="caption"
@@ -249,18 +241,18 @@ function RouteOptionCard({
 
                 <View style={{ flexDirection: "row", gap: 8 }}>
                   <MiniStat
-                    label="Risk"
-                    value={`${route.predictedFailureRisk?.toFixed(1) ?? "0.0"}%`}
+                    label="Evidence risk"
+                    value={`${route.routePlan?.intelligence.risk.value.toFixed(0) ?? "0"}%`}
                   />
 
                   <MiniStat
-                    label="Corridor"
-                    value={`${route.corridorHealthScore ?? 0}/100`}
+                    label="Coverage"
+                    value={`${route.routePlan?.intelligence.evidenceCoverage ?? 0}%`}
                   />
 
                   <MiniStat
-                    label="Trend"
-                    value={route.providerRecentTrend ?? "STABLE"}
+                    label="AI source"
+                    value={routeExplanation?.source === "edge_function" ? "DERIVED" : "FALLBACK"}
                   />
                 </View>
               </View>
@@ -276,27 +268,27 @@ function RouteOptionCard({
                 }}
               >
                 <AppText variant="caption" color="#8A6218">
-                  Corridor liquidity intelligence
+                  Provider evidence gaps
                 </AppText>
 
                 <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
-                  {route.treasuryRecommendation ?? "Corridor liquidity intelligence pending"}
+                  {route.routePlan?.eligible ? "Eligible for sandbox execution" : "Route unavailable"}
                 </AppText>
 
                 <View style={{ flexDirection: "row", gap: 8 }}>
                   <MiniStat
-                    label="Route Capacity"
-                    value={`${route.treasuryScore ?? 0}/100`}
+                    label="Liquidity"
+                    value={route.routePlan?.intelligence.liquidity.value == null ? "Unavailable" : String(route.routePlan.intelligence.liquidity.value)}
                   />
 
                   <MiniStat
-                    label="Pressure"
-                    value={route.treasuryCorridorPressure ?? "LOW"}
+                    label="Capacity"
+                    value={route.routePlan?.intelligence.capacity.value == null ? "Unavailable" : String(route.routePlan.intelligence.capacity.value)}
                   />
 
                   <MiniStat
-                    label="Rail cap."
-                    value={`${route.treasuryRailCapacityScore ?? 0}/100`}
+                    label="Total cost"
+                    value={route.routePlan?.economics.totalCost.value == null ? "Unavailable" : `£${route.routePlan.economics.totalCost.value.toFixed(2)}`}
                   />
                 </View>
               </View>
@@ -313,7 +305,7 @@ function RouteOptionCard({
                   }}
                 >
                   <AppText variant="caption" color={colors.textDarkMuted}>
-                    AI decision factors
+                    Decision factors
                   </AppText>
 
                   {route.aiDecisionFactors.map((factor, factorIndex) => (
@@ -355,7 +347,7 @@ function RouteOptionCard({
 
 export default function RoutesScreen() {
   const { transfer, setRoutes, selectRoute } = useTransfer();
-  const { simulatedRlusdBalance } = useWallet();
+  const { rlusdBalance } = useWallet();
   const {
     loading: nexusAILoading,
     enabled: routeAIEnabled,
@@ -365,21 +357,21 @@ export default function RoutesScreen() {
   } = useNexusAIScreenSetting("route_enabled");
 
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
+  const [approvalError, setApprovalError] = useState<string | null>(null);
   const [routeExplanations, setRouteExplanations] = useState<
-    Record<string, RouteExplanationResult>
+    Record<string, { data: RouteExplanationResult; source: "edge_function" | "fallback" }>
   >({});
 
-  const generatedRoutes = useMemo(() => {
-    if (!transfer?.senderAmount || !transfer?.recipient?.currency) {
-      return [];
-    }
-
-    return buildRouteQuotes(
-      transfer.senderAmount,
-      transfer.recipient.currency,
-      simulatedRlusdBalance
-    );
-  }, [transfer?.id, transfer?.senderAmount, transfer?.recipient?.currency, simulatedRlusdBalance]);
+  const canonicalRouteResult = useCanonicalRouteQuotes({
+    amount: transfer?.senderAmount ?? 0,
+    destinationCurrency: transfer?.recipient?.currency,
+    destinationCountry: transfer?.recipient?.country,
+    payoutMethod: transfer?.recipient?.payoutMethod ?? "BANK",
+    fundingMethod: transfer?.fundingMethod ?? "OPEN_BANKING",
+    actualRlusdBalance: rlusdBalance,
+    enabled: Boolean(transfer && (!transfer.routes || transfer.routes.length === 0)),
+  });
+  const generatedRoutes = canonicalRouteResult.routes;
 
   const shouldStoreGeneratedRoutes =
     Boolean(transfer) &&
@@ -390,34 +382,6 @@ export default function RoutesScreen() {
     if (!shouldStoreGeneratedRoutes) return;
     setRoutes(generatedRoutes);
   }, [shouldStoreGeneratedRoutes, generatedRoutes, setRoutes]);
-
-  useEffect(() => {
-    if (!transfer?.id || generatedRoutes.length === 0) return;
-
-    generatedRoutes.forEach((route) => {
-      const treasurySignal = route.treasurySnapshotPayload;
-
-      if (treasurySignal) {
-        void writeTreasuryLiquiditySnapshot({
-          transactionId: transfer.id,
-          routeId: route.id,
-          provider: route.provider,
-          rail: route.rail,
-          currency: transfer.recipient.currency,
-          bridgeAsset: route.bridgeAsset,
-          treasurySignal: treasurySignal as never,
-        });
-      }
-
-      const operationalEvent = buildRouteOperationalEvent(route);
-
-      void writeRouteOperationalEvent({
-        transactionId: transfer.id,
-        route,
-        event: operationalEvent,
-      });
-    });
-  }, [transfer?.id, transfer?.recipient.currency, generatedRoutes]);
 
   const activeRoutes =
     transfer?.routes && transfer.routes.length > 0 ? transfer.routes : generatedRoutes;
@@ -453,7 +417,7 @@ export default function RoutesScreen() {
             }
           );
 
-          return [route.id, result.data] as const;
+            return [route.id, { data: result.data, source: result.meta.source }] as const;
         })
       );
 
@@ -472,12 +436,18 @@ export default function RoutesScreen() {
   const selectedRoute = activeRoutes.find((route) => route.id === selectedRouteId);
 
   const handleSelectRoute = (route: RouteQuote) => {
+    if (route.routePlan && !route.routePlan.eligible) return;
+    setApprovalError(null);
     setSelectedRouteId(route.id);
-    selectRoute(route);
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!selectedRoute) return;
+    const approved = await selectRoute(selectedRoute);
+    if (!approved) {
+      setApprovalError("The selected Route Plan could not be persisted and approved. Recalculate before continuing.");
+      return;
+    }
     router.push("/funding");
   };
 
@@ -593,6 +563,10 @@ export default function RoutesScreen() {
                   : "Select one of the ranked route options to continue."}
               </AppText>
             </View>
+
+            {approvalError ? (
+              <AppText variant="caption" color="#B91C1C">{approvalError}</AppText>
+            ) : null}
 
             <AppButton
               title={selectedRoute ? "Choose funding source" : "Select a route"}

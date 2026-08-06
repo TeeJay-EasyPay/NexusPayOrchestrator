@@ -158,4 +158,14 @@ Secure a destination-rail sandbox partner to complete the first end-to-end MVP o
 
 ---
 
+## 2026-08-06 Route Intelligence Evidence Update
+
+- Canonical Route Plan V1 now governs preview, ranking, approval, execution, tracking and AI explanation.
+- Airwallex remains a validated sandbox payout provider and live FX is available.
+- Yapily payment initiation is not yet genuine; the route engine blocks approval rather than treating synthetic consent/payment references as provider evidence.
+- XRPL/RLUSD remains blocked pending executable path, market depth, slippage, fee and RLUSD settlement evidence.
+- Partner priority is a genuine Yapily payment-authorisation flow followed by a second evidence-backed route for failover certification.
+
+---
+
 > **Maintenance Rule:** Append new daily briefings to the end of this document. Do not overwrite previous entries. Update the partner register and communication history whenever new information is confirmed.

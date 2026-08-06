@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { View } from "react-native";
 
 import {
@@ -10,15 +10,25 @@ import {
     ConsumerShell,
 } from "../../src/components/consumer/ConsumerShell";
 import { OpenBankingFlowCard } from "../../src/components/openBanking/OpenBankingFlowCard";
+import { RoutePlanComparison } from "../../src/components/routes/RoutePlanComparison";
+import { RoutePlanHistory } from "../../src/components/routes/RoutePlanHistory";
 import { AppText } from "../../src/components/ui/AppText";
 import { useNexusAIScreenSetting } from "../../src/hooks/useNexusAISettings";
+import {
+    ExecutionSnapshot,
+    runTransferExecution,
+} from "../../src/services/execution/executionEngine";
+import { loadExecutionSession } from "../../src/services/execution/executionPersistenceService";
+import { subscribeToExecutionSession } from "../../src/services/execution/executionRealtimeService";
 import {
     analyseTransfer,
     TransferAnalysisResult,
 } from "../../src/services/nexusAIService";
 import { loadOpenBankingPaymentFlow } from "../../src/services/openBankingPaymentFlowService";
+import { loadRoutePlanEvents, RoutePlanEvent } from "../../src/services/routePlanService";
 import { loadTransactionAuditLogs } from "../../src/services/transactionAuditService";
 import { useTransfer } from "../../src/state/TransferContext";
+import { useWallet } from "../../src/state/WalletContext";
 import { OpenBankingPaymentFlow } from "../../src/types/transfer";
 
 type TimelineStep = {
@@ -64,13 +74,20 @@ export default function ConsumerTrackScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { transfer, completedTransfers, startTransfer, completeTransfer, hydrateTransfers } = useTransfer();
+  const { debitGbp, refreshXrpBalance } = useWallet();
   const { enabled: trackingAIEnabled, settings: aiSettings } = useNexusAIScreenSetting("tracking_enabled");
   const [auditLines, setAuditLines] = useState<string[]>([]);
   const [aiUpdate, setAiUpdate] = useState<TransferAnalysisResult | null>(null);
+  const [aiUpdateSource, setAiUpdateSource] = useState<"DERIVED" | "FALLBACK">("FALLBACK");
   const [openBankingFlow, setOpenBankingFlowState] = useState<OpenBankingPaymentFlow | null>(null);
-  const autoCompleteForTransferRef = useRef<string | null>(null);
+  const [executionSnapshot, setExecutionSnapshot] = useState<ExecutionSnapshot | null>(null);
+  const [sessionHydrated, setSessionHydrated] = useState(false);
+  const [routePlanEvents, setRoutePlanEvents] = useState<RoutePlanEvent[]>([]);
   const startedTransferRef = useRef<string | null>(null);
   const successNavigationRef = useRef<string | null>(null);
+  const executionStartedRef = useRef<string | null>(null);
+  const completedTransferRef = useRef<string | null>(null);
+  const debitedTransferRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!transfer?.id) {
@@ -127,48 +144,115 @@ export default function ConsumerTrackScreen() {
     };
   }, [activeTransfer?.id, activeTransfer?.fundingMethod, activeTransfer?.openBankingFlow]);
 
-  const timeline = useMemo(
-    () => timelineForStatus(activeTransfer?.status ?? "CREATED"),
-    [activeTransfer?.status]
-  );
-
-  async function markDelivered() {
-    if (!transfer) {
-      return;
+  const timeline = useMemo(() => {
+    if (!executionSnapshot?.steps.length) {
+      return timelineForStatus(activeTransfer?.status ?? "CREATED");
     }
 
-    if (transfer.status !== "IN_PROGRESS") {
-      startTransfer();
-    }
+    return executionSnapshot.steps.map((step) => ({
+      title: step.title,
+      state:
+        step.status === "DONE" || step.status === "SKIPPED"
+          ? "Done" as const
+          : step.status === "RUNNING"
+            ? "Current" as const
+            : "Next" as const,
+      detail: step.description,
+    }));
+  }, [activeTransfer?.status, executionSnapshot?.steps]);
 
-    completeTransfer();
-    await hydrateTransfers();
-  }
+  const applyExecutionSnapshot = useCallback((snapshot: ExecutionSnapshot) => {
+    setExecutionSnapshot(snapshot);
 
-  useEffect(() => {
-    if (!transfer?.id || transfer.status === "COMPLETED") {
-      return;
-    }
-
-    startedTransferRef.current = transfer.id;
-
-    if (autoCompleteForTransferRef.current === transfer.id) {
-      return;
-    }
-
-    autoCompleteForTransferRef.current = transfer.id;
-
-    const timer = setTimeout(() => {
-      if (transfer.status !== "IN_PROGRESS") {
-        startTransfer();
-      }
-
+    if (snapshot.state === "COMPLETED" && completedTransferRef.current !== snapshot.transferId) {
+      completedTransferRef.current = snapshot.transferId;
       completeTransfer();
       void hydrateTransfers();
-    }, 1200);
+    }
+  }, [completeTransfer, hydrateTransfers]);
 
-    return () => clearTimeout(timer);
-  }, [completeTransfer, hydrateTransfers, startTransfer, transfer?.id, transfer?.status]);
+  useEffect(() => {
+    if (!activeTransfer?.id) {
+      setExecutionSnapshot(null);
+      setSessionHydrated(true);
+      return;
+    }
+
+    const transferId = activeTransfer.id;
+    let mounted = true;
+    setSessionHydrated(false);
+
+    Promise.all([
+      loadExecutionSession(transferId),
+      loadRoutePlanEvents(transferId),
+    ]).then(([persisted, planEvents]) => {
+      if (!mounted) return;
+      if (persisted?.snapshot) applyExecutionSnapshot(persisted.snapshot);
+      setRoutePlanEvents(planEvents);
+      setSessionHydrated(true);
+    });
+
+    const unsubscribe = subscribeToExecutionSession({
+      transferId,
+      onSession: () => undefined,
+      onSnapshot: applyExecutionSnapshot,
+      onError: () => undefined,
+    });
+
+    return () => {
+      mounted = false;
+      unsubscribe();
+    };
+  }, [activeTransfer?.id, applyExecutionSnapshot]);
+
+  useEffect(() => {
+    if (!activeTransfer?.id) return;
+    loadRoutePlanEvents(activeTransfer.id).then(setRoutePlanEvents);
+  }, [activeTransfer?.id, executionSnapshot?.state]);
+
+  useEffect(() => {
+    if (
+      requestedTransferId
+      || !sessionHydrated
+      || !transfer?.id
+      || !transfer.selectedRoute
+      || transfer.status === "COMPLETED"
+      || executionStartedRef.current === transfer.id
+    ) {
+      return;
+    }
+
+    const currentTransfer = transfer;
+    const currentRoute = transfer.selectedRoute;
+    executionStartedRef.current = transfer.id;
+    startedTransferRef.current = transfer.id;
+    startTransfer();
+
+    if (debitedTransferRef.current !== transfer.id) {
+      debitGbp(transfer.senderAmount ?? 0);
+      debitedTransferRef.current = transfer.id;
+    }
+
+    void runTransferExecution({
+      transfer: currentTransfer,
+      selectedRoute: currentRoute,
+      refreshXrpBalance,
+      onSnapshot: applyExecutionSnapshot,
+      resumeFromSnapshot: executionSnapshot,
+    });
+  }, [
+    debitGbp,
+    applyExecutionSnapshot,
+    executionSnapshot,
+    refreshXrpBalance,
+    requestedTransferId,
+    sessionHydrated,
+    startTransfer,
+    transfer?.id,
+    transfer?.selectedRoute?.id,
+    transfer?.status,
+    transfer,
+  ]);
 
   useEffect(() => {
     if (!transfer?.id || transfer.status !== "COMPLETED") {
@@ -213,14 +297,10 @@ export default function ConsumerTrackScreen() {
     void analyseTransfer(
       {
         transferId: activeTransfer.id,
-        transferState: activeTransfer.status,
-        progressPercent:
-          activeTransfer.status === "COMPLETED"
-            ? 100
-            : activeTransfer.status === "IN_PROGRESS"
-              ? 72
-              : 45,
-        settlementCommentary: "Transfer execution timeline in progress.",
+        transferState: executionSnapshot?.state ?? activeTransfer.status,
+        progressPercent: executionSnapshot?.progressPercent ?? 0,
+        settlementCommentary:
+          executionSnapshot?.humanStatus ?? "Transfer execution timeline is preparing.",
         milestones: timelineMilestones,
         operationalEvents,
       },
@@ -229,16 +309,18 @@ export default function ConsumerTrackScreen() {
         timeoutMs: 6500,
         maxRetries: 1,
         _transfer: activeTransfer,
+        _executionSnapshot: executionSnapshot ?? undefined,
       }
     ).then((result) => {
       if (!active) return;
       setAiUpdate(result.data);
+      setAiUpdateSource(result.meta.source === "edge_function" ? "DERIVED" : "FALLBACK");
     });
 
     return () => {
       active = false;
     };
-  }, [activeTransfer, aiSettings?.sensitivity, auditLines, timeline, trackingAIEnabled]);
+  }, [activeTransfer, aiSettings?.sensitivity, auditLines, executionSnapshot, timeline, trackingAIEnabled]);
 
   if (!activeTransfer) {
     return (
@@ -257,8 +339,15 @@ export default function ConsumerTrackScreen() {
   }
 
   const recipientName = activeTransfer.recipient?.name ?? "Recipient";
-  const statusLabel = activeTransfer.status === "COMPLETED" ? "Delivered" : "On track";
-  const progress = activeTransfer.status === "COMPLETED" ? 100 : activeTransfer.status === "IN_PROGRESS" ? 72 : 45;
+  const effectiveStatus = executionSnapshot?.state ?? activeTransfer.status;
+  const statusLabel = effectiveStatus === "COMPLETED"
+    ? "Delivered"
+    : effectiveStatus === "FAILED"
+      ? "Failed"
+      : "On track";
+  const progress = executionSnapshot?.progressPercent
+    ?? (activeTransfer.status === "COMPLETED" ? 100 : activeTransfer.status === "IN_PROGRESS" ? 72 : 45);
+  const displayedRoute = executionSnapshot?.activeRoute ?? activeTransfer.selectedRoute;
   const rerouteDetected = auditLines.some((line) => /reroute|failover/i.test(line));
 
   return (
@@ -275,15 +364,31 @@ export default function ConsumerTrackScreen() {
             </AppText>
             <AppText color={consumerColors.muted}>Reference {activeTransfer.id}</AppText>
           </View>
-          <ConsumerPill label={statusLabel} tone={activeTransfer.status === "COMPLETED" ? "green" : "blue"} />
+          <ConsumerPill
+            label={statusLabel}
+            tone={effectiveStatus === "COMPLETED" ? "green" : effectiveStatus === "FAILED" ? "red" : "blue"}
+          />
         </View>
         <View style={{ height: 10, borderRadius: 999, backgroundColor: consumerColors.blueSoft, overflow: "hidden" }}>
           <View style={{ width: `${progress}%`, height: "100%", backgroundColor: consumerColors.blue }} />
         </View>
         <AppText color={consumerColors.muted}>
-          {activeTransfer.selectedRoute?.provider ?? "Routing engine"} • ETA {activeTransfer.selectedRoute?.estimatedTime ?? "Pending"}
+          {displayedRoute?.provider ?? "Routing engine"} • ETA {displayedRoute?.estimatedTime ?? "Pending"}
         </AppText>
       </ConsumerCard>
+
+      {displayedRoute?.routePlan ? (
+        <ConsumerCard>
+          <AppText color={consumerColors.text} style={{ fontSize: 18, fontWeight: "900" }}>
+            Approved route evidence
+          </AppText>
+          <RoutePlanComparison plan={displayedRoute.routePlan} />
+          <AppText color={consumerColors.text} style={{ fontSize: 18, fontWeight: "900" }}>
+            Route decision history
+          </AppText>
+          <RoutePlanHistory events={routePlanEvents} />
+        </ConsumerCard>
+      ) : null}
 
       {rerouteDetected ? (
         <ConsumerCard accent>
@@ -299,7 +404,7 @@ export default function ConsumerTrackScreen() {
       {trackingAIEnabled ? (
         <ConsumerCard>
           <AppText color={consumerColors.text} style={{ fontSize: 18, fontWeight: "900" }}>
-            Nexus AI live update
+            Nexus AI update • {aiUpdateSource}
           </AppText>
           <AppText color={consumerColors.muted}>
             {aiUpdate?.progressAnalysis ?? "Nexus AI is preparing transfer commentary."}
@@ -367,9 +472,6 @@ export default function ConsumerTrackScreen() {
         />
       ) : null}
 
-      {transfer && transfer.status !== "COMPLETED" ? (
-        <ConsumerAction label="Mark delivered" icon="check-circle" onPress={markDelivered} />
-      ) : null}
     </ConsumerShell>
   );
 }

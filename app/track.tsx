@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import { Linking, Pressable, ScrollView, View } from "react-native";
 
 import { NexusAIToggleCard } from "../src/components/intelligence/NexusAIToggleCard";
+import { RoutePlanComparison } from "../src/components/routes/RoutePlanComparison";
+import { RoutePlanHistory } from "../src/components/routes/RoutePlanHistory";
 import { AppButton } from "../src/components/ui/AppButton";
 import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
@@ -20,6 +22,7 @@ import {
     TransferAnalysisResult,
 } from "../src/services/nexusAIService";
 import { PayoutStatus } from "../src/services/payout/payoutTypes";
+import { loadRoutePlanEvents, RoutePlanEvent } from "../src/services/routePlanService";
 import { useTransfer } from "../src/state/TransferContext";
 import { useWallet } from "../src/state/WalletContext";
 import { colors } from "../src/theme";
@@ -176,6 +179,8 @@ export default function TrackScreen() {
   const [realtimeStatus, setRealtimeStatus] = useState("Connecting");
   const [transferAnalysis, setTransferAnalysis] =
     useState<TransferAnalysisResult | null>(null);
+  const [transferAnalysisSource, setTransferAnalysisSource] = useState<"DERIVED" | "FALLBACK">("FALLBACK");
+  const [routePlanEvents, setRoutePlanEvents] = useState<RoutePlanEvent[]>([]);
 
   const hasStartedRef = useRef(false);
   const hasDebitedWalletRef = useRef(false);
@@ -201,13 +206,17 @@ export default function TrackScreen() {
 
   let mounted = true;
 
-  async function hydrateExistingSession() {
-    const persisted = await loadExecutionSession(transferId);
+    async function hydrateExistingSession() {
+    const [persisted, planEvents] = await Promise.all([
+      loadExecutionSession(transferId),
+      loadRoutePlanEvents(transferId),
+    ]);
 
     if (mounted && persisted?.snapshot) {
       persistedSnapshotRef.current = persisted.snapshot;
       applyExecutionSnapshot(persisted.snapshot);
     }
+    if (mounted) setRoutePlanEvents(planEvents);
   }
 
     hydrateExistingSession();
@@ -227,6 +236,11 @@ export default function TrackScreen() {
       unsubscribe();
     };
   }, [transfer?.id]);
+
+  useEffect(() => {
+    if (!transfer?.id) return;
+    loadRoutePlanEvents(transfer.id).then(setRoutePlanEvents);
+  }, [executionSnapshot?.state, transfer?.id]);
 
   useEffect(() => {
   if (!transfer || !selectedRoute) return;
@@ -312,6 +326,7 @@ export default function TrackScreen() {
     ).then((result) => {
       if (!active) return;
       setTransferAnalysis(result.data);
+      setTransferAnalysisSource(result.meta.source === "edge_function" ? "DERIVED" : "FALLBACK");
     });
 
     return () => {
@@ -421,7 +436,7 @@ export default function TrackScreen() {
             <AppCard>
               <View style={{ gap: 8 }}>
                 <AppText variant="subheading" color={colors.textDarkPrimary}>
-                  {transferAnalysis?.title ?? "Transfer intelligence"}
+                  {transferAnalysis?.title ?? "Transfer intelligence"} • {transferAnalysisSource}
                 </AppText>
 
                 <AppText variant="body" color={colors.textDarkSecondary}>
@@ -552,6 +567,18 @@ export default function TrackScreen() {
                 <DetailMetric label="Retries" value={String(executionTelemetry.provider_max_retries ?? activeRoute.providerMaxRetries ?? 0)} />
                 <DetailMetric label="Timeout" value={`${executionTelemetry.provider_timeout_ms ?? activeRoute.providerTimeoutMs ?? 0}ms`} />
               </View>
+
+              {activeRoute.routePlan ? (
+                <>
+                  <RoutePlanComparison plan={activeRoute.routePlan} />
+                  <View style={{ gap: 10 }}>
+                    <AppText variant="subheading" color={colors.textDarkPrimary}>
+                      Route decision history
+                    </AppText>
+                    <RoutePlanHistory events={routePlanEvents} />
+                  </View>
+                </>
+              ) : null}
 
               <View
                 style={{
@@ -755,7 +782,9 @@ export default function TrackScreen() {
                 </View>
               ) : (
                 <AppText variant="caption" color={colors.textDarkSecondary}>
-                  This route uses simulated fiat settlement. XRPL proof is only generated for HYBRID routes.
+                  {activeRoute.routePlan
+                    ? "This evidence-backed sandbox route does not require an XRPL bridge."
+                    : "Legacy route evidence. XRPL proof is only generated for HYBRID routes."}
                 </AppText>
               )}
             </View>

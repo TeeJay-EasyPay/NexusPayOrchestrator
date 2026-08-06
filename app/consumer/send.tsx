@@ -11,13 +11,13 @@ import {
 } from "../../src/components/consumer/ConsumerShell";
 import { AppText } from "../../src/components/ui/AppText";
 import { corridors } from "../../src/data/corridors";
+import { useCanonicalRouteQuotes } from "../../src/hooks/useCanonicalRouteQuotes";
 import { useNexusAIScreenSetting } from "../../src/hooks/useNexusAISettings";
-import { buildOrchestratedRouteQuotes } from "../../src/lib/settlementOrchestrator";
 import { explainRoute } from "../../src/services/nexusAIService";
 import { startOpenBankingPaymentFlow } from "../../src/services/openBankingPaymentFlowService";
 import { useTransfer } from "../../src/state/TransferContext";
 import { useWallet } from "../../src/state/WalletContext";
-import { Currency, FundingMethod, Recipient, RouteQuote } from "../../src/types/transfer";
+import { Currency, FundingMethod, Recipient } from "../../src/types/transfer";
 
 function inputStyle() {
   return {
@@ -43,7 +43,7 @@ function asString(value: string | string[] | undefined) {
 export default function ConsumerSendScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { simulatedRlusdBalance } = useWallet();
+  const { rlusdBalance } = useWallet();
   const { transfer, createTransfer, startTransfer, setOpenBankingFlow } = useTransfer();
   const { enabled: routeAIEnabled, settings: aiSettings } = useNexusAIScreenSetting("route_enabled");
 
@@ -134,32 +134,18 @@ export default function ConsumerSendScreen() {
     };
   }, [firstName, lastName, manualAccountNumber, manualCountry, manualCurrency, manualSortCode, selectedBank]);
 
-  const allRoutes = useMemo<RouteQuote[]>(() => {
-    if (!recipient || sendAmount <= 0) {
-      return [];
-    }
-
-    return buildOrchestratedRouteQuotes({
-      amount: sendAmount,
-      currency: recipient.currency,
-      simulatedRlusdBalance,
-    });
-  }, [recipient, sendAmount, simulatedRlusdBalance]);
-
-  const routes = useMemo<RouteQuote[]>(() => {
-    if (allRoutes.length === 0) {
-      return [];
-    }
-
-    const cheapest = [...allRoutes].sort((a, b) => a.fee - b.fee)[0];
-    const safest = [...allRoutes]
-      .filter((route) => route.id !== cheapest.id)
-      .sort((a, b) => b.score - a.score)[0];
-
-    return safest ? [cheapest, safest] : [cheapest];
-  }, [allRoutes]);
-
-  const selectedRoute = routes.find((route) => route.id === selectedRouteId) ?? routes[0];
+  const canonicalRouteResult = useCanonicalRouteQuotes({
+    amount: sendAmount,
+    destinationCurrency: recipient?.currency,
+    destinationCountry: recipient?.country,
+    payoutMethod: recipient?.payoutMethod ?? "BANK",
+    fundingMethod,
+    actualRlusdBalance: rlusdBalance,
+    enabled: Boolean(recipient),
+  });
+  const routes = canonicalRouteResult.routes;
+  const selectedRoute = routes.find((route) => route.id === selectedRouteId)
+    ?? routes.find((route) => route.routePlan?.eligible);
   const recipientNameValid = firstName.trim().length > 0 && lastName.trim().length > 0;
   const recipientBankValid =
     selectedBank.trim().length > 0 &&
@@ -167,7 +153,7 @@ export default function ConsumerSendScreen() {
     manualAccountNumber.trim().length > 0;
   const recipientReady = Boolean(recipient);
   const fundingReady = fundingReference.trim().length > 0;
-  const routeReady = Boolean(selectedRoute);
+  const routeReady = Boolean(selectedRoute?.routePlan?.eligible);
 
   function continueToFunding() {
     if (sendAmount <= 0) {
@@ -317,6 +303,12 @@ export default function ConsumerSendScreen() {
 
     if (!selectedRoute) {
       setErrorMessage("Choose a delivery route to continue.");
+      setCurrentStep(3);
+      return;
+    }
+
+    if (!selectedRoute.routePlan?.eligible || Date.now() >= Date.parse(selectedRoute.routePlan.quoteExpiresAt)) {
+      setErrorMessage("The route is unavailable or expired. Refresh route evidence before sending.");
       setCurrentStep(3);
       return;
     }
@@ -639,14 +631,15 @@ export default function ConsumerSendScreen() {
             {routes.length === 0 ? (
               <AppText color={consumerColors.muted}>Complete recipient and amount to load route options.</AppText>
             ) : null}
-            {routes.map((route, index) => {
+            {routes.map((route) => {
               const active = (selectedRoute?.id ?? "") === route.id;
-              const routeLabel = index === 0 ? "Cheapest" : "Safest";
+              const eligible = route.routePlan?.eligible === true;
+              const routeLabel = eligible ? "Recommended" : "Unavailable";
               return (
                 <Pressable
                   key={route.id}
                   onPress={() => {
-                    setSelectedRouteId(route.id);
+                    if (eligible) setSelectedRouteId(route.id);
                     setErrorMessage(null);
                   }}
                   style={{
@@ -665,16 +658,21 @@ export default function ConsumerSendScreen() {
                       </AppText>
                       <AppText color={consumerColors.muted}>{route.rail} • ETA {route.estimatedTime}</AppText>
                     </View>
-                    <ConsumerPill label={routeLabel} tone={index === 0 ? "gold" : "green"} />
+                    <ConsumerPill label={routeLabel} tone={eligible ? "green" : "gold"} />
                   </View>
                   <AppText color={consumerColors.muted}>
-                    {index === 0 ? "Lower fees" : "Reliable delivery"}
+                    {eligible ? "Evidence-supported" : "Unavailable"}
                   </AppText>
                   <AppText color={consumerColors.text} style={{ fontWeight: "900" }}>
                     Amount received: {route.receiveAmount.toFixed(2)} {recipient?.currency ?? "PHP"}
                   </AppText>
                   <AppText color={consumerColors.muted}>FX rate: {route.fxRate.toFixed(2)}</AppText>
-                  <AppText color={consumerColors.muted}>Fee: GBP {route.fee.toFixed(2)}</AppText>
+                  <AppText color={consumerColors.muted}>
+                    Fee: {route.routePlan?.economics.providerFees.value == null ? "Unavailable" : `GBP ${route.fee.toFixed(2)}`}
+                  </AppText>
+                  <AppText color={consumerColors.muted}>
+                    Source: {route.routePlan?.sourceProvenance.join(" • ") ?? "UNAVAILABLE"}
+                  </AppText>
                 </Pressable>
               );
             })}

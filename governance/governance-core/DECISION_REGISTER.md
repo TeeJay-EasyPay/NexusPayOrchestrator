@@ -40,6 +40,62 @@ Each decision entry must include:
 ---
 
 ## Decision ID
+D-015
+
+## Title
+Canonical Evidence-Driven Route Plan Becomes The Route Intelligence Source Of Truth
+
+## Date
+2026-08-06
+
+## Decision Owner
+Founder
+
+## Participating Roles
+- NexusPay CTO
+- Operations Intelligence Director
+- Lead Architect
+- QA Director
+
+## Background
+The Route Intelligence Consistency Audit found separate hard-coded preview, deterministic ranking and execution-time provider selection paths. Displayed RLUSD recommendations could disagree with the route eventually executed.
+
+## Decision
+Adopt versioned Route Plan V1 as the only active route object for preview, ranking, approval, execution, tracking and AI explanation. Missing mandatory evidence blocks eligibility and scoring. XRPL/RLUSD remains unavailable until the advertised asset and market evidence are genuinely executable.
+
+## Rationale
+A persisted evidence object eliminates screen disagreement, prevents execution-time provider substitution, and makes every decision auditable. Failing closed protects customer and investor transparency.
+
+## Alternatives Considered
+- Reconcile labels while retaining separate calculators.
+- Continue ranking configured demo routes with stronger provenance badges.
+- Allow sandbox routes to execute despite missing payment-initiation evidence.
+
+## Risks
+- No new route is currently eligible because Yapily payment initiation is not implemented.
+- V1 route generation remains client-side and requires a trusted server boundary before production.
+- No evidence-backed alternate route exists for failover certification.
+
+## Expected Outcome
+All payment experiences explain the same plan and execute only its approved provider chain. Unavailable evidence remains visible and cannot create a recommendation.
+
+## Status
+Implemented with PARTIAL PASS; provider evidence gaps remain.
+
+## Follow-up Actions
+1. Implement Yapily payment authorisation, callback, creation and status retrieval.
+2. Move plan generation/approval behind a trusted server-side boundary.
+3. Implement genuine RLUSD quote and execution evidence.
+4. Add and certify a second eligible route and failover.
+
+## Reference Documents
+- [ROUTE_INTELLIGENCE_ARCHITECTURE_V1.md](ROUTE_INTELLIGENCE_ARCHITECTURE_V1.md)
+- [../reports/ROUTE_INTELLIGENCE_TRANSFORMATION_IMPLEMENTATION_REPORT.md](../reports/ROUTE_INTELLIGENCE_TRANSFORMATION_IMPLEMENTATION_REPORT.md)
+- [../founder-briefings/briefings/FOUNDER_BRIEFING_ROUTE_INTELLIGENCE_TRANSFORMATION_2026-08-06.md](../founder-briefings/briefings/FOUNDER_BRIEFING_ROUTE_INTELLIGENCE_TRANSFORMATION_2026-08-06.md)
+
+---
+
+## Decision ID
 D-014
 
 ## Title

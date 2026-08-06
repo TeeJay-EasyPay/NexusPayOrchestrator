@@ -11,10 +11,15 @@ type Props = {
 
 const PROVENANCE_COLORS: Record<DataProvenanceClassification, string> = {
   LIVE: "#16A34A",
+  SANDBOX: "#B7791F",
+  TESTNET: "#0F766E",
   DERIVED: "#2563EB",
+  ESTIMATED: "#7C3AED",
   SIMULATED: "#D97706",
   MOCK: "#DC2626",
   FALLBACK: "#6B7280",
+  UNAVAILABLE: "#64748B",
+  DEMO: "#B45309",
   NO_DATA: "#64748B",
   DIAGNOSTIC: "#9333EA",
   DISABLED: "#6B7280",

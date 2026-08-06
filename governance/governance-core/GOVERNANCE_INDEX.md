@@ -34,6 +34,7 @@ and must be considered during technical decision making.
 - PROJECT_MAP.md
 - UI_DESIGN_SYSTEM.md
 - PROJECT_VISION.md
+- [ROUTE_INTELLIGENCE_ARCHITECTURE_V1.md](ROUTE_INTELLIGENCE_ARCHITECTURE_V1.md)
 
 Architecture documents are authoritative for design and implementation decisions.
 

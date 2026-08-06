@@ -16,10 +16,15 @@ export type OperationsPressure = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 export type OperationsStatusTone = "healthy" | "warning" | "critical" | "neutral";
 export type DataProvenanceClassification =
   | "LIVE"
+  | "SANDBOX"
+  | "TESTNET"
   | "DERIVED"
+  | "ESTIMATED"
   | "SIMULATED"
   | "MOCK"
   | "FALLBACK"
+  | "UNAVAILABLE"
+  | "DEMO"
   | "NO_DATA"
   | "DIAGNOSTIC"
   | "DISABLED";

@@ -317,11 +317,12 @@ export function ConsumerCard({ children, accent = false }: { children: React.Rea
   return <View style={[styles.card, accent && styles.cardAccent]}>{children}</View>;
 }
 
-export function ConsumerPill({ label, tone = "blue" }: { label: string; tone?: "blue" | "green" | "gold" }) {
+export function ConsumerPill({ label, tone = "blue" }: { label: string; tone?: "blue" | "green" | "gold" | "red" }) {
   const palette = {
     blue: { bg: consumerColors.blueSoft, fg: consumerColors.blueDark },
     green: { bg: "#DFF7EC", fg: consumerColors.success },
     gold: { bg: "#FFF1CF", fg: consumerColors.warning },
+    red: { bg: "#FEE2E2", fg: "#B91C1C" },
   }[tone];
 
   return (

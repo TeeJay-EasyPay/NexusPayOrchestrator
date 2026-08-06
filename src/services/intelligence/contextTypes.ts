@@ -119,7 +119,7 @@ export interface RouteIntelligenceContext {
   settlementContext: {
     estimatedTime: string;
     settlementStages: string[];
-    marketConditions: "OPEN" | "CLOSED";
+    marketConditions: "OPEN" | "CLOSED" | "UNAVAILABLE";
     expectedChallenges?: string[];
   };
 
@@ -144,7 +144,7 @@ export interface RouteIntelligenceContext {
   liquidityAssessment: {
     requiredRlusd?: number;
     available: boolean;
-    liquidityStatus: "AVAILABLE" | "LOW" | "INSUFFICIENT" | "NOT_REQUIRED";
+    liquidityStatus: "AVAILABLE" | "LOW" | "INSUFFICIENT" | "NOT_REQUIRED" | "UNAVAILABLE";
     liquidityRecommendation: string;
   };
 
@@ -197,16 +197,16 @@ export interface TransferIntelligenceContext {
 
   // Treasury State at Execution
   treasuryStateSnapshot: {
-    treasuryStatus: "OPTIMAL" | "HEALTHY" | "WATCH" | "CRITICAL";
-    corridorLiquidity: "STRONG" | "ADEQUATE" | "LOW";
-    corridorPressure: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+    treasuryStatus: "OPTIMAL" | "HEALTHY" | "WATCH" | "CRITICAL" | "UNAVAILABLE";
+    corridorLiquidity: "STRONG" | "ADEQUATE" | "LOW" | "UNAVAILABLE";
+    corridorPressure: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" | "UNAVAILABLE";
   };
 
   // FX Snapshot
   fxSnapshot: {
     pair: string;
     rate: number;
-    volatilityAtExecution: "STABLE" | "VOLATILE" | "EXTREME";
+    volatilityAtExecution: "STABLE" | "VOLATILE" | "EXTREME" | "UNAVAILABLE";
     asOf: string;
   };
 
@@ -230,10 +230,10 @@ export interface TransferIntelligenceContext {
   financial: {
     senderAmount: number;
     senderCurrency: Currency;
-    expectedReceiveAmount: number;
+    expectedReceiveAmount: number | null;
     recipientCurrency: Currency;
-    feeAmount: number;
-    exchangeRate: number;
+    feeAmount: number | null;
+    exchangeRate: number | null;
   };
 
   // Configuration

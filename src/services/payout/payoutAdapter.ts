@@ -5,7 +5,18 @@ import { airwallexSandboxProvider } from "./providers/airwallexSandboxProvider";
 import { niumSandboxProvider, hasNiumSandboxCredentials } from "./providers/niumSandboxProvider";
 
 export async function createPayout(request: CreatePayoutRequest) {
-  const selection = selectBestPayoutPartner(request);
+  const resolvedSelection = selectBestPayoutPartner(request);
+  const selection = request.providerId
+    ? {
+        ...resolvedSelection,
+        selectedProviderId: request.providerId,
+        selectedProviderName:
+          request.providerId === "AIRWALLEX_SANDBOX"
+            ? "Airwallex Sandbox"
+            : resolvedSelection.evaluatedProviders.find((item) => item.id === request.providerId)?.name ?? request.providerId,
+        reason: "Provider fixed by the approved canonical route plan.",
+      }
+    : resolvedSelection;
 
   console.log("Payout partner selection:", selection);
 

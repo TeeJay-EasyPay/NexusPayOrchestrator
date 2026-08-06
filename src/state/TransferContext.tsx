@@ -2,6 +2,8 @@ import React, { createContext, useCallback, useContext, useEffect, useState } fr
 import { createTransferId } from "../lib/id";
 import { supabase } from "../lib/supabase";
 import { saveRecipientFromTransfer } from "../services/recipientService";
+import { bindRouteQuotesToTransfer } from "../services/routeIntelligenceService";
+import { persistRoutePlans, transitionRoutePlan } from "../services/routePlanService";
 import { writeTransactionAuditLog } from "../services/transactionAuditService";
 import { loadCompletedTransfers, saveCompletedTransfer } from "../services/transferService";
 import {
@@ -35,7 +37,7 @@ interface TransferContextType {
   ) => Transfer;
   setRecipient: (recipient: Recipient) => void;
   setRoutes: (routes: RouteQuote[]) => void;
-  selectRoute: (route: RouteQuote) => void;
+  selectRoute: (route: RouteQuote) => Promise<boolean>;
   setFundingMethod: (method: FundingMethod, fundingReference?: string) => void;
   setFundingStatus: (status: FundingStatus) => void;
   setOpenBankingFlow: (flow: OpenBankingPaymentFlow, transferFallback?: Transfer) => void;
@@ -97,13 +99,18 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
       openBankingFlow?: OpenBankingPaymentFlow;
     }
   ) => {
+    const transferId = createTransferId();
+    const boundRoutes = bindRouteQuotesToTransfer(options?.routes ?? [], transferId);
+    const boundSelectedRoute = options?.selectedRoute
+      ? bindRouteQuotesToTransfer([options.selectedRoute], transferId)[0]
+      : undefined;
     const newTransfer: Transfer = {
-      id: createTransferId(),
+      id: transferId,
       senderCurrency: "GBP",
       senderAmount: amount,
       recipient: options?.recipient ?? ({} as Recipient),
-      routes: options?.routes ?? [],
-      selectedRoute: options?.selectedRoute,
+      routes: boundRoutes,
+      selectedRoute: boundSelectedRoute,
       fundingMethod: options?.fundingMethod,
       fundingReference: options?.fundingReference,
       fundingStatus: options?.fundingStatus ?? "NOT_STARTED",
@@ -119,6 +126,7 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
     };
 
     setTransfer(newTransfer);
+    void persistRoutePlans(boundRoutes);
 
     void writeTransactionAuditLog({
       transactionId: newTransfer.id,
@@ -196,40 +204,55 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
         },
       });
 
+      const boundRoutes = bindRouteQuotesToTransfer(routes, currentTransfer.id);
+      void persistRoutePlans(boundRoutes);
+
       return {
         ...currentTransfer,
-        routes,
+        routes: boundRoutes,
         status: "ROUTES_FETCHED",
       };
     });
   };
 
-  const selectRoute = (route: RouteQuote) => {
-    setTransfer((currentTransfer) => {
-      if (!currentTransfer) return currentTransfer;
+  const selectRoute = async (route: RouteQuote) => {
+    const currentTransfer = transfer;
+    if (!currentTransfer) return false;
+    if (route.routePlan && (!route.routePlan.eligible || Date.now() >= Date.parse(route.routePlan.quoteExpiresAt))) {
+      return false;
+    }
 
-      void writeTransactionAuditLog({
+    const boundRoute = bindRouteQuotesToTransfer([route], currentTransfer.id)[0];
+    if (boundRoute.routePlan) {
+      const persisted = await transitionRoutePlan(boundRoute, "APPROVED", "User approved this canonical route plan version.");
+      if (!persisted) return false;
+    }
+    const approvedRoute = boundRoute.routePlan
+      ? { ...boundRoute, routePlan: { ...boundRoute.routePlan, status: "APPROVED" as const } }
+      : boundRoute;
+
+    await writeTransactionAuditLog({
         transactionId: currentTransfer.id,
         eventType: "ROUTE_SELECTED",
         status: "SUCCESS",
         message: "User selected a route for transfer execution.",
         metadata: {
-          provider: route.provider,
-          rail: route.rail,
-          score: route.score,
-          fee: route.fee,
-          estimated_time: route.estimatedTime,
-          receive_amount: route.receiveAmount,
-          bridge_asset: route.bridgeAsset ?? null,
+          provider: approvedRoute.provider,
+          rail: approvedRoute.rail,
+          score: approvedRoute.score,
+          fee: approvedRoute.fee,
+          estimated_time: approvedRoute.estimatedTime,
+          receive_amount: approvedRoute.receiveAmount,
+          bridge_asset: approvedRoute.bridgeAsset ?? null,
+          route_plan_id: approvedRoute.routePlan?.id ?? null,
+          route_plan_version: approvedRoute.routePlan?.version ?? null,
         },
-      });
-
-      return {
-        ...currentTransfer,
-        selectedRoute: route,
-        status: "ROUTE_SELECTED",
-      };
     });
+
+    setTransfer((latest) => latest?.id === currentTransfer.id
+      ? { ...latest, selectedRoute: approvedRoute, status: "ROUTE_SELECTED" }
+      : latest);
+    return true;
   };
 
   const setFundingMethod = (method: FundingMethod, fundingReference?: string) => {

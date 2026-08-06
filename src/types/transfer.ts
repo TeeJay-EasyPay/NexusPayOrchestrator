@@ -170,6 +170,7 @@ export interface RouteQuote {
   failoverRouteId?: string;
   accountScope?: AccountScope;
   personaId?: string;
+  routePlan?: import("./routePlan").CanonicalRoutePlan;
 
   steps: string[];
 }
