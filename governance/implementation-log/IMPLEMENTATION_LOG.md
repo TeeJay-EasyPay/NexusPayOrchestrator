@@ -73,6 +73,7 @@ Lifecycle Remediation / Certification Completion Update:
 - Added those Airwallex stages to the Corporate execution state machine so ordinary payment tracking names the last-leg provider and its actual sandbox evidence.
 - Increased the client-side payout timeout boundary to accommodate genuine provider calls without fabricating completion.
 - Updated the Platform Administration certification fixture to satisfy Airwallex's minimum payout amount.
+- Restored owner-scoped `execution_sessions` RLS policies after emulator testing proved the table had RLS enabled with no policies, preventing persisted Track snapshots.
 
 Terminal Sandbox Evidence:
 - NexusPay transfer: `airwallex-lifecycle-1786038054520`
@@ -82,6 +83,24 @@ Terminal Sandbox Evidence:
 - Canonical status: `PAID_OUT`
 - Evidence record: `045450e5-c53b-4113-ae38-40151defc0a4`
 - Actual Airwallex webhook delivery: pending; signed/unsigned/deduplication behavior remains synthetically verified.
+
+Ordinary Corporate Payment Acceptance:
+- Pixel 9 emulator completed a new payment through the normal Corporate User flow.
+- NexusPay transfer: `3fe90106-00bf-48e4-9d51-7c7ad136af6f`
+- Airwallex beneficiary: `1324cf01-9aa6-46d0-ba1d-97f68509ab54`
+- Airwallex transfer: `4321958d-d473-49e1-93c6-514a4c55c317`
+- Provider status: `PAID`; canonical status: `PAID_OUT`
+- The Corporate execution state machine visibly rendered `Airwallex payout sent`, `Airwallex recipient payout completed`, and `Airwallex Sandbox payout verified`.
+- The selected HYBRID route entered XRPL processing but the terminal screen recorded a failover to `FastTrack Banking Rail` with bridge settlement skipped; therefore this run proves Yapily plus Airwallex in the ordinary journey, not a successful three-leg Yapily/XRPL/Airwallex terminal path.
+- Migration `20260806000400_execution_sessions_user_persistence_policies.sql` applied successfully.
+- Authenticated owner-scoped execution-session insert, select and delete certification passed; the temporary policy-test record was removed.
+
+Release:
+- Runtime commit: `4be3bea58ddac27dd4ffdaa5c1fd341a014e6d02`
+- Preview OTA group: `c9bfc785-86eb-4f17-9652-e9148cc187c7`
+- Android update: `019fd830-e092-77ee-8ceb-a03f94cedfba`
+- iOS update: `019fd830-e092-7de7-a791-fa7c46c1abd6`
+- Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/c9bfc785-86eb-4f17-9652-e9148cc187c7`
 
 Validation:
 - Deployed `nexuspay-submit-payout` successfully after lifecycle remediation.

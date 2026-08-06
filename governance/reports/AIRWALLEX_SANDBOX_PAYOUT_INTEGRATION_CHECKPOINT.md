@@ -59,6 +59,7 @@ Mobile:
 Database:
 
 - `supabase/migrations/20260806000100_airwallex_last_leg_payout_provider.sql`
+- `supabase/migrations/20260806000400_execution_sessions_user_persistence_policies.sql`
 
 Governance:
 
@@ -141,3 +142,16 @@ Redacted:
 ## Requested Reviewer Action
 
 Review whether the provider-neutral architecture, idempotency model, evidence tables and Airwallex certification gates are sufficient before investor demonstration.
+
+## Ordinary Corporate Payment Acceptance Update
+
+- Emulator: Pixel 9
+- NexusPay transfer: `3fe90106-00bf-48e4-9d51-7c7ad136af6f`
+- Airwallex beneficiary: `1324cf01-9aa6-46d0-ba1d-97f68509ab54`
+- Airwallex transfer: `4321958d-d473-49e1-93c6-514a4c55c317`
+- Airwallex terminal status: `PAID`
+- NexusPay canonical status: `PAID_OUT`
+- Corporate UI evidence: named Airwallex dispatch, paid, and verification rows rendered in the execution state machine.
+- XRPL qualification: this specific payment entered XRPL processing but completed after route failover with bridge settlement skipped. It is not evidence of a successful three-provider terminal path.
+- Execution persistence: owner-scoped RLS policies deployed and authenticated CRUD certification passed.
+- Preview OTA group: `c9bfc785-86eb-4f17-9652-e9148cc187c7`
