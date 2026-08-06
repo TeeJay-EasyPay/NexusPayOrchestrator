@@ -7,6 +7,7 @@ import { PlatformCard, PlatformShell } from "../src/components/platform/Platform
 import { AppText } from "../src/components/ui/AppText";
 import {
   loadPlatformAdministrationSnapshot,
+  runAirwallexPayoutCertification,
   runPartnerConnectionTest,
   type PartnerConnectionTestRecord,
   type PartnerProviderRecord,
@@ -17,6 +18,7 @@ import { colors } from "../src/theme";
 export default function PlatformProvidersScreen() {
   const [snapshot, setSnapshot] = useState<PlatformAdministrationSnapshot | null>(null);
   const [testingProvider, setTestingProvider] = useState<string | null>(null);
+  const [certifyingAirwallex, setCertifyingAirwallex] = useState(false);
   const [testMessage, setTestMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -42,6 +44,20 @@ export default function PlatformProvidersScreen() {
     }
   }
 
+  async function handleAirwallexCertification() {
+    setCertifyingAirwallex(true);
+    setTestMessage(null);
+    try {
+      const result = await runAirwallexPayoutCertification();
+      setTestMessage(`${result.status}: ${result.providerMessage}${result.evidenceSummary ? ` ${result.evidenceSummary}` : ""}`);
+      await refresh();
+    } catch (error) {
+      setTestMessage(error instanceof Error ? error.message : "Airwallex sandbox payout certification failed.");
+    } finally {
+      setCertifyingAirwallex(false);
+    }
+  }
+
   return (
     <PlatformShell routeKey="providers" title="Provider Connectivity" subtitle="Live partner connectivity tests and credential metadata without storing secrets in database fields.">
       <PlatformCard>
@@ -54,20 +70,45 @@ export default function PlatformProvidersScreen() {
         </AppText>
         <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
           <QuickTestButton
+            label="Test Airwallex"
+            icon="credit-card"
+            loading={testingProvider === "airwallex"}
+            disabled={testingProvider !== null || certifyingAirwallex}
+            onPress={() => handleTestConnection("airwallex")}
+          />
+          <QuickTestButton
             label="Test Yapily"
             icon="shield"
             loading={testingProvider === "yapily"}
-            disabled={testingProvider !== null}
+            disabled={testingProvider !== null || certifyingAirwallex}
             onPress={() => handleTestConnection("yapily")}
           />
           <QuickTestButton
             label="Test Ripple/XRPL"
             icon="zap"
             loading={testingProvider === "ripple"}
-            disabled={testingProvider !== null}
+            disabled={testingProvider !== null || certifyingAirwallex}
             onPress={() => handleTestConnection("ripple")}
           />
         </View>
+        <Pressable
+          onPress={handleAirwallexCertification}
+          disabled={testingProvider !== null || certifyingAirwallex}
+          style={{
+            minHeight: 44,
+            borderRadius: 10,
+            backgroundColor: "#E5B64D",
+            paddingHorizontal: 12,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            opacity: testingProvider !== null ? 0.55 : 1,
+          }}
+        >
+          {certifyingAirwallex ? <ActivityIndicator size="small" color="#06111F" /> : <Feather name="send" size={16} color="#06111F" />}
+          <AppText color="#06111F" style={{ fontWeight: "900" }}>Run Airwallex Sandbox Payout Certification</AppText>
+        </Pressable>
         {testMessage ? (
           <AppText variant="caption" color={colors.textDarkSecondary}>{testMessage}</AppText>
         ) : null}
@@ -159,7 +200,7 @@ export default function PlatformProvidersScreen() {
 }
 
 function isConnectableProvider(providerId: string) {
-  return providerId === "yapily" || providerId === "ripple";
+  return providerId === "airwallex" || providerId === "yapily" || providerId === "ripple";
 }
 
 function sortConnectableFirst(a: PartnerProviderRecord, b: PartnerProviderRecord) {

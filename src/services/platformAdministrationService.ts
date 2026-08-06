@@ -126,6 +126,7 @@ export type PlatformAdministrationSnapshot = {
 };
 
 const fallbackProviders: PartnerProviderRecord[] = [
+  provider("airwallex", "Airwallex", "Payment Network", "Testing", true, false, true, "Sandbox last-leg payout provider. Backend-only credentials; no production readiness claimed."),
   provider("thunes", "Thunes", "Payment Network", "Researching", false, false, false, "Global payout network candidate."),
   provider("tranglo", "Tranglo", "Payment Network", "Researching", false, false, false, "Candidate provider. No live NexusPay connectivity configured yet."),
   provider("nium", "Nium", "Payment Network", "Researching", false, false, false, "Candidate provider. No live NexusPay connectivity configured yet."),
@@ -403,6 +404,53 @@ export async function runPartnerConnectionTest(providerId: string, environment =
   }
 
   return mapConnectionTest(data.test);
+}
+
+export async function runAirwallexPayoutCertification(): Promise<{
+  status: string;
+  providerMessage: string;
+  payoutReference?: string;
+  evidenceSummary?: string;
+}> {
+  const { data, error } = await supabase.functions.invoke<{
+    status: string;
+    providerMessage: string;
+    payoutReference?: string;
+    evidenceSummary?: string;
+  }>("nexuspay-submit-payout", {
+    body: {
+      providerId: "airwallex",
+      environment: "sandbox",
+      transferId: `airwallex-cert-${Date.now()}`,
+      amount: 10,
+      sourceCurrency: "GBP",
+      destinationCurrency: "PHP",
+      destinationAmount: 10,
+      payoutMethod: "BANK",
+      reference: "NexusPay sandbox certification",
+      recipient: {
+        name: "NexusPay Sandbox Recipient",
+        firstName: "NexusPay",
+        surname: "Recipient",
+        country: "Philippines",
+        currency: "PHP",
+        payoutMethod: "BANK",
+        bankName: "BDO",
+        bankCode: "BDO",
+        accountNumber: "0000000000",
+      },
+    },
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!data) {
+    throw new Error("Airwallex certification did not return a result.");
+  }
+
+  return data;
 }
 
 export async function loadPlatformAdministrationSnapshot(): Promise<PlatformAdministrationSnapshot> {

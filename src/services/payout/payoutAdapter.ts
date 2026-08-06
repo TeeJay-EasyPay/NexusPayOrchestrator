@@ -1,6 +1,7 @@
 import { mockPayoutProvider } from "./mockPayoutProvider";
 import { CreatePayoutRequest } from "./payoutTypes";
 import { selectBestPayoutPartner } from "./payoutRoutingEngine";
+import { airwallexSandboxProvider } from "./providers/airwallexSandboxProvider";
 import { niumSandboxProvider, hasNiumSandboxCredentials } from "./providers/niumSandboxProvider";
 
 export async function createPayout(request: CreatePayoutRequest) {
@@ -11,7 +12,10 @@ export async function createPayout(request: CreatePayoutRequest) {
   let result;
   let usingRealProvider = false;
 
-  if (
+  if (selection.selectedProviderId === "AIRWALLEX_SANDBOX") {
+    result = await airwallexSandboxProvider.createPayout(request);
+    usingRealProvider = true;
+  } else if (
     selection.selectedProviderId === "NIUM_SANDBOX" &&
     hasNiumSandboxCredentials()
   ) {
@@ -33,12 +37,16 @@ export async function createPayout(request: CreatePayoutRequest) {
     routingReason: selection.reason,
     fallbackUsed: !usingRealProvider,
     providerMessage: usingRealProvider
-      ? `Executing via Nium sandbox (${process.env.EXPO_PUBLIC_NIUM_BASE_URL})`
+      ? result.providerMessage
       : `Selected ${selection.selectedProviderName} through the partner capability resolver. Executed through mock sandbox fallback until credentials are configured.`,
   };
 }
 
 export async function getPayoutStatus(reference: string) {
+  if (reference.startsWith("airwallex:")) {
+    return airwallexSandboxProvider.getPayoutStatus(reference);
+  }
+
   if (hasNiumSandboxCredentials()) {
     try {
       return await niumSandboxProvider.getPayoutStatus(reference);

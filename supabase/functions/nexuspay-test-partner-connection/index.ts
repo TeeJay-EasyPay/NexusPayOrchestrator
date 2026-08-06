@@ -289,6 +289,152 @@ async function runRippleTest(providerId: string, environment: string, createdBy:
   }
 }
 
+async function airwallexAuthenticate(baseUrl: string) {
+  const clientId = getEnv('AIRWALLEX_CLIENT_ID');
+  const apiKey = getEnv('AIRWALLEX_API_KEY');
+
+  if (!clientId || !apiKey) {
+    throw new Error('MISSING_AIRWALLEX_CREDENTIALS');
+  }
+
+  const response = await fetch(`${baseUrl.replace(/\/$/, '')}/api/v1/authentication/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-client-id': clientId,
+      'x-api-key': apiKey,
+    },
+    body: '{}',
+  });
+
+  const text = await response.text();
+  let payload: Record<string, unknown> | null = null;
+  try {
+    payload = text ? JSON.parse(text) : null;
+  } catch {
+    payload = null;
+  }
+
+  const token = typeof payload?.token === 'string' ? payload.token : typeof payload?.access_token === 'string' ? payload.access_token : '';
+  const expiresAt = typeof payload?.expires_at === 'string' ? payload.expires_at : null;
+
+  return { response, token, expiresAt };
+}
+
+async function runAirwallexTest(providerId: string, environment: string, createdBy: string | null) {
+  const baseUrl = getEnv('AIRWALLEX_BASE_URL') || 'https://api.sandbox.airwallex.com';
+  const started = Date.now();
+
+  try {
+    const { response, token, expiresAt } = await airwallexAuthenticate(baseUrl);
+    const authResponseTimeMs = Date.now() - started;
+
+    if (!response.ok || !token) {
+      const test = await persistTest({
+        providerId,
+        environment,
+        testType: 'airwallex_read_only_connectivity',
+        status: 'FAILED',
+        readiness: 'DIAGNOSTIC',
+        responseTimeMs: authResponseTimeMs,
+        httpStatus: response.status,
+        capabilityCount: 0,
+        responseSummary: `Airwallex authentication failed with HTTP ${response.status}.`,
+        errorCode: `HTTP_${response.status}`,
+        errorMessage: 'Authentication failed. Response body omitted to avoid credential or account leakage.',
+        createdBy,
+        metadata: {
+          provider: 'airwallex',
+          environment,
+          auth_status: response.status,
+          base_url_configured: Boolean(baseUrl),
+        },
+      });
+      return { test };
+    }
+
+    const capabilityStarted = Date.now();
+    const capabilityResponse = await fetch(`${baseUrl.replace(/\/$/, '')}/api/v1/account_capabilities/funding_limits`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    const responseTimeMs = Date.now() - started;
+    const capabilityText = await capabilityResponse.text();
+    let capabilityPayload: Record<string, unknown> | null = null;
+    try {
+      capabilityPayload = capabilityText ? JSON.parse(capabilityText) : null;
+    } catch {
+      capabilityPayload = null;
+    }
+    const itemCount = Array.isArray(capabilityPayload?.items) ? capabilityPayload.items.length : null;
+    const success = capabilityResponse.ok;
+
+    const serviceClient = buildServiceClient();
+    if (success) {
+      await serviceClient
+        .from('partner_capabilities')
+        .update({
+          readiness_status: 'Validated',
+          provenance: 'LIVE',
+          last_validated_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('provider_id', providerId)
+        .eq('environment', environment)
+        .in('capability_code', ['API_AUTHENTICATION', 'ACCOUNT_CAPABILITIES_READ']);
+    }
+
+    const test = await persistTest({
+      providerId,
+      environment,
+      testType: 'airwallex_read_only_connectivity',
+      status: success ? 'SUCCESS' : 'FAILED',
+      readiness: success ? 'LIVE' : 'DIAGNOSTIC',
+      responseTimeMs,
+      httpStatus: capabilityResponse.status,
+      capabilityCount: success ? 2 : 1,
+      responseSummary: success
+        ? `Airwallex authenticated and account capability read returned ${itemCount ?? 'available'} funding limit record(s).`
+        : `Airwallex authenticated, but capability read failed with HTTP ${capabilityResponse.status}.`,
+      errorCode: success ? null : `HTTP_${capabilityResponse.status}`,
+      errorMessage: success ? null : capabilityText.slice(0, 300),
+      createdBy,
+      metadata: {
+        provider: 'airwallex',
+        endpoint: '/api/v1/account_capabilities/funding_limits',
+        auth_token_present: true,
+        token_expiry_present: Boolean(expiresAt),
+        auth_response_time_ms: authResponseTimeMs,
+        capability_response_time_ms: Date.now() - capabilityStarted,
+      },
+    });
+    return { test };
+  } catch (error) {
+    const missingCredentials = error instanceof Error && error.message === 'MISSING_AIRWALLEX_CREDENTIALS';
+    const test = await persistTest({
+      providerId,
+      environment,
+      testType: 'airwallex_read_only_connectivity',
+      status: 'FAILED',
+      readiness: missingCredentials ? 'NO_DATA' : 'DIAGNOSTIC',
+      responseTimeMs: Date.now() - started,
+      responseSummary: missingCredentials
+        ? 'Airwallex Supabase secrets are not configured.'
+        : 'Airwallex read-only connectivity test failed before completion.',
+      errorCode: missingCredentials ? 'MISSING_CREDENTIALS' : 'AIRWALLEX_CONNECTION_FAILED',
+      errorMessage: missingCredentials
+        ? 'Expected AIRWALLEX_CLIENT_ID and AIRWALLEX_API_KEY in Supabase Edge Function secrets.'
+        : error instanceof Error ? error.message : String(error),
+      createdBy,
+      metadata: { provider: 'airwallex', endpoint: '/api/v1/authentication/login' },
+    });
+    return { test };
+  }
+}
+
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -324,6 +470,10 @@ serve(async (req: Request) => {
 
     if (providerId === 'ripple') {
       return json(await runRippleTest(providerId, environment, user.id));
+    }
+
+    if (providerId === 'airwallex') {
+      return json(await runAirwallexTest(providerId, environment, user.id));
     }
 
     return json(await runUnsupportedProviderTest(providerId, environment, user.id));

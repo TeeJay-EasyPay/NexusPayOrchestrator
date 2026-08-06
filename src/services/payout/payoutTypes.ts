@@ -2,6 +2,7 @@ import { PayoutMethod, Recipient } from "../../types/transfer";
 
 export type PayoutProviderId =
   | "MOCK_PAYOUT_SANDBOX"
+  | "AIRWALLEX_SANDBOX"
   | "THUNES_SANDBOX"
   | "NIUM_SANDBOX"
   | "TRANGLO_SANDBOX"
@@ -45,6 +46,10 @@ export interface PayoutResult {
   providerMessage: string;
   routingReason?: string;
   fallbackUsed?: boolean;
+  providerRequestId?: string;
+  providerStatus?: string;
+  evidenceId?: string;
+  evidenceSummary?: string;
 }
 
 export interface PayoutProvider {
@@ -75,11 +80,11 @@ export interface PayoutPartnerSelection {
   score: number;
   reason: string;
   fallbackProviderId: PayoutProviderId;
-  evaluatedProviders: Array<{
+  evaluatedProviders: {
     id: PayoutProviderId;
     name: string;
     score: number;
     supported: boolean;
     reason: string;
-  }>;
+  }[];
 }

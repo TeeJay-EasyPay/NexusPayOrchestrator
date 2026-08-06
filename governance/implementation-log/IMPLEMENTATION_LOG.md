@@ -2,6 +2,55 @@
 
 Purpose: durable record of meaningful implementation work, security/context fixes, validation, commits, and OTA deployments. New code changes should append an entry here before commit when practical.
 
+## 2026-08-06 - Airwallex Sandbox Last-Leg Payout Provider
+
+Prompt / Objective:
+Implement the Airwallex Client API sandbox integration as a provider-neutral last-leg payout rail, prove read-only connectivity first, preserve secret boundaries, and produce a checkpoint for CIO/ChatGPT review.
+
+Files Changed:
+- `app/platform-providers.tsx`
+- `src/services/platformAdministrationService.ts`
+- `src/services/payout/payoutAdapter.ts`
+- `src/services/payout/payoutPartnerDirectory.ts`
+- `src/services/payout/payoutTypes.ts`
+- `src/services/payout/providers/airwallexSandboxProvider.ts`
+- `supabase/functions/nexuspay-test-partner-connection/index.ts`
+- `supabase/functions/nexuspay-submit-payout/index.ts`
+- `supabase/functions/nexuspay-provider-webhook/index.ts`
+- `supabase/migrations/20260806000100_airwallex_last_leg_payout_provider.sql`
+- `governance/reports/AIRWALLEX_SANDBOX_PAYOUT_INTEGRATION_CHECKPOINT.md`
+- `governance/reports/FOUNDER_BRIEFING_AIRWALLEX_SANDBOX_PAYOUT.md`
+- `governance/governance-core/DECISION_REGISTER.md`
+- `governance/cdlo/CDLO_OPERATIONS.md`
+
+Summary:
+- Confirmed `.env` remains ignored by Git and inspected Airwallex variable names without printing values.
+- Ran read-only local Airwallex sandbox diagnostic: authentication passed; `balances/current` returned `401`; `account_capabilities/funding_limits` returned `200`.
+- Added Airwallex to partner selection as `AIRWALLEX_SANDBOX`, with mobile code acting only as a server-side function caller.
+- Replaced the payout Edge Function stub with an Airwallex-aware server implementation covering token cache, durable idempotency, beneficiary validation/create, transfer validation/create, retrieval, sandbox transition attempt and redacted evidence persistence.
+- Replaced webhook stub with strict Airwallex signature verification support using `AIRWALLEX_WEBHOOK_SECRET`; unsigned Airwallex events are rejected.
+- Added a Platform Administrator read-only `Test Airwallex` action and a separate guarded sandbox payout certification action.
+- Added additive database structures for provider payout intents, attempts, evidence and webhook events.
+
+Validation:
+- `npx tsc --noEmit` passed.
+- Targeted ESLint on changed app/src files passed.
+- Local Deno type-check was not available because `deno` is not installed.
+- Supabase secrets were updated from local `.env` without printing secret values.
+
+Deployment State:
+- `supabase db push` blocked twice: remote database login role creation timed out and requested `SUPABASE_DB_PASSWORD`.
+- `supabase functions deploy nexuspay-test-partner-connection` blocked because Supabase reported project `gsekiwpqzushrmglncns` status `INACTIVE`.
+- Edge Functions and migrations are implemented locally but not deployed.
+- No OTA was published because backend deployment and migration were blocked.
+
+Certification Status:
+- Connectivity: PARTIAL PASS. Authentication and a harmless capability read passed.
+- Beneficiary workflow: BLOCKED pending deployed function/table availability and Airwallex payout scope validation.
+- Transfer workflow: BLOCKED pending deployed function/table availability and Airwallex payout scope validation.
+- Webhooks: BLOCKED until `AIRWALLEX_WEBHOOK_SECRET` and Airwallex webhook subscription are configured.
+- Overall: implementation-ready locally, not certified end-to-end.
+
 ## 2026-07-13 - Full Screen In-App Splash Overlay
 
 Prompt / Objective:

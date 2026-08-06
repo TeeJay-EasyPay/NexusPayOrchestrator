@@ -1,15 +1,9 @@
 /**
- * Supabase Edge Function — nexuspay-submit-payout
- * External Rail Readiness Sprint — 2026-06-16
+ * Supabase Edge Function - nexuspay-submit-payout
  *
- * Submits a payout to the configured last-leg payout provider.
- * This function owns all server-side provider calls so that:
- *  - Provider secrets never reach the mobile client
- *  - All events are persisted server-side
- *  - Auth and account scope are validated server-side
- *
- * STATUS: STUB — Ready for real provider implementation when credentials available.
- * Currently returns a mock response matching the PayoutProvider interface contract.
+ * Server-side payout boundary for NexusPay last-leg providers.
+ * Airwallex sandbox credentials are read only from Supabase Edge Function
+ * secrets. The mobile app receives redacted references and canonical status.
  */
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
@@ -20,93 +14,507 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+type CanonicalPayoutStatus = 'NOT_STARTED' | 'INITIATED' | 'PROCESSING' | 'PAID_OUT' | 'FAILED';
+
+type AirwallexTokenCache = {
+  token: string;
+  expiresAtMs: number;
+};
+
+let airwallexTokenCache: AirwallexTokenCache | null = null;
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
+function getEnv(name: string) {
+  return Deno.env.get(name)?.trim() ?? '';
+}
+
+function buildServiceClient() {
+  return createClient(getEnv('SUPABASE_URL'), getEnv('SUPABASE_SERVICE_ROLE_KEY'));
+}
+
+function buildUserClient(authHeader: string) {
+  return createClient(
+    getEnv('SUPABASE_URL'),
+    getEnv('SUPABASE_ANON_KEY'),
+    { global: { headers: { Authorization: authHeader } } },
+  );
+}
+
+function maskAccount(value?: string | null) {
+  if (!value) return 'not supplied';
+  const digits = String(value).replace(/\s/g, '');
+  return `****${digits.slice(-4)}`;
+}
+
+function safeString(value: unknown, fallback = '') {
+  return typeof value === 'string' && value.trim() ? value.trim() : fallback;
+}
+
+function getCountryCode(country: string) {
+  const map: Record<string, string> = {
+    Philippines: 'PH',
+    Malaysia: 'MY',
+    Singapore: 'SG',
+    UAE: 'AE',
+    'Saudi Arabia': 'SA',
+    Qatar: 'QA',
+    Kuwait: 'KW',
+    Bahrain: 'BH',
+    Oman: 'OM',
+    'United Kingdom': 'GB',
+  };
+  return map[country] ?? country.slice(0, 2).toUpperCase();
+}
+
+function mapAirwallexStatus(status: unknown): CanonicalPayoutStatus {
+  const value = String(status ?? '').toUpperCase();
+  if (['PAID', 'SETTLED', 'SENT', 'COMPLETED'].includes(value)) return 'PAID_OUT';
+  if (['FAILED', 'CANCELLED', 'REJECTED'].includes(value)) return 'FAILED';
+  if (['PROCESSING', 'SCHEDULED', 'IN_PROGRESS', 'PENDING_REVIEW', 'PENDING_APPROVAL'].includes(value)) return 'PROCESSING';
+  if (['INITIATED', 'CREATED', 'SUBMITTED'].includes(value)) return 'INITIATED';
+  return 'PROCESSING';
+}
+
+function providerReference(id?: string | null) {
+  return id ? `airwallex:${id}` : `airwallex:pending:${crypto.randomUUID()}`;
+}
+
+function requestIdForTransfer(transferId: string) {
+  const compact = transferId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 36);
+  return `npx-${compact}`;
+}
+
+function redactPayload(payload: Record<string, unknown>) {
+  const copy = { ...payload };
+  delete copy.Authorization;
+  delete copy.authorization;
+  delete copy.token;
+  delete copy.access_token;
+  return copy;
+}
+
+async function parseProviderResponse(response: Response) {
+  const text = await response.text();
+  try {
+    return text ? JSON.parse(text) : null;
+  } catch {
+    return { raw: text.slice(0, 300) };
+  }
+}
+
+async function airwallexRequest(
+  path: string,
+  options: RequestInit & { operation: string; correlationId: string; payoutIntentId?: string | null },
+) {
+  const baseUrl = getEnv('AIRWALLEX_BASE_URL') || 'https://api.sandbox.airwallex.com';
+  const token = await getAirwallexToken(baseUrl);
+  const startedAt = new Date();
+  const response = await fetch(`${baseUrl.replace(/\/$/, '')}${path}`, {
+    ...options,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      ...(options.headers ?? {}),
+    },
+  });
+  const payload = await parseProviderResponse(response);
+  const endedAt = new Date();
+
+  await buildServiceClient().from('provider_payout_attempts').insert({
+    payout_intent_id: options.payoutIntentId ?? null,
+    provider_id: 'airwallex',
+    environment: 'sandbox',
+    operation: options.operation,
+    correlation_id: options.correlationId,
+    provider_reference: typeof payload?.id === 'string' ? payload.id : null,
+    started_at: startedAt.toISOString(),
+    ended_at: endedAt.toISOString(),
+    http_status: response.status,
+    canonical_result: response.ok ? 'SUCCESS' : 'FAILED',
+    redacted_error_code: response.ok ? null : `HTTP_${response.status}`,
+    redacted_error_message: response.ok ? null : JSON.stringify(payload).slice(0, 300),
+    metadata: {
+      path,
+      response_shape: Array.isArray(payload) ? 'array' : payload && typeof payload === 'object' ? 'object' : 'unknown',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Airwallex ${options.operation} failed with HTTP ${response.status}`);
+  }
+
+  return payload as Record<string, unknown>;
+}
+
+async function getAirwallexToken(baseUrl: string) {
+  if (airwallexTokenCache && airwallexTokenCache.expiresAtMs - Date.now() > 60_000) {
+    return airwallexTokenCache.token;
+  }
+
+  const clientId = getEnv('AIRWALLEX_CLIENT_ID');
+  const apiKey = getEnv('AIRWALLEX_API_KEY');
+  if (!clientId || !apiKey) {
+    throw new Error('Airwallex credentials are not configured in Supabase secrets.');
+  }
+
+  const response = await fetch(`${baseUrl.replace(/\/$/, '')}/api/v1/authentication/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-client-id': clientId,
+      'x-api-key': apiKey,
+    },
+    body: '{}',
+  });
+  const payload = await parseProviderResponse(response);
+  const token = safeString(payload?.token) || safeString(payload?.access_token);
+  if (!response.ok || !token) {
+    throw new Error(`Airwallex authentication failed with HTTP ${response.status}.`);
+  }
+
+  const expiresAtMs = payload?.expires_at
+    ? Date.parse(String(payload.expires_at))
+    : Date.now() + 25 * 60_000;
+  airwallexTokenCache = { token, expiresAtMs: Number.isNaN(expiresAtMs) ? Date.now() + 25 * 60_000 : expiresAtMs };
+  return token;
+}
+
+function buildBeneficiary(recipient: Record<string, unknown>, destinationCurrency: string) {
+  const countryCode = getCountryCode(safeString(recipient.country));
+  const accountName = safeString(recipient.name, 'NexusPay Sandbox Recipient');
+  const accountNumber = safeString(recipient.accountNumber, '00000000');
+  const bankCode = safeString(recipient.bankCode);
+
+  const bankDetails: Record<string, unknown> = {
+    account_currency: destinationCurrency,
+    account_name: accountName,
+    account_number: accountNumber,
+    bank_country_code: countryCode,
+  };
+
+  if (bankCode) {
+    bankDetails.account_routing_type1 = countryCode === 'PH' ? 'bank_code' : 'sort_code';
+    bankDetails.account_routing_value1 = bankCode;
+  }
+
+  return {
+    entity_type: 'PERSONAL',
+    first_name: safeString(recipient.firstName, accountName.split(' ')[0]),
+    last_name: safeString(recipient.surname, accountName.split(' ').slice(1).join(' ') || 'Recipient'),
+    address: {
+      country_code: countryCode,
+      city: 'Sandbox City',
+      street_address: 'Sandbox Address',
+      postcode: '00000',
+    },
+    bank_details: bankDetails,
+  };
+}
+
+async function upsertIntent(body: Record<string, unknown>, providerRequestId: string, beneficiarySummary: string) {
+  const serviceClient = buildServiceClient();
+  const transferId = safeString(body.transferId);
+  const { data, error } = await serviceClient
+    .from('provider_payout_intents')
+    .upsert({
+      transfer_id: transferId,
+      provider_id: 'airwallex',
+      environment: 'sandbox',
+      idempotency_key: providerRequestId,
+      provider_request_id: providerRequestId,
+      canonical_status: 'CREATED',
+      source_currency: safeString(body.sourceCurrency, 'GBP'),
+      transfer_currency: safeString(body.destinationCurrency),
+      transfer_amount: Number(body.destinationAmount ?? body.amount ?? 0),
+      destination_country: safeString((body.recipient as Record<string, unknown>)?.country),
+      destination_currency: safeString(body.destinationCurrency),
+      beneficiary_summary: beneficiarySummary,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'transfer_id,provider_id,environment' })
+    .select('*')
+    .single();
+
+  if (error) throw error;
+  return data as Record<string, unknown>;
+}
+
+async function captureEvidence(intentId: string, evidenceType: string, summary: string, payload: Record<string, unknown>) {
+  const { data, error } = await buildServiceClient()
+    .from('provider_payout_evidence')
+    .insert({
+      payout_intent_id: intentId,
+      provider_id: 'airwallex',
+      environment: 'sandbox',
+      evidence_type: evidenceType,
+      summary,
+      payload: redactPayload(payload),
+    })
+    .select('id, summary')
+    .single();
+
+  if (error) throw error;
+  return data as { id: string; summary: string };
+}
+
+function toPayoutResult(intent: Record<string, unknown>, body: Record<string, unknown>, evidence?: { id: string; summary: string }) {
+  const recipient = body.recipient as Record<string, unknown>;
+  const providerTransferId = safeString(intent.provider_transfer_id);
+  const providerStatus = safeString(intent.provider_status);
+  const status = mapAirwallexStatus(providerStatus || intent.canonical_status);
+  const currency = safeString(body.destinationCurrency, safeString(intent.transfer_currency));
+  const country = safeString(recipient?.country, safeString(intent.destination_country));
+
+  return {
+    providerId: 'AIRWALLEX_SANDBOX',
+    providerName: 'Airwallex Sandbox',
+    payoutReference: providerReference(providerTransferId || safeString(intent.provider_request_id)),
+    payoutRail: 'BANK_ACCOUNT',
+    status,
+    amount: Number(body.destinationAmount ?? body.amount ?? intent.transfer_amount ?? 0),
+    currency,
+    country,
+    recipientName: safeString(recipient?.name, 'Sandbox recipient'),
+    destinationLabel: `${safeString(recipient?.bankName, 'Bank')} - ${maskAccount(safeString(recipient?.accountNumber))}`,
+    estimatedArrival: 'Airwallex sandbox lifecycle',
+    createdAt: safeString(intent.created_at, new Date().toISOString()),
+    updatedAt: new Date().toISOString(),
+    sandbox: true,
+    providerMessage: providerTransferId
+      ? `Airwallex sandbox transfer ${status === 'PAID_OUT' ? 'completed' : 'submitted'} with redacted evidence.`
+      : 'Airwallex sandbox payout intent recorded; provider transfer reference pending.',
+    providerRequestId: safeString(intent.provider_request_id),
+    providerStatus,
+    evidenceId: evidence?.id,
+    evidenceSummary: evidence?.summary,
+  };
+}
+
+async function handleAirwallexCreate(body: Record<string, unknown>) {
+  const transferId = safeString(body.transferId);
+  if (!transferId) throw new Error('transferId is required for Airwallex payout.');
+  const recipient = body.recipient as Record<string, unknown>;
+  if (!recipient || typeof recipient !== 'object') throw new Error('recipient is required for Airwallex payout.');
+
+  const providerRequestId = requestIdForTransfer(transferId);
+  const destinationCurrency = safeString(body.destinationCurrency, safeString(recipient.currency));
+  const beneficiarySummary = `${safeString(recipient.name, 'Recipient')} - ${safeString(recipient.bankName, 'Bank')} - ${maskAccount(safeString(recipient.accountNumber))}`;
+  let intent = await upsertIntent(body, providerRequestId, beneficiarySummary);
+
+  if (safeString(intent.provider_transfer_id)) {
+    return toPayoutResult(intent, body);
+  }
+
+  const beneficiary = buildBeneficiary(recipient, destinationCurrency);
+  const correlationId = crypto.randomUUID();
+
+  await airwallexRequest('/api/v1/beneficiaries/validate', {
+    method: 'POST',
+    operation: 'beneficiary_validate',
+    correlationId,
+    payoutIntentId: safeString(intent.id),
+    body: JSON.stringify(beneficiary),
+  });
+
+  const beneficiaryCreate = await airwallexRequest('/api/v1/beneficiaries/create', {
+    method: 'POST',
+    operation: 'beneficiary_create',
+    correlationId,
+    payoutIntentId: safeString(intent.id),
+    body: JSON.stringify(beneficiary),
+  });
+
+  const beneficiaryId = safeString(beneficiaryCreate.id);
+  if (!beneficiaryId) {
+    throw new Error('Airwallex beneficiary creation did not return an ID.');
+  }
+
+  const transferPayload = {
+    beneficiary_id: beneficiaryId,
+    transfer_amount: String(Number(body.destinationAmount ?? body.amount ?? 0)),
+    transfer_currency: destinationCurrency,
+    source_currency: safeString(body.sourceCurrency, 'GBP'),
+    transfer_method: 'LOCAL',
+    reason: 'business_expense',
+    reference: safeString(body.reference, `NexusPay ${transferId.slice(0, 8)}`).slice(0, 35),
+    request_id: providerRequestId,
+  };
+
+  await airwallexRequest('/api/v1/transfers/validate', {
+    method: 'POST',
+    operation: 'transfer_validate',
+    correlationId,
+    payoutIntentId: safeString(intent.id),
+    body: JSON.stringify(transferPayload),
+  });
+
+  const transferCreate = await airwallexRequest('/api/v1/transfers/create', {
+    method: 'POST',
+    operation: 'transfer_create',
+    correlationId,
+    payoutIntentId: safeString(intent.id),
+    body: JSON.stringify(transferPayload),
+  });
+
+  const providerTransferId = safeString(transferCreate.id);
+  let providerStatus = safeString(transferCreate.status, 'CREATED');
+  let simulationSummary = 'Sandbox transition not attempted.';
+
+  if (providerTransferId) {
+    try {
+      const transition = await airwallexRequest(`/api/v1/simulation/transfers/${providerTransferId}/transition`, {
+        method: 'POST',
+        operation: 'transfer_simulation_transition',
+        correlationId,
+        payoutIntentId: safeString(intent.id),
+        body: JSON.stringify({ next_status: 'SENT' }),
+      });
+      providerStatus = safeString(transition.status, providerStatus);
+      simulationSummary = 'Airwallex sandbox transfer transition endpoint accepted the status transition request.';
+    } catch (error) {
+      simulationSummary = error instanceof Error ? error.message : 'Airwallex sandbox transfer transition failed.';
+    }
+  }
+
+  const canonicalStatus = mapAirwallexStatus(providerStatus);
+
+  const { data: updatedIntent, error } = await buildServiceClient()
+    .from('provider_payout_intents')
+    .update({
+      provider_beneficiary_id: beneficiaryId,
+      provider_transfer_id: providerTransferId,
+      canonical_status: canonicalStatus,
+      provider_status: providerStatus,
+      submitted_at: new Date().toISOString(),
+      fee_amount: transferCreate.fee_amount ?? null,
+      fee_currency: transferCreate.fee_currency ?? null,
+      amount_payer_pays: transferCreate.amount_payer_pays ?? null,
+      amount_beneficiary_receives: transferCreate.amount_beneficiary_receives ?? null,
+      evidence: {
+        request_id: providerRequestId,
+        transfer_id_present: Boolean(providerTransferId),
+        beneficiary_id_present: Boolean(beneficiaryId),
+        provider_status: providerStatus,
+        simulation_summary: simulationSummary,
+      },
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', safeString(intent.id))
+    .select('*')
+    .single();
+
+  if (error) throw error;
+  intent = updatedIntent as Record<string, unknown>;
+
+  const evidence = await captureEvidence(safeString(intent.id), 'AIRWALLEX_TRANSFER_CREATED', 'Airwallex sandbox transfer submitted with redacted provider references.', {
+    request_id: providerRequestId,
+    transfer_id_present: Boolean(providerTransferId),
+    beneficiary_id_present: Boolean(beneficiaryId),
+    provider_status: providerStatus,
+    canonical_status: canonicalStatus,
+    simulation_summary: simulationSummary,
+    amount_payer_pays: transferCreate.amount_payer_pays ?? null,
+    amount_beneficiary_receives: transferCreate.amount_beneficiary_receives ?? null,
+    fee_amount: transferCreate.fee_amount ?? null,
+    fee_currency: transferCreate.fee_currency ?? null,
+  });
+
+  return toPayoutResult(intent, body, evidence);
+}
+
+async function handleAirwallexRetrieve(body: Record<string, unknown>) {
+  const reference = safeString(body.payoutReference).replace(/^airwallex:/, '');
+  if (!reference) return { status: 'PROCESSING' };
+
+  const serviceClient = buildServiceClient();
+  const { data: intent } = await serviceClient
+    .from('provider_payout_intents')
+    .select('*')
+    .or(`provider_transfer_id.eq.${reference},provider_request_id.eq.${reference}`)
+    .maybeSingle();
+
+  if (!intent?.provider_transfer_id) {
+    return { status: mapAirwallexStatus(intent?.provider_status ?? intent?.canonical_status) };
+  }
+
+  const retrieved = await airwallexRequest(`/api/v1/transfers/${intent.provider_transfer_id}`, {
+    method: 'GET',
+    operation: 'transfer_retrieve',
+    correlationId: crypto.randomUUID(),
+    payoutIntentId: safeString(intent.id),
+  });
+  const providerStatus = safeString(retrieved.status, safeString(intent.provider_status));
+  const canonicalStatus = mapAirwallexStatus(providerStatus);
+
+  await serviceClient
+    .from('provider_payout_intents')
+    .update({
+      canonical_status: canonicalStatus,
+      provider_status: providerStatus,
+      completed_at: canonicalStatus === 'PAID_OUT' ? new Date().toISOString() : intent.completed_at,
+      failed_at: canonicalStatus === 'FAILED' ? new Date().toISOString() : intent.failed_at,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', safeString(intent.id));
+
+  return { status: canonicalStatus, providerStatus };
+}
+
+function mockResult(body: Record<string, unknown>) {
+  const transferId = safeString(body.transferId, crypto.randomUUID());
+  const recipient = body.recipient as Record<string, unknown>;
+  const destinationCurrency = safeString(body.destinationCurrency, safeString(recipient?.currency, 'GBP'));
+  const destinationAmount = Number(body.destinationAmount ?? body.amount ?? 0);
+  const providerMode = getEnv('PROVIDER_MODE') || 'mock';
+  return {
+    status: 'PENDING',
+    externalReference: `edge-payout-${providerMode}-${transferId.slice(0, 8)}`,
+    executedAt: new Date().toISOString(),
+    metadata: {
+      provider: 'EdgeFunction',
+      mode: providerMode,
+      corridor: `${safeString(body.sourceCurrency, 'GBP')}-${destinationCurrency}`,
+      recipientName: safeString(recipient?.name, 'Recipient'),
+      destinationAmount,
+    },
+  };
+}
+
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    // ── Auth Validation ───────────────────────────────────────────────────────
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    if (!authHeader) return json({ error: 'Missing authorization header' }, 401);
+
+    const userClient = buildUserClient(authHeader);
+    const { data: { user }, error: authError } = await userClient.auth.getUser();
+    if (authError || !user) return json({ error: 'Unauthorized' }, 401);
+
+    const body = await req.json().catch(() => ({}));
+    const providerId = safeString(body.providerId).toLowerCase();
+    const environment = safeString(body.environment, 'sandbox').toLowerCase();
+    if (environment !== 'sandbox') {
+      return json({ error: 'Only Airwallex sandbox execution is enabled.' }, 400);
     }
 
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: authHeader } } },
-    );
-
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    if (providerId === 'airwallex') {
+      if (safeString(body.operation) === 'retrieve') {
+        return json(await handleAirwallexRetrieve(body));
+      }
+      return json(await handleAirwallexCreate(body));
     }
 
-    // ── Request Parsing ───────────────────────────────────────────────────────
-    const body = await req.json();
-    const {
-      transferId, accountId, amount, sourceCurrency,
-      destinationCurrency, destinationAmount, recipient, reference,
-    } = body;
-
-    if (!transferId || !accountId || !amount || !sourceCurrency || !destinationCurrency || !recipient) {
-      return new Response(JSON.stringify({ error: 'Missing required fields' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // ── Recipient Validation ──────────────────────────────────────────────────
-    if (!recipient.name || !recipient.country || !recipient.currency) {
-      return new Response(JSON.stringify({ error: 'Invalid recipient: missing name, country, or currency' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // ── Provider Mode ─────────────────────────────────────────────────────────
-    const providerMode = Deno.env.get('PROVIDER_MODE') ?? 'mock';
-
-    // ── Provider Execution ────────────────────────────────────────────────────
-    // STUB: When Nium/Tranglo/Thunes credentials are available, replace this section.
-    //
-    // Example for Nium:
-    // const niumClientId = Deno.env.get('NIUM_CLIENT_ID');
-    // const niumClientSecret = Deno.env.get('NIUM_CLIENT_SECRET');
-    // const response = await fetch('https://gateway.nium.com/api/...', { ... });
-
-    const corridor = `${sourceCurrency}-${destinationCurrency}`;
-    const ref = `edge-payout-${providerMode}-${transferId.slice(0, 8)}`;
-
-    const mockResult = {
-      status: 'PENDING',
-      externalReference: ref,
-      executedAt: new Date().toISOString(),
-      metadata: {
-        provider: 'EdgeFunction',
-        mode: providerMode,
-        corridor,
-        recipientName: recipient.name,
-        destinationAmount,
-      },
-    };
-
-    return new Response(JSON.stringify(mockResult), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Internal server error';
-    return new Response(JSON.stringify({ error: message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return json(mockResult(body));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Internal server error';
+    return json({ error: message }, 500);
   }
 });

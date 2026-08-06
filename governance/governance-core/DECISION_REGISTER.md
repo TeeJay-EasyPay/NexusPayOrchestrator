@@ -40,6 +40,63 @@ Each decision entry must include:
 ---
 
 ## Decision ID
+D-014
+
+## Title
+Airwallex Client API Selected For Sandbox Last-Leg Payout Proof
+
+## Date
+2026-08-06
+
+## Decision Owner
+Founder
+
+## Participating Roles
+- Codex Lead Implementation Agent
+- NexusPay CTO
+- Operations Intelligence Director
+- QA Director
+
+## Background
+NexusPay needs a destination payout rail to move beyond source-rail and settlement demonstrations. The Founder created an Airwallex self-service sandbox account and supplied scoped sandbox credentials through local environment configuration.
+
+## Decision
+Implement Airwallex as a sandbox-only last-leg payout provider behind NexusPay's provider-neutral payout adapter and Edge Function boundary. Do not represent this as production payment readiness.
+
+## Rationale
+Airwallex provides Client API resources for authentication, account capability checks, beneficiaries, transfers, transfer status retrieval and sandbox transfer simulation. This makes it suitable for proving a destination payout leg while keeping secrets server-side.
+
+## Alternatives Considered
+- Continue using mock payout providers only.
+- Hardcode Airwallex directly into the execution engine.
+- Treat candidate providers such as Nium or Tranglo as configured without live connectivity evidence.
+
+## Risks
+- Supabase deployment is currently blocked because the linked project is reported `INACTIVE`.
+- Airwallex beneficiary and transfer API scopes are not yet proven.
+- Dynamic beneficiary requirements may vary by country and currency.
+- Webhook certification depends on configuring a real Airwallex webhook subscription and signing secret.
+
+## Expected Outcome
+NexusPay can progress from a visual/demo last-leg payout to a certifiable Airwallex sandbox payout rail with durable idempotency, evidence capture and explicit certification status.
+
+## Status
+Approved for sandbox implementation; end-to-end certification blocked pending Supabase deployment recovery.
+
+## Follow-up Actions
+1. Restore Supabase project active status.
+2. Apply the Airwallex migration.
+3. Deploy Airwallex-aware Edge Functions.
+4. Run read-only and payout certification tests from Platform Administration.
+5. Configure verified Airwallex webhook subscriptions.
+
+## Reference Documents
+- [Airwallex Sandbox Payout Integration Checkpoint](../reports/AIRWALLEX_SANDBOX_PAYOUT_INTEGRATION_CHECKPOINT.md)
+- [Founder Briefing: Airwallex Sandbox Payout Integration](../reports/FOUNDER_BRIEFING_AIRWALLEX_SANDBOX_PAYOUT.md)
+
+---
+
+## Decision ID
 D-001
 
 ## Title
