@@ -196,11 +196,17 @@ function buildBeneficiary(recipient: Record<string, unknown>, destinationCurrenc
     account_name: accountName,
     account_number: accountNumber,
     bank_country_code: countryCode,
+    bank_name: safeString(recipient.bankName, 'Sandbox Bank'),
   };
 
   if (bankCode) {
     bankDetails.account_routing_type1 = countryCode === 'PH' ? 'bank_code' : 'sort_code';
     bankDetails.account_routing_value1 = bankCode;
+  }
+
+  const bankName = safeString(recipient.bankName).toLowerCase();
+  if (countryCode === 'PH' && bankName.includes('bdo')) {
+    bankDetails.swift_code = 'BNORPHMM';
   }
 
   return {
@@ -311,6 +317,11 @@ async function handleAirwallexCreate(body: Record<string, unknown>) {
   }
 
   const beneficiary = buildBeneficiary(recipient, destinationCurrency);
+  const beneficiaryPayload = {
+    beneficiary,
+    nickname: safeString(recipient.name, 'NexusPay Sandbox Recipient').slice(0, 64),
+    transfer_methods: ['LOCAL'],
+  };
   const correlationId = crypto.randomUUID();
 
   await airwallexRequest('/api/v1/beneficiaries/validate', {
@@ -318,7 +329,7 @@ async function handleAirwallexCreate(body: Record<string, unknown>) {
     operation: 'beneficiary_validate',
     correlationId,
     payoutIntentId: safeString(intent.id),
-    body: JSON.stringify(beneficiary),
+    body: JSON.stringify(beneficiaryPayload),
   });
 
   const beneficiaryCreate = await airwallexRequest('/api/v1/beneficiaries/create', {
@@ -326,7 +337,7 @@ async function handleAirwallexCreate(body: Record<string, unknown>) {
     operation: 'beneficiary_create',
     correlationId,
     payoutIntentId: safeString(intent.id),
-    body: JSON.stringify(beneficiary),
+    body: JSON.stringify(beneficiaryPayload),
   });
 
   const beneficiaryId = safeString(beneficiaryCreate.id);
@@ -340,7 +351,7 @@ async function handleAirwallexCreate(body: Record<string, unknown>) {
     transfer_currency: destinationCurrency,
     source_currency: safeString(body.sourceCurrency, 'GBP'),
     transfer_method: 'LOCAL',
-    reason: 'business_expense',
+    reason: 'business_expenses',
     reference: safeString(body.reference, `NexusPay ${transferId.slice(0, 8)}`).slice(0, 35),
     request_id: providerRequestId,
   };
