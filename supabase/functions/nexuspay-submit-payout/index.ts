@@ -16,6 +16,20 @@ const corsHeaders = {
 
 type CanonicalPayoutStatus = 'NOT_STARTED' | 'INITIATED' | 'PROCESSING' | 'PAID_OUT' | 'FAILED';
 
+type AirwallexJourneyStep = {
+  key: string;
+  label: string;
+  description: string;
+  status: 'PENDING' | 'DONE' | 'FAILED';
+  provider: 'Airwallex Sandbox';
+  provenance: 'SANDBOX';
+  providerStatus?: string;
+  occurredAt: string;
+};
+
+const AIRWALLEX_API_VERSION = '2024-09-27';
+const AIRWALLEX_SANDBOX_BASE_URL = 'https://api.sandbox.airwallex.com';
+
 type AirwallexTokenCache = {
   token: string;
   expiresAtMs: number;
@@ -74,9 +88,9 @@ function getCountryCode(country: string) {
 
 function mapAirwallexStatus(status: unknown): CanonicalPayoutStatus {
   const value = String(status ?? '').toUpperCase();
-  if (['PAID', 'SETTLED', 'SENT', 'COMPLETED'].includes(value)) return 'PAID_OUT';
+  if (['PAID', 'SETTLED', 'COMPLETED'].includes(value)) return 'PAID_OUT';
   if (['FAILED', 'CANCELLED', 'REJECTED'].includes(value)) return 'FAILED';
-  if (['PROCESSING', 'SCHEDULED', 'IN_PROGRESS', 'PENDING_REVIEW', 'PENDING_APPROVAL'].includes(value)) return 'PROCESSING';
+  if (['PROCESSING', 'SCHEDULED', 'SENT', 'IN_PROGRESS', 'PENDING_REVIEW', 'PENDING_APPROVAL'].includes(value)) return 'PROCESSING';
   if (['INITIATED', 'CREATED', 'SUBMITTED'].includes(value)) return 'INITIATED';
   return 'PROCESSING';
 }
@@ -112,7 +126,7 @@ async function airwallexRequest(
   path: string,
   options: RequestInit & { operation: string; correlationId: string; payoutIntentId?: string | null },
 ) {
-  const baseUrl = getEnv('AIRWALLEX_BASE_URL') || 'https://api-demo.airwallex.com';
+  const baseUrl = AIRWALLEX_SANDBOX_BASE_URL;
   const token = await getAirwallexToken(baseUrl);
   const startedAt = new Date();
   const response = await fetch(`${baseUrl.replace(/\/$/, '')}${path}`, {
@@ -120,6 +134,7 @@ async function airwallexRequest(
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
+      'x-api-version': AIRWALLEX_API_VERSION,
       ...(options.headers ?? {}),
     },
   });
@@ -183,6 +198,152 @@ async function getAirwallexToken(baseUrl: string) {
     : Date.now() + 25 * 60_000;
   airwallexTokenCache = { token, expiresAtMs: Number.isNaN(expiresAtMs) ? Date.now() + 25 * 60_000 : expiresAtMs };
   return token;
+}
+
+function airwallexJourneyStep(
+  key: string,
+  label: string,
+  description: string,
+  status: AirwallexJourneyStep['status'] = 'DONE',
+  providerStatus?: string,
+): AirwallexJourneyStep {
+  return {
+    key,
+    label,
+    description,
+    status,
+    provider: 'Airwallex Sandbox',
+    provenance: 'SANDBOX',
+    providerStatus,
+    occurredAt: new Date().toISOString(),
+  };
+}
+
+function storedJourney(intent: Record<string, unknown>): AirwallexJourneyStep[] {
+  const evidence = intent.evidence as Record<string, unknown> | null;
+  const journey = evidence?.provider_journey;
+  return Array.isArray(journey) ? journey as AirwallexJourneyStep[] : [];
+}
+
+function mergeJourneyStep(journey: AirwallexJourneyStep[], step: AirwallexJourneyStep) {
+  return [...journey.filter((item) => item.key !== step.key), step];
+}
+
+async function runAirwallexSandboxLifecycle(
+  providerTransferId: string,
+  initialStatus: string,
+  correlationId: string,
+  payoutIntentId: string,
+  initialJourney: AirwallexJourneyStep[],
+) {
+  let providerStatus = initialStatus.toUpperCase();
+  let journey = [...initialJourney];
+  const retrieveUntil = async (targetStatus: string, operation: string) => {
+    for (let attempt = 1; attempt <= 8; attempt += 1) {
+      const retrieved = await airwallexRequest(`/api/v1/transfers/${providerTransferId}`, {
+        method: 'GET',
+        operation: `${operation}_${attempt}`,
+        correlationId,
+        payoutIntentId,
+      });
+      providerStatus = safeString(retrieved.status, providerStatus).toUpperCase();
+      if (providerStatus === targetStatus) return;
+      if (['FAILED', 'CANCELLED'].includes(providerStatus)) {
+        throw new Error(`Airwallex transfer entered ${providerStatus} while waiting for ${targetStatus}.`);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+    throw new Error(`Airwallex remained ${providerStatus} while waiting for ${targetStatus}.`);
+  };
+
+  const transitionWithRetry = async (nextStatus: 'SENT' | 'PAID') => {
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= 8; attempt += 1) {
+      try {
+        return await airwallexRequest(`/api/v1/simulation/transfers/${providerTransferId}/transition`, {
+          method: 'POST',
+          operation: `transfer_simulation_${nextStatus.toLowerCase()}_${attempt}`,
+          correlationId,
+          payoutIntentId,
+          body: JSON.stringify({ next_status: nextStatus }),
+        });
+      } catch (error) {
+        lastError = error;
+        const retryable = error instanceof Error && error.message.includes('HTTP 500');
+        if (!retryable || attempt === 8) throw error;
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+      }
+    }
+    throw lastError instanceof Error ? lastError : new Error(`Airwallex ${nextStatus} transition failed.`);
+  };
+
+  try {
+    if (providerStatus === 'SCHEDULED') {
+      const sentTransition = await transitionWithRetry('SENT');
+      providerStatus = safeString(sentTransition.status, providerStatus).toUpperCase();
+    }
+
+    if (providerStatus === 'PROCESSING') {
+      journey = mergeJourneyStep(journey, airwallexJourneyStep(
+        'airwallex_processing',
+        'Airwallex payout processing',
+        'Airwallex accepted the sandbox transfer for processing.',
+        'DONE',
+        providerStatus,
+      ));
+      await retrieveUntil('SENT', 'transfer_retrieve_until_sent');
+    }
+
+    if (providerStatus === 'SENT') {
+      journey = mergeJourneyStep(journey, airwallexJourneyStep(
+        'airwallex_sent',
+        'Airwallex payout sent',
+        'Airwallex dispatched the sandbox transfer to the destination payout rail.',
+        'DONE',
+        providerStatus,
+      ));
+    }
+
+    if (providerStatus === 'SENT') {
+      const paidTransition = await transitionWithRetry('PAID');
+      providerStatus = safeString(paidTransition.status, providerStatus).toUpperCase();
+      if (providerStatus !== 'PAID') {
+        await retrieveUntil('PAID', 'transfer_retrieve_until_paid');
+      }
+    }
+
+    if (providerStatus !== 'PAID') {
+      throw new Error(`Airwallex lifecycle ended at ${providerStatus} instead of PAID.`);
+    }
+
+    journey = mergeJourneyStep(journey, airwallexJourneyStep(
+      'airwallex_paid',
+      'Airwallex recipient payout completed',
+      'Airwallex confirmed the sandbox transfer as PAID.',
+      'DONE',
+      providerStatus,
+    ));
+
+    return {
+      providerStatus,
+      journey,
+      simulationSummary: 'Airwallex sandbox lifecycle completed at PAID.',
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Airwallex sandbox lifecycle transition failed.';
+    journey = mergeJourneyStep(journey, airwallexJourneyStep(
+      'airwallex_lifecycle_failure',
+      'Airwallex payout lifecycle interrupted',
+      message,
+      'FAILED',
+      providerStatus,
+    ));
+    return {
+      providerStatus,
+      journey,
+      simulationSummary: `Airwallex sandbox lifecycle stopped at ${providerStatus}: ${message}`,
+    };
+  }
 }
 
 function buildBeneficiary(recipient: Record<string, unknown>, destinationCurrency: string) {
@@ -268,7 +429,12 @@ async function captureEvidence(intentId: string, evidenceType: string, summary: 
   return data as { id: string; summary: string };
 }
 
-function toPayoutResult(intent: Record<string, unknown>, body: Record<string, unknown>, evidence?: { id: string; summary: string }) {
+function toPayoutResult(
+  intent: Record<string, unknown>,
+  body: Record<string, unknown>,
+  evidence?: { id: string; summary: string },
+  journey: AirwallexJourneyStep[] = storedJourney(intent),
+) {
   const recipient = body.recipient as Record<string, unknown>;
   const providerTransferId = safeString(intent.provider_transfer_id);
   const providerStatus = safeString(intent.provider_status);
@@ -298,6 +464,7 @@ function toPayoutResult(intent: Record<string, unknown>, body: Record<string, un
     providerStatus,
     evidenceId: evidence?.id,
     evidenceSummary: evidence?.summary,
+    providerJourney: journey,
   };
 }
 
@@ -311,9 +478,46 @@ async function handleAirwallexCreate(body: Record<string, unknown>) {
   const destinationCurrency = safeString(body.destinationCurrency, safeString(recipient.currency));
   const beneficiarySummary = `${safeString(recipient.name, 'Recipient')} - ${safeString(recipient.bankName, 'Bank')} - ${maskAccount(safeString(recipient.accountNumber))}`;
   let intent = await upsertIntent(body, providerRequestId, beneficiarySummary);
+  const correlationId = crypto.randomUUID();
 
   if (safeString(intent.provider_transfer_id)) {
-    return toPayoutResult(intent, body);
+    const providerTransferId = safeString(intent.provider_transfer_id);
+    const retrieved = await airwallexRequest(`/api/v1/transfers/${providerTransferId}`, {
+      method: 'GET',
+      operation: 'transfer_retrieve_for_resume',
+      correlationId,
+      payoutIntentId: safeString(intent.id),
+    });
+    const lifecycle = await runAirwallexSandboxLifecycle(
+      providerTransferId,
+      safeString(retrieved.status, safeString(intent.provider_status, 'SCHEDULED')),
+      correlationId,
+      safeString(intent.id),
+      storedJourney(intent),
+    );
+    const canonicalStatus = mapAirwallexStatus(lifecycle.providerStatus);
+    const existingEvidence = intent.evidence && typeof intent.evidence === 'object'
+      ? intent.evidence as Record<string, unknown>
+      : {};
+    const { data: resumedIntent, error: resumeError } = await buildServiceClient()
+      .from('provider_payout_intents')
+      .update({
+        canonical_status: canonicalStatus,
+        provider_status: lifecycle.providerStatus,
+        completed_at: canonicalStatus === 'PAID_OUT' ? new Date().toISOString() : intent.completed_at,
+        evidence: {
+          ...existingEvidence,
+          provider_status: lifecycle.providerStatus,
+          simulation_summary: lifecycle.simulationSummary,
+          provider_journey: lifecycle.journey,
+        },
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', safeString(intent.id))
+      .select('*')
+      .single();
+    if (resumeError) throw resumeError;
+    return toPayoutResult(resumedIntent as Record<string, unknown>, body, undefined, lifecycle.journey);
   }
 
   const beneficiary = buildBeneficiary(recipient, destinationCurrency);
@@ -322,8 +526,6 @@ async function handleAirwallexCreate(body: Record<string, unknown>) {
     nickname: safeString(recipient.name, 'NexusPay Sandbox Recipient').slice(0, 64),
     transfer_methods: ['LOCAL'],
   };
-  const correlationId = crypto.randomUUID();
-
   await airwallexRequest('/api/v1/beneficiaries/validate', {
     method: 'POST',
     operation: 'beneficiary_validate',
@@ -331,6 +533,18 @@ async function handleAirwallexCreate(body: Record<string, unknown>) {
     payoutIntentId: safeString(intent.id),
     body: JSON.stringify(beneficiaryPayload),
   });
+  let providerJourney: AirwallexJourneyStep[] = [
+    airwallexJourneyStep(
+      'airwallex_authenticated',
+      'Airwallex sandbox authenticated',
+      `Airwallex accepted the authenticated API request using version ${AIRWALLEX_API_VERSION}.`,
+    ),
+    airwallexJourneyStep(
+      'airwallex_beneficiary_validated',
+      'Airwallex beneficiary validated',
+      'Airwallex validated the beneficiary and bank instruction.',
+    ),
+  ];
 
   const beneficiaryCreate = await airwallexRequest('/api/v1/beneficiaries/create', {
     method: 'POST',
@@ -344,6 +558,11 @@ async function handleAirwallexCreate(body: Record<string, unknown>) {
   if (!beneficiaryId) {
     throw new Error('Airwallex beneficiary creation did not return an ID.');
   }
+  providerJourney = mergeJourneyStep(providerJourney, airwallexJourneyStep(
+    'airwallex_beneficiary_created',
+    'Airwallex beneficiary created',
+    'Airwallex created the sandbox beneficiary and returned a redacted reference.',
+  ));
 
   const transferPayload = {
     beneficiary_id: beneficiaryId,
@@ -363,6 +582,11 @@ async function handleAirwallexCreate(body: Record<string, unknown>) {
     payoutIntentId: safeString(intent.id),
     body: JSON.stringify(transferPayload),
   });
+  providerJourney = mergeJourneyStep(providerJourney, airwallexJourneyStep(
+    'airwallex_transfer_validated',
+    'Airwallex transfer validated',
+    'Airwallex validated the last-leg transfer instruction before submission.',
+  ));
 
   const transferCreate = await airwallexRequest('/api/v1/transfers/create', {
     method: 'POST',
@@ -375,21 +599,25 @@ async function handleAirwallexCreate(body: Record<string, unknown>) {
   const providerTransferId = safeString(transferCreate.id);
   let providerStatus = safeString(transferCreate.status, 'CREATED');
   let simulationSummary = 'Sandbox transition not attempted.';
+  providerJourney = mergeJourneyStep(providerJourney, airwallexJourneyStep(
+    'airwallex_transfer_submitted',
+    'Airwallex payout submitted',
+    'Airwallex created the sandbox transfer and returned a redacted transfer reference.',
+    'DONE',
+    providerStatus,
+  ));
 
   if (providerTransferId) {
-    try {
-      const transition = await airwallexRequest(`/api/v1/simulation/transfers/${providerTransferId}/transition`, {
-        method: 'POST',
-        operation: 'transfer_simulation_transition',
-        correlationId,
-        payoutIntentId: safeString(intent.id),
-        body: JSON.stringify({ next_status: 'SENT' }),
-      });
-      providerStatus = safeString(transition.status, providerStatus);
-      simulationSummary = 'Airwallex sandbox transfer transition endpoint accepted the status transition request.';
-    } catch (error) {
-      simulationSummary = error instanceof Error ? error.message : 'Airwallex sandbox transfer transition failed.';
-    }
+    const lifecycle = await runAirwallexSandboxLifecycle(
+      providerTransferId,
+      providerStatus,
+      correlationId,
+      safeString(intent.id),
+      providerJourney,
+    );
+    providerStatus = lifecycle.providerStatus;
+    providerJourney = lifecycle.journey;
+    simulationSummary = lifecycle.simulationSummary;
   }
 
   const canonicalStatus = mapAirwallexStatus(providerStatus);
@@ -402,6 +630,7 @@ async function handleAirwallexCreate(body: Record<string, unknown>) {
       canonical_status: canonicalStatus,
       provider_status: providerStatus,
       submitted_at: new Date().toISOString(),
+      completed_at: canonicalStatus === 'PAID_OUT' ? new Date().toISOString() : null,
       fee_amount: transferCreate.fee_amount ?? null,
       fee_currency: transferCreate.fee_currency ?? null,
       amount_payer_pays: transferCreate.amount_payer_pays ?? null,
@@ -412,6 +641,7 @@ async function handleAirwallexCreate(body: Record<string, unknown>) {
         beneficiary_id_present: Boolean(beneficiaryId),
         provider_status: providerStatus,
         simulation_summary: simulationSummary,
+        provider_journey: providerJourney,
       },
       updated_at: new Date().toISOString(),
     })
@@ -429,13 +659,14 @@ async function handleAirwallexCreate(body: Record<string, unknown>) {
     provider_status: providerStatus,
     canonical_status: canonicalStatus,
     simulation_summary: simulationSummary,
+    provider_journey: providerJourney,
     amount_payer_pays: transferCreate.amount_payer_pays ?? null,
     amount_beneficiary_receives: transferCreate.amount_beneficiary_receives ?? null,
     fee_amount: transferCreate.fee_amount ?? null,
     fee_currency: transferCreate.fee_currency ?? null,
   });
 
-  return toPayoutResult(intent, body, evidence);
+  return toPayoutResult(intent, body, evidence, providerJourney);
 }
 
 async function handleAirwallexRetrieve(body: Record<string, unknown>) {

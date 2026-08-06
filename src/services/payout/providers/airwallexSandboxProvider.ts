@@ -4,6 +4,7 @@ import {
   PayoutProvider,
   PayoutResult,
   PayoutStatus,
+  ProviderJourneyStep,
 } from "../payoutTypes";
 
 type EdgePayoutResponse = {
@@ -26,6 +27,7 @@ type EdgePayoutResponse = {
   providerStatus?: string;
   evidenceId?: string;
   evidenceSummary?: string;
+  providerJourney?: ProviderJourneyStep[];
 };
 
 function assertEdgeResult(data: EdgePayoutResponse | null): PayoutResult {
@@ -54,6 +56,7 @@ function assertEdgeResult(data: EdgePayoutResponse | null): PayoutResult {
     providerStatus: data.providerStatus,
     evidenceId: data.evidenceId,
     evidenceSummary: data.evidenceSummary,
+    providerJourney: data.providerJourney,
   };
 }
 

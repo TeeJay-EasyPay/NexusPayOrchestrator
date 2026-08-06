@@ -422,10 +422,10 @@ export async function runAirwallexPayoutCertification(): Promise<{
       providerId: "airwallex",
       environment: "sandbox",
       transferId: `airwallex-cert-${Date.now()}`,
-      amount: 10,
+      amount: 1000,
       sourceCurrency: "GBP",
       destinationCurrency: "PHP",
-      destinationAmount: 10,
+      destinationAmount: 1000,
       payoutMethod: "BANK",
       reference: "NexusPay sandbox certification",
       recipient: {

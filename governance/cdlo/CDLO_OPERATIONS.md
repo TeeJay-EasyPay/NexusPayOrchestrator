@@ -50,7 +50,7 @@ Recipient Bank
 | TerraPay | London, UK | Global Payouts | Destination Rail | Yes | Awaiting Response |
 | Nium | Singapore | Global Payments | Source & Destination | Yes | Awaiting Response |
 | TrueLayer | London, UK | Open Banking | Source Rail | Yes | Referred to Stripe |
-| Airwallex | Melbourne, Australia | Financial Infrastructure | Destination Rail | Yes | Sandbox Implementation In Progress |
+| Airwallex | Melbourne, Australia | Financial Infrastructure | Destination Rail | Yes | Terminal Sandbox Payout Passed; Webhook Pending |
 | Currencycloud | London, UK | Cross-border Banking | Settlement / Destination | Yes | Target |
 | BVNK | London, UK | Stablecoin Infrastructure | Settlement / Destination | Yes | Target |
 | Banking Circle | Luxembourg | Banking Infrastructure | Settlement / Destination | Yes | Target |
@@ -102,8 +102,10 @@ Recipient Bank
 - Read-only sandbox authentication passed.
 - Account capability funding-limits read returned HTTP 200.
 - Supabase migrations and Edge Functions deployed after project reactivation.
-- Beneficiary and transfer certification are blocked by Airwallex API key scope: `beneficiaries/validate` returns HTTP 401 unauthorized / insufficient permissions.
-- Webhook signature verification is implemented and synthetically tested; actual Airwallex webhook delivery remains pending because transfer creation is blocked.
+- Founder-expanded API scope now permits balance, beneficiary and transfer operations.
+- Terminal sandbox payout certification passed through Airwallex beneficiary creation, transfer submission, `SENT`, and `PAID`.
+- NexusPay stores redacted provider references, attempts, timestamps and journey evidence and exposes the stages in Corporate payment tracking.
+- Webhook signature verification is implemented and synthetically tested; actual Airwallex webhook delivery remains pending.
 
 ---
 
@@ -111,7 +113,7 @@ Recipient Bank
 
 1. Secure a destination rail sandbox.
 2. Continue Stripe engagement.
-3. Request Airwallex sandbox beneficiary and transfer API permissions for payout certification.
+3. Configure and verify an actual Airwallex sandbox webhook subscription.
 4. Contact Currencycloud.
 5. Contact BVNK.
 6. Contact Banking Circle.

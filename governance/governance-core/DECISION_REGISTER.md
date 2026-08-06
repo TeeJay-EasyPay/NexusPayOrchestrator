@@ -72,8 +72,6 @@ Airwallex provides Client API resources for authentication, account capability c
 - Treat candidate providers such as Nium or Tranglo as configured without live connectivity evidence.
 
 ## Risks
-- Supabase deployment is currently blocked because the linked project is reported `INACTIVE`.
-- Airwallex beneficiary and transfer API scopes are not yet proven.
 - Dynamic beneficiary requirements may vary by country and currency.
 - Webhook certification depends on configuring a real Airwallex webhook subscription and signing secret.
 
@@ -81,13 +79,12 @@ Airwallex provides Client API resources for authentication, account capability c
 NexusPay can progress from a visual/demo last-leg payout to a certifiable Airwallex sandbox payout rail with durable idempotency, evidence capture and explicit certification status.
 
 ## Status
-Approved for sandbox implementation; deployed to Supabase; end-to-end certification blocked by Airwallex API key permissions for beneficiary/transfer APIs.
+Approved and deployed for sandbox use. Terminal Airwallex provider certification passed at `PAID`; actual Airwallex webhook delivery remains pending.
 
 ## Follow-up Actions
-1. Request/enable Airwallex sandbox permissions for beneficiary validation/create and transfer validation/create.
-2. Rerun guarded payout certification tests from Platform Administration.
-3. Configure verified Airwallex webhook subscriptions.
-4. Rerun actual Airwallex webhook delivery or Airwallex test-event delivery.
+1. Configure a verified Airwallex sandbox webhook subscription.
+2. Rerun actual Airwallex webhook delivery or Airwallex test-event delivery.
+3. Complete and retain the ordinary Corporate payment emulator acceptance evidence.
 
 ## Reference Documents
 - [Airwallex Sandbox Payout Integration Checkpoint](../reports/AIRWALLEX_SANDBOX_PAYOUT_INTEGRATION_CHECKPOINT.md)

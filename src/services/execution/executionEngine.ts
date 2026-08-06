@@ -1,7 +1,7 @@
 import { executeXrplTestnetSettlement, XrplSettlementResult } from "../../lib/xrplSettlement";
 import { OpenBankingPaymentFlow, RouteQuote, Transfer, TransferStatus } from "../../types/transfer";
 import { createPayout, getPayoutStatus } from "../payout/payoutAdapter";
-import { PayoutResult, PayoutStatus } from "../payout/payoutTypes";
+import { PayoutResult, PayoutStatus, ProviderJourneyStep } from "../payout/payoutTypes";
 import { writeTransactionAuditLog } from "../transactionAuditService";
 import { saveTransferProgress } from "../transferService";
 import { persistExecutionSnapshot } from "./executionPersistenceService";
@@ -83,6 +83,10 @@ async function withTimeout<T>(task: Promise<T>, ms: number, label: string) {
 
 function getTimeoutMs(route: RouteQuote) {
   return route.providerTimeoutMs ?? 4500;
+}
+
+function getPayoutTimeoutMs(route: RouteQuote) {
+  return Math.max(getTimeoutMs(route), 60000);
 }
 
 function getMaxRetries(route: RouteQuote) {
@@ -227,6 +231,34 @@ function skipStep(steps: ExecutionStep[], id: string, telemetry?: Record<string,
     completedAt: Date.now(),
     telemetry,
   });
+}
+
+function mergeProviderJourneySteps(steps: ExecutionStep[], journey?: ProviderJourneyStep[]) {
+  if (!journey?.length) return steps;
+
+  const baseSteps = steps.filter((step) => !step.id.startsWith("provider_journey_"));
+  const payoutIndex = baseSteps.findIndex((step) => step.id === "payout_execution");
+  const insertionIndex = payoutIndex >= 0 ? payoutIndex + 1 : baseSteps.length;
+  const providerSteps = journey.map((step): ExecutionStep => ({
+    id: `provider_journey_${step.key}`,
+    title: step.label,
+    description: `${step.description} Evidence: ${step.provenance}.`,
+    status: step.status,
+    attempt: step.status === "PENDING" ? 0 : 1,
+    provider: step.provider,
+    startedAt: step.occurredAt ? new Date(step.occurredAt).getTime() : undefined,
+    completedAt: step.status === "PENDING" || !step.occurredAt ? undefined : new Date(step.occurredAt).getTime(),
+    telemetry: {
+      provider_status: step.providerStatus ?? null,
+      provenance: step.provenance,
+    },
+  }));
+
+  return [
+    ...baseSteps.slice(0, insertionIndex),
+    ...providerSteps,
+    ...baseSteps.slice(insertionIndex),
+  ];
 }
 
 function progressForSteps(steps: ExecutionStep[]) {
@@ -521,7 +553,7 @@ export async function runTransferExecution({
               payoutMethod: transfer.recipient.payoutMethod,
               payoutProviderName: activeRoute.provider,
             }),
-            getTimeoutMs(activeRoute),
+            getPayoutTimeoutMs(activeRoute),
             `${activeRoute.provider} payout submission`
           );
 
@@ -531,9 +563,16 @@ export async function runTransferExecution({
             provider_id: payout.providerId,
             fallback_used: payout.fallbackUsed ?? false,
           });
-          await emit("Provider payout accepted by adapter.", {
+          steps = updateStep(steps, "payout_execution", {
+            title: `${payout.providerName} payout submitted`,
+            description: payout.providerMessage,
+            provider: payout.providerName,
+          });
+          steps = mergeProviderJourneySteps(steps, payout.providerJourney);
+          await emit(`${payout.providerName} payout accepted by adapter.`, {
             payout_reference: payout.payoutReference,
             payout_provider_id: payout.providerId,
+            payout_provider_status: payout.providerStatus ?? null,
           });
           break;
         } catch (caughtError) {
@@ -579,7 +618,9 @@ export async function runTransferExecution({
         status: "RUNNING",
         attempt: 1,
         startedAt: Date.now(),
-        provider: activeRoute.provider,
+        provider: payout.providerName,
+        title: `${payout.providerName} payout verified`,
+        description: "The provider transfer status is retrieved before NexusPay declares recipient completion.",
       });
       await emit("Verifying destination payout status...", {
         payout_reference: payout.payoutReference,
@@ -590,7 +631,7 @@ export async function runTransferExecution({
 
       payoutStatus = await withTimeout(
         getPayoutStatus(payout.payoutReference),
-        getTimeoutMs(activeRoute),
+        getPayoutTimeoutMs(activeRoute),
         `${activeRoute.provider} payout verification`
       );
 

@@ -13,17 +13,17 @@ NexusPay now has a deployed Airwallex sandbox integration path for last-leg payo
 - Supabase migrations and Edge Functions are deployed.
 - Webhook signature verification rejects unsigned events and accepts signed synthetic events.
 
-## What Is Not Yet Certified
+## Certification Update
 
-NexusPay has not yet completed a genuine Airwallex sandbox payout end to end.
+NexusPay has now completed a genuine Airwallex sandbox provider payout from beneficiary validation through terminal `PAID` status.
 
-The blocker is now Airwallex API permission/scope, not NexusPay deployment:
+- Airwallex beneficiary validation and creation passed.
+- Transfer validation and creation passed.
+- Airwallex confirmed dispatch and terminal sandbox payment.
+- NexusPay stored the provider references, timestamps, attempts and redacted journey evidence.
+- The Corporate payment tracker now displays named Airwallex stages after Yapily and any applicable XRPL settlement stage.
 
-- Beneficiary validation returns HTTP `401`.
-- Redacted Airwallex cause: `unauthorized`, `Insufficient permissions`.
-- No beneficiary was created.
-- No transfer was submitted.
-- No real Airwallex webhook event exists yet because no transfer could be created.
+The remaining gap is actual Airwallex webhook delivery. NexusPay's webhook verification, invalid-signature rejection and duplicate protection are synthetically proven, but the terminal certification transfer did not arrive through a configured Airwallex webhook subscription.
 
 ## Business Value
 
@@ -35,8 +35,8 @@ The important improvement is that Airwallex is wired as a reusable provider rail
 
 ## Recommended Next Action
 
-Request or enable Airwallex sandbox API permissions for beneficiary and transfer APIs, then rerun the guarded sandbox payout certification.
+Configure and verify the real Airwallex sandbox webhook subscription, then retain one actual signed webhook event as final asynchronous evidence.
 
 Until that is done, this should be described as:
 
-`Airwallex sandbox integration deployed; end-to-end payout certification blocked by Airwallex API permissions.`
+`End-to-end Airwallex sandbox provider orchestration passed; actual webhook delivery remains pending.`

@@ -64,6 +64,34 @@ Follow-up Deployment / Certification Update:
 - Webhook security partially verified with synthetic evidence: unsigned Airwallex event rejected, signed synthetic event accepted, duplicate synthetic event deduplicated.
 - No OTA published because full payout certification did not pass.
 
+Lifecycle Remediation / Certification Completion Update:
+- Founder expanded the Airwallex API key scope; `balances/current`, beneficiary validation/create, and transfer validation/create subsequently passed.
+- Corrected the Airwallex canonical mapping so `SENT` remains `PROCESSING`; only provider status `PAID` maps to NexusPay `PAID_OUT`.
+- Pinned Airwallex payout calls to API version `2024-09-27` and the current official sandbox host.
+- Replaced the invalid immediate lifecycle request with the proven sandbox sequence: create as `SCHEDULED`, request `SENT` with bounded retry for sandbox readiness, then request `PAID`.
+- Added redacted, persisted Airwallex journey evidence for authentication, beneficiary validation/create, transfer validation/create, payout submission, dispatch, and paid completion.
+- Added those Airwallex stages to the Corporate execution state machine so ordinary payment tracking names the last-leg provider and its actual sandbox evidence.
+- Increased the client-side payout timeout boundary to accommodate genuine provider calls without fabricating completion.
+- Updated the Platform Administration certification fixture to satisfy Airwallex's minimum payout amount.
+
+Terminal Sandbox Evidence:
+- NexusPay transfer: `airwallex-lifecycle-1786038054520`
+- Airwallex beneficiary: `5aec04ef-d1eb-48f0-a113-e3178c3751e2`
+- Airwallex transfer: `04d2e3d3-b896-45b1-a12c-15a00ec9fce0`
+- Provider status: `PAID`
+- Canonical status: `PAID_OUT`
+- Evidence record: `045450e5-c53b-4113-ae38-40151defc0a4`
+- Actual Airwallex webhook delivery: pending; signed/unsigned/deduplication behavior remains synthetically verified.
+
+Validation:
+- Deployed `nexuspay-submit-payout` successfully after lifecycle remediation.
+- Genuine Airwallex sandbox beneficiary and transfer creation passed.
+- `SENT` and `PAID` sandbox transitions passed with durable provider references.
+- Database intent, attempts, evidence, timestamps, and provider journey verified.
+- `npx tsc --noEmit` passed.
+- Targeted ESLint passed with no errors; three pre-existing `app/track.tsx` hook dependency warnings remain.
+- Overall backend certification: `PARTIAL PASS` because terminal sandbox payout passed but an actual Airwallex webhook delivery has not yet been received.
+
 ## 2026-07-13 - Full Screen In-App Splash Overlay
 
 Prompt / Objective:

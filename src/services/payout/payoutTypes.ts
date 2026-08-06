@@ -17,6 +17,17 @@ export type PayoutStatus =
 
 export type PayoutRail = "BANK_ACCOUNT" | "MOBILE_WALLET";
 
+export type ProviderJourneyStep = {
+  key: string;
+  label: string;
+  description: string;
+  status: "PENDING" | "DONE" | "FAILED";
+  provider: string;
+  provenance: "SANDBOX" | "LIVE" | "DERIVED";
+  providerStatus?: string;
+  occurredAt?: string;
+};
+
 export interface CreatePayoutRequest {
   transferId: string;
   providerId?: PayoutProviderId;
@@ -50,6 +61,7 @@ export interface PayoutResult {
   providerStatus?: string;
   evidenceId?: string;
   evidenceSummary?: string;
+  providerJourney?: ProviderJourneyStep[];
 }
 
 export interface PayoutProvider {
