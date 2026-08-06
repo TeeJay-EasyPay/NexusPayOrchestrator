@@ -34,6 +34,13 @@ Validation:
 - `deno check`: NOT RUN because Deno is not installed locally.
 - Deployed Edge Function runtime certification: PASS.
 
+Release:
+- Runtime commit: `a713576b3fcb5bc655b14a9a7a153fea7de3190a`.
+- Preview OTA group: `c1253198-7ebb-416c-854f-0fd9ca8c8f9b`.
+- Android update: `019fd85b-d4da-7c0e-8efc-d7049f7c463a`.
+- iOS update: `019fd85b-d4da-711d-bf06-dcfcd54d29ab`.
+- Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/c1253198-7ebb-416c-854f-0fd9ca8c8f9b`.
+
 ## 2026-08-06 - Airwallex Sandbox Last-Leg Payout Provider
 
 Prompt / Objective:
