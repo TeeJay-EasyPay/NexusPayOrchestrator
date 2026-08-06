@@ -40,7 +40,9 @@ Governance:
 
 Release:
 - Status: PARTIAL PASS; not production-ready.
-- Commit and OTA fields remain pending final repository closure.
+- Implementation commit: `2d966c058fdc56649ceb2361a6235188b52b9677`.
+- Branch pushed: `startup-v2-founder-validation-consumer-multi-account`.
+- OTA intentionally withheld because the canonical engine currently has no evidence-complete route; publishing it as payment-ready would be misleading.
 
 ## 2026-08-06 - Airwallex Malaysia Payout And Tracking Remediation
 
