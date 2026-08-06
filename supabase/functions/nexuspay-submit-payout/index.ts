@@ -112,7 +112,7 @@ async function airwallexRequest(
   path: string,
   options: RequestInit & { operation: string; correlationId: string; payoutIntentId?: string | null },
 ) {
-  const baseUrl = getEnv('AIRWALLEX_BASE_URL') || 'https://api.sandbox.airwallex.com';
+  const baseUrl = getEnv('AIRWALLEX_BASE_URL') || 'https://api-demo.airwallex.com';
   const token = await getAirwallexToken(baseUrl);
   const startedAt = new Date();
   const response = await fetch(`${baseUrl.replace(/\/$/, '')}${path}`, {

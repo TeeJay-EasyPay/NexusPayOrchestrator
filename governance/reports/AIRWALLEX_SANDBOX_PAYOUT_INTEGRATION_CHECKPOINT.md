@@ -4,19 +4,19 @@
 
 - Branch: `startup-v2-founder-validation-consumer-multi-account`
 - Starting commit: `63c5cfcc4223801b8f77990af7618b58a0f46b81`
-- Ending commit: pending
-- Working tree status: local implementation complete; unrelated `.idea/caches/deviceStreaming.xml` remains modified and is not part of this work
-- Environment tested: local Windows workspace, Airwallex sandbox API, Supabase CLI
+- Ending commit: see final delivery response; this checkpoint is included in that final commit
+- Working tree status: deployment/certification updates in progress; unrelated `.idea/caches/deviceStreaming.xml` and historical untracked artifacts remain outside this work
+- Environment tested: local Windows workspace, Airwallex sandbox API, linked Supabase project `gsekiwpqzushrmglncns`
 
 ## Executive Outcome
 
-- Connectivity: PARTIAL PASS
+- Connectivity: PASS
 - Beneficiary workflow: BLOCKED
 - Transfer workflow: BLOCKED
-- Webhooks: BLOCKED
+- Webhooks: PARTIAL
 - Sandbox simulation: BLOCKED
 - NexusPay orchestration integration: PARTIAL
-- Overall certification result: implementation-ready locally, not certified end to end
+- Overall certification result: BLOCKED
 
 ## Architecture
 
@@ -74,8 +74,11 @@ Migration is additive only. It creates payout intent, attempt, evidence and webh
 
 Deployment status:
 
-- `supabase db push`: BLOCKED
-- Error: remote DB login role creation timed out and requested `SUPABASE_DB_PASSWORD`
+- `supabase db push`: PASS
+- Applied migrations:
+  - `20260806000100_airwallex_last_leg_payout_provider.sql`
+  - `20260806000200_airwallex_official_sandbox_host_and_blocked_scope.sql`
+  - `20260806000300_airwallex_webhook_synthetic_verification_status.sql`
 - Rollback: remove Airwallex route eligibility, redeploy previous Edge Function versions, keep any evidence records if migration has already been applied
 
 ## Test Evidence
@@ -83,26 +86,32 @@ Deployment status:
 - `.env` ignored by Git: PASS
 - Airwallex variable-name inspection without values: PASS
 - Local Airwallex authentication: PASS
-- Airwallex `GET /api/v1/balances/current`: FAIL, HTTP `401`
+- Airwallex `GET /api/v1/balances/current`: FAIL, HTTP `401`, redacted code `unauthorized`
 - Airwallex `GET /api/v1/account_capabilities/funding_limits`: PASS, HTTP `200`
+- Deployed `nexuspay-test-partner-connection`: PASS, HTTP `200`, `SUCCESS`, `LIVE`, 1 funding-limit record
+- Guarded Airwallex sandbox payout certification: BLOCKED at `beneficiaries/validate`, HTTP `401`, redacted code `unauthorized`, message `Insufficient permissions`
+- Duplicate-request safety: PASS at NexusPay intent layer; two repeated attempts for the same transfer produced one durable payout intent and no provider transfer reference
+- Synthetic unsigned webhook: PASS, rejected with HTTP `400`
+- Synthetic signed webhook: PASS, accepted and verified
+- Synthetic duplicate webhook: PASS, event stored once by unique event id
 - `npx tsc --noEmit`: PASS
 - Targeted ESLint on changed app/src files: PASS
-- `deno --version`: FAIL, Deno not installed locally
-- `supabase db push`: BLOCKED
-- `supabase functions deploy nexuspay-test-partner-connection`: BLOCKED, Supabase project reported `INACTIVE`
+- `npx expo config --json`: PASS
+- `deno check`: NOT RUN, Deno CLI is not installed locally
+- `supabase functions list`: PASS, Airwallex-related functions active
 
 ## Live Sandbox Evidence
 
 Redacted:
 
-- Authentication timestamp: recorded during local diagnostic on 2026-08-06
+- Authentication timestamp: deployed read-only test recorded at `2026-08-06T16:19:42.047846+00:00`
 - Harmless read result: account capability funding limits returned HTTP `200`
-- Beneficiary ID/reference: not created
-- Transfer ID/reference: not created
-- Request ID: not issued to Airwallex transfer API
+- Beneficiary ID/reference: not created; blocked by Airwallex insufficient API permissions
+- Transfer ID/reference: not created; certification stopped before transfer submission
+- Request ID: `npx-airwallex-duplicate-cert-20260806173` for duplicate test intent
 - Status transitions: not available
 - Final status: not certified
-- Webhook IDs: not configured
+- Webhook IDs: synthetic verified event `evt_npx_synthetic_airwallex_001`; no actual Airwallex webhook event available because transfer creation is blocked
 
 ## Security Review
 
@@ -117,22 +126,18 @@ Redacted:
 
 ## Remaining Risks and Blockers
 
-- Supabase project `gsekiwpqzushrmglncns` is reported as `INACTIVE`.
-- Database migration has not been applied remotely.
-- Edge Functions have not been deployed.
-- Airwallex beneficiary and transfer scopes are unproven.
+- Airwallex API key lacks beneficiary/transfer permission or account entitlement; `beneficiaries/validate` returns HTTP `401 unauthorized`, `Insufficient permissions`.
 - Airwallex dynamic beneficiary schema may require additional country/corridor-specific fields.
-- Webhook subscription and signing secret are not configured.
+- Actual Airwallex webhook delivery cannot be tested until a transfer can be created or a webhook subscription/test event is configured in Airwallex.
+- Deno CLI is not installed locally; Edge Function checks relied on successful Supabase deployment and runtime smoke tests.
 
 ## Recommended Next Steps
 
-1. Restore Supabase project active status.
-2. Provide or configure `SUPABASE_DB_PASSWORD` for migration deployment.
-3. Deploy `nexuspay-test-partner-connection`, `nexuspay-submit-payout` and `nexuspay-provider-webhook`.
-4. Run `Test Airwallex` from Platform Administration.
-5. Run guarded Airwallex sandbox payout certification.
-6. Configure Airwallex webhook subscription and `AIRWALLEX_WEBHOOK_SECRET`.
-7. Ask ChatGPT/CIO to review architecture, security, payout safety, evidence and certification conclusion.
+1. Update the Airwallex sandbox API key/scopes to allow beneficiary validation/create and transfer validation/create.
+2. Rerun guarded Airwallex sandbox payout certification.
+3. Configure a real Airwallex webhook subscription against the deployed `nexuspay-provider-webhook` endpoint.
+4. Rerun actual webhook delivery or Airwallex test-event delivery.
+5. Ask ChatGPT/CIO to review architecture, security, payout safety, evidence and certification conclusion.
 
 ## Requested Reviewer Action
 

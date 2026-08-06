@@ -81,14 +81,13 @@ Airwallex provides Client API resources for authentication, account capability c
 NexusPay can progress from a visual/demo last-leg payout to a certifiable Airwallex sandbox payout rail with durable idempotency, evidence capture and explicit certification status.
 
 ## Status
-Approved for sandbox implementation; end-to-end certification blocked pending Supabase deployment recovery.
+Approved for sandbox implementation; deployed to Supabase; end-to-end certification blocked by Airwallex API key permissions for beneficiary/transfer APIs.
 
 ## Follow-up Actions
-1. Restore Supabase project active status.
-2. Apply the Airwallex migration.
-3. Deploy Airwallex-aware Edge Functions.
-4. Run read-only and payout certification tests from Platform Administration.
-5. Configure verified Airwallex webhook subscriptions.
+1. Request/enable Airwallex sandbox permissions for beneficiary validation/create and transfer validation/create.
+2. Rerun guarded payout certification tests from Platform Administration.
+3. Configure verified Airwallex webhook subscriptions.
+4. Rerun actual Airwallex webhook delivery or Airwallex test-event delivery.
 
 ## Reference Documents
 - [Airwallex Sandbox Payout Integration Checkpoint](../reports/AIRWALLEX_SANDBOX_PAYOUT_INTEGRATION_CHECKPOINT.md)

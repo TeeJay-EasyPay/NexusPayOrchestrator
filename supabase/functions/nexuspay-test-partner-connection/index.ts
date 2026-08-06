@@ -322,7 +322,7 @@ async function airwallexAuthenticate(baseUrl: string) {
 }
 
 async function runAirwallexTest(providerId: string, environment: string, createdBy: string | null) {
-  const baseUrl = getEnv('AIRWALLEX_BASE_URL') || 'https://api.sandbox.airwallex.com';
+  const baseUrl = getEnv('AIRWALLEX_BASE_URL') || 'https://api-demo.airwallex.com';
   const started = Date.now();
 
   try {

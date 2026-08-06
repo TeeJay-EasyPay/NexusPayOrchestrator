@@ -101,7 +101,9 @@ Recipient Bank
 - Scoped sandbox Client API credentials supplied through local environment configuration.
 - Read-only sandbox authentication passed.
 - Account capability funding-limits read returned HTTP 200.
-- Beneficiary, transfer and webhook certification remain blocked until Supabase project deployment is restored.
+- Supabase migrations and Edge Functions deployed after project reactivation.
+- Beneficiary and transfer certification are blocked by Airwallex API key scope: `beneficiaries/validate` returns HTTP 401 unauthorized / insufficient permissions.
+- Webhook signature verification is implemented and synthetically tested; actual Airwallex webhook delivery remains pending because transfer creation is blocked.
 
 ---
 
@@ -109,7 +111,7 @@ Recipient Bank
 
 1. Secure a destination rail sandbox.
 2. Continue Stripe engagement.
-3. Restore Supabase deployment path for Airwallex sandbox certification.
+3. Request Airwallex sandbox beneficiary and transfer API permissions for payout certification.
 4. Contact Currencycloud.
 5. Contact BVNK.
 6. Contact Banking Circle.

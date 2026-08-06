@@ -58,6 +58,11 @@ async function verifyAirwallexWebhook(req: Request, rawBody: string) {
     return { verified: false, reason: 'MISSING_AIRWALLEX_SIGNATURE_HEADERS' };
   }
 
+  const timestampMs = Number(timestamp);
+  if (!Number.isFinite(timestampMs) || Math.abs(Date.now() - timestampMs) > 5 * 60_000) {
+    return { verified: false, reason: 'AIRWALLEX_WEBHOOK_TIMESTAMP_OUTSIDE_TOLERANCE' };
+  }
+
   const expected = await hmacSha256Hex(secret, `${timestamp}${rawBody}`);
   return {
     verified: timingSafeEqual(signature.toLowerCase(), expected.toLowerCase()),

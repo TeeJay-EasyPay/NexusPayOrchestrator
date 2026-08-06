@@ -51,6 +51,19 @@ Certification Status:
 - Webhooks: BLOCKED until `AIRWALLEX_WEBHOOK_SECRET` and Airwallex webhook subscription are configured.
 - Overall: implementation-ready locally, not certified end-to-end.
 
+Follow-up Deployment / Certification Update:
+- Supabase CLI relinked successfully to project `gsekiwpqzushrmglncns`.
+- Migration `20260806000100_airwallex_last_leg_payout_provider.sql` applied successfully.
+- Migration `20260806000200_airwallex_official_sandbox_host_and_blocked_scope.sql` applied successfully.
+- Migration `20260806000300_airwallex_webhook_synthetic_verification_status.sql` applied successfully.
+- Deployed `nexuspay-test-partner-connection`, `nexuspay-submit-payout`, and `nexuspay-provider-webhook`; all are active.
+- Deployed read-only Airwallex test passed: `SUCCESS`, `LIVE`, HTTP `200`, one funding-limit record.
+- `balances/current` remains blocked: HTTP `401`, redacted code `unauthorized`.
+- Guarded payout certification is BLOCKED at Airwallex `beneficiaries/validate`: HTTP `401`, redacted message `Insufficient permissions`.
+- Duplicate-request safety verified at NexusPay intent layer: repeated attempts for one transfer created one durable payout intent and no Airwallex transfer reference.
+- Webhook security partially verified with synthetic evidence: unsigned Airwallex event rejected, signed synthetic event accepted, duplicate synthetic event deduplicated.
+- No OTA published because full payout certification did not pass.
+
 ## 2026-07-13 - Full Screen In-App Splash Overlay
 
 Prompt / Objective:

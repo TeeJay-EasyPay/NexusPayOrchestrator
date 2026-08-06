@@ -2,7 +2,7 @@
 
 ## Plain-English Outcome
 
-NexusPay now has a local implementation path for Airwallex as a last-leg payout provider. This means Airwallex is treated as a destination payout rail behind the NexusPay orchestration engine, not as a hardcoded one-off demo.
+NexusPay now has a deployed Airwallex sandbox integration path for last-leg payouts. Airwallex is treated as a destination payout rail behind the NexusPay orchestration engine, not as a hardcoded one-off demo.
 
 ## What Was Proven
 
@@ -10,15 +10,20 @@ NexusPay now has a local implementation path for Airwallex as a last-leg payout 
 - A harmless Airwallex account capability read works.
 - The Platform Administration screen now has a `Test Airwallex` button for read-only proof.
 - A separate guarded action exists for sandbox payout certification so a normal connection test cannot accidentally submit a payout.
+- Supabase migrations and Edge Functions are deployed.
+- Webhook signature verification rejects unsigned events and accepts signed synthetic events.
 
 ## What Is Not Yet Certified
 
 NexusPay has not yet completed a genuine Airwallex sandbox payout end to end.
 
-The blocker is deployment infrastructure, not the mobile UI:
+The blocker is now Airwallex API permission/scope, not NexusPay deployment:
 
-- Supabase database migration could not be applied because the remote DB connection timed out and requested `SUPABASE_DB_PASSWORD`.
-- Supabase Edge Function deployment could not complete because the project is currently reported as `INACTIVE`.
+- Beneficiary validation returns HTTP `401`.
+- Redacted Airwallex cause: `unauthorized`, `Insufficient permissions`.
+- No beneficiary was created.
+- No transfer was submitted.
+- No real Airwallex webhook event exists yet because no transfer could be created.
 
 ## Business Value
 
@@ -30,13 +35,8 @@ The important improvement is that Airwallex is wired as a reusable provider rail
 
 ## Recommended Next Action
 
-Reactivate or restore access to the Supabase project, provide the database password if required, then rerun:
-
-- database migration
-- Edge Function deployment
-- Airwallex read-only test from Platform Administration
-- Airwallex sandbox payout certification
+Request or enable Airwallex sandbox API permissions for beneficiary and transfer APIs, then rerun the guarded sandbox payout certification.
 
 Until that is done, this should be described as:
 
-`Airwallex sandbox integration implemented locally; end-to-end payout certification blocked by Supabase deployment state.`
+`Airwallex sandbox integration deployed; end-to-end payout certification blocked by Airwallex API permissions.`
