@@ -13,6 +13,9 @@ export type SavedPaymentMethod = {
   isPrimary: boolean;
   last4?: string;
   fundingLimitGbp: number;
+  institutionId?: string;
+  institutionName?: string;
+  provenance?: "SANDBOX" | "SIMULATED";
 };
 
 export const mockPaymentMethods: SavedPaymentMethod[] = [
@@ -27,42 +30,6 @@ export const mockPaymentMethods: SavedPaymentMethod[] = [
     isPrimary: false,
     last4: "4242",
     fundingLimitGbp: 500,
-  },
-  {
-    id: "bank_hsbc_open_banking",
-    type: "OPEN_BANKING",
-    label: "Yapily Sandbox - HSBC UK",
-    subtitle: "Sandbox bank source through Yapily Open Banking",
-    provider: "Yapily Open Banking Sandbox",
-    reference: "yapily_sandbox_hsbc_uk",
-    status: "CONNECTED",
-    isPrimary: true,
-    last4: "1188",
-    fundingLimitGbp: 1000,
-  },
-  {
-    id: "bank_barclays_yapily_sandbox",
-    type: "OPEN_BANKING",
-    label: "Yapily Sandbox - Barclays UK",
-    subtitle: "Sandbox bank source through Yapily Open Banking",
-    provider: "Yapily Open Banking Sandbox",
-    reference: "yapily_sandbox_barclays_uk",
-    status: "CONNECTED",
-    isPrimary: false,
-    last4: "2401",
-    fundingLimitGbp: 1000,
-  },
-  {
-    id: "bank_lloyds_yapily_sandbox",
-    type: "OPEN_BANKING",
-    label: "Yapily Sandbox - Lloyds UK",
-    subtitle: "Sandbox bank source through Yapily Open Banking",
-    provider: "Yapily Open Banking Sandbox",
-    reference: "yapily_sandbox_lloyds_uk",
-    status: "CONNECTED",
-    isPrimary: false,
-    last4: "7780",
-    fundingLimitGbp: 1000,
   },
 ];
 

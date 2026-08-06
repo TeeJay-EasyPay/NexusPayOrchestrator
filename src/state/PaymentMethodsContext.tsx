@@ -5,6 +5,7 @@ import {
     mockPaymentMethods,
     SavedPaymentMethod,
 } from "../data/mockPaymentMethods";
+import { listYapilyPaymentInstitutions } from "../services/openBankingPaymentFlowService";
 import { supabase } from "../lib/supabase";
 import { getStoredAccountScope } from "./AccountContext";
 
@@ -13,6 +14,9 @@ type PaymentMethodsContextType = {
   primaryMethodId: string;
   primaryMethod?: SavedPaymentMethod;
   setPrimaryMethod: (methodId: string) => void;
+  loadingInstitutions: boolean;
+  institutionError?: string;
+  refreshInstitutions: () => Promise<void>;
 };
 
 const PaymentMethodsContext = createContext<PaymentMethodsContextType | undefined>(undefined);
@@ -23,6 +27,43 @@ export function PaymentMethodsProvider({ children }: { children: React.ReactNode
   const [primaryMethodId, setPrimaryMethodId] = useState(
     fallbackPrimary
   );
+  const [institutions, setInstitutions] = useState<SavedPaymentMethod[]>([]);
+  const [loadingInstitutions, setLoadingInstitutions] = useState(true);
+  const [institutionError, setInstitutionError] = useState<string>();
+
+  const refreshInstitutions = React.useCallback(async () => {
+    setLoadingInstitutions(true);
+    setInstitutionError(undefined);
+    try {
+      const rows = await listYapilyPaymentInstitutions();
+      if (rows.length === 0) {
+        setInstitutions([]);
+        setInstitutionError("No payment-capable sandbox institution is registered to the NexusPay Yapily application.");
+        return;
+      }
+      setInstitutions(rows.map((institution) => ({
+        id: `yapily:${institution.id}`,
+        type: "OPEN_BANKING",
+        label: institution.fullName,
+        subtitle: "Institution returned by the Yapily sandbox API",
+        provider: "Yapily Open Banking Sandbox",
+        reference: institution.id,
+        status: "CONNECTED",
+        isPrimary: false,
+        fundingLimitGbp: 1000,
+        institutionId: institution.id,
+        institutionName: institution.fullName,
+        provenance: "SANDBOX",
+      })));
+    } catch (error) {
+      setInstitutions([]);
+      setInstitutionError(error instanceof Error ? error.message : "Yapily institutions are unavailable.");
+    } finally {
+      setLoadingInstitutions(false);
+    }
+  }, []);
+
+  React.useEffect(() => { void refreshInstitutions(); }, [refreshInstitutions]);
 
   React.useEffect(() => {
     let mounted = true;
@@ -39,7 +80,7 @@ export function PaymentMethodsProvider({ children }: { children: React.ReactNode
         return;
       }
 
-      const exists = mockPaymentMethods.some((method) => method.id === persisted);
+      const exists = [...mockPaymentMethods, ...institutions].some((method) => method.id === persisted);
 
       if (exists) {
         setPrimaryMethodId(persisted);
@@ -51,7 +92,7 @@ export function PaymentMethodsProvider({ children }: { children: React.ReactNode
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [institutions]);
 
   React.useEffect(() => {
     async function persistPrimaryMethod() {
@@ -67,7 +108,7 @@ export function PaymentMethodsProvider({ children }: { children: React.ReactNode
   }, [primaryMethodId, fallbackPrimary]);
 
   const value = useMemo(() => {
-    const paymentMethods = mockPaymentMethods.map((method) => ({
+    const paymentMethods = [...mockPaymentMethods, ...institutions].map((method) => ({
       ...method,
       isPrimary: method.id === primaryMethodId,
     }));
@@ -77,8 +118,11 @@ export function PaymentMethodsProvider({ children }: { children: React.ReactNode
       primaryMethodId,
       primaryMethod: paymentMethods.find((method) => method.id === primaryMethodId),
       setPrimaryMethod: setPrimaryMethodId,
+      loadingInstitutions,
+      institutionError,
+      refreshInstitutions,
     };
-  }, [primaryMethodId]);
+  }, [institutionError, institutions, loadingInstitutions, primaryMethodId, refreshInstitutions]);
 
   return (
     <PaymentMethodsContext.Provider value={value}>

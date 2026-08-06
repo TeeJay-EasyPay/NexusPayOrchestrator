@@ -40,6 +40,52 @@ Each decision entry must include:
 ---
 
 ## Decision ID
+D-016
+
+## Title
+Yapily Funding Evidence Must Originate From A Registered Provider Institution
+
+## Date
+2026-08-07
+
+## Decision Owner
+Founder
+
+## Participating Roles
+- NexusPay CTO
+- Lead Architect
+- QA Director
+
+## Background
+The funding UI displayed locally configured bank names while the backend generated consent and payment references after only an institution-discovery request.
+
+## Decision
+Remove local Yapily bank substitutes. Display only institutions returned for the authenticated Yapily application, and require provider-issued authorisation, consent and payment evidence before marking funding authorised or starting payout orchestration.
+
+## Rationale
+Provider connectivity is not payment initiation. Failing closed prevents a sandbox simulation from being presented as a genuine provider transaction.
+
+## Risks
+- The current Yapily application has no registered payment institution, so no Pay by Bank option is available until Console configuration is completed.
+- End-user callback and payment status certification remains outstanding.
+
+## Expected Outcome
+After a preconfigured sandbox institution is registered, both Corporate and Private journeys will use the same genuine Yapily consent and payment lifecycle with persistent evidence.
+
+## Status
+Implemented with PARTIAL PASS; external Yapily institution registration is blocked.
+
+## Follow-up Actions
+1. Add Modelo Sandbox or Yapily Mock to the application's Connected Institutions in Yapily Console and complete registration.
+2. Run one end-user sandbox consent and verify payment creation, status retrieval and Track persistence.
+3. Mark `PAYMENT_INITIATION` validated only after that certification and publish the OTA.
+
+## Reference Documents
+- [../reports/YAPILY_GENUINE_SANDBOX_PAYMENT_FLOW_IMPLEMENTATION.md](../reports/YAPILY_GENUINE_SANDBOX_PAYMENT_FLOW_IMPLEMENTATION.md)
+
+---
+
+## Decision ID
 D-015
 
 ## Title

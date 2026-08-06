@@ -172,13 +172,14 @@ async function runYapilyTest(providerId: string, environment: string, createdBy:
   }
 
   const institutionCount = countInstitutions(payload);
+  const discoveryMode = 'APPLICATION_CONNECTED_INSTITUTIONS';
   const success = response.ok;
   const test = await persistTest({
     providerId,
     environment,
     testType: 'institution_discovery',
     status: success ? 'SUCCESS' : 'FAILED',
-    readiness: success ? 'LIVE' : 'DIAGNOSTIC',
+    readiness: success ? 'SANDBOX' : 'DIAGNOSTIC',
     responseTimeMs,
     httpStatus: response.status,
     institutionCount,
@@ -192,6 +193,7 @@ async function runYapilyTest(providerId: string, environment: string, createdBy:
     metadata: {
       provider: 'yapily',
       endpoint: '/institutions',
+      discoveryMode,
       responseShape: Array.isArray(payload) ? 'array' : payload && typeof payload === 'object' ? 'object' : 'unknown',
     },
   });

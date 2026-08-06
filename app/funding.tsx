@@ -7,7 +7,7 @@ import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
 import { Screen } from "../src/components/ui/Screen";
 import { SavedPaymentMethod } from "../src/data/mockPaymentMethods";
-import { startOpenBankingPaymentFlow } from "../src/services/openBankingPaymentFlowService";
+import { authoriseOpenBankingPayment } from "../src/services/openBankingPaymentFlowService";
 import { usePaymentMethods } from "../src/state/PaymentMethodsContext";
 import { useTransfer } from "../src/state/TransferContext";
 import { colors } from "../src/theme";
@@ -134,7 +134,14 @@ function PaymentMethodOption({
 
 export default function FundingScreen() {
   const { transfer, setFundingMethod, setFundingStatus, setOpenBankingFlow } = useTransfer();
-  const { paymentMethods, primaryMethodId, primaryMethod } = usePaymentMethods();
+  const {
+    paymentMethods,
+    primaryMethodId,
+    primaryMethod,
+    loadingInstitutions,
+    institutionError,
+    refreshInstitutions,
+  } = usePaymentMethods();
 
   const [selectedMethodId, setSelectedMethodId] = useState(primaryMethodId);
   const [busy, setBusy] = useState(false);
@@ -156,12 +163,20 @@ export default function FundingScreen() {
 
     if (fundingMethod === "OPEN_BANKING" && transfer) {
       try {
-        const flow = await startOpenBankingPaymentFlow({
+        if (!selectedMethod.institutionId || !selectedMethod.institutionName) {
+          throw new Error("Select an institution returned by Yapily before continuing.");
+        }
+        const flow = await authoriseOpenBankingPayment({
           transferId: transfer.id,
           amount: transfer.senderAmount,
           currency: transfer.senderCurrency,
           fundingReference: selectedMethod.reference,
+          institutionId: selectedMethod.institutionId,
+          institutionName: selectedMethod.institutionName,
         });
+        if (!flow.providerPaymentId || flow.status.includes("FAILED")) {
+          throw new Error(flow.failureReason ?? "Yapily did not create the sandbox payment.");
+        }
         setOpenBankingFlow(flow);
       } catch (error) {
         console.warn("Open banking payment flow failed", error instanceof Error ? error.message : String(error));
@@ -260,6 +275,25 @@ export default function FundingScreen() {
             ))}
           </View>
 
+          {loadingInstitutions ? (
+            <AppCard>
+              <AppText variant="caption" color={colors.textDarkSecondary}>
+                Loading payment-capable institutions from Yapily...
+              </AppText>
+            </AppCard>
+          ) : null}
+
+          {institutionError ? (
+            <AppCard>
+              <View style={{ gap: 10 }}>
+                <AppText variant="caption" color={colors.danger}>
+                  Yapily institutions are unavailable. No simulated bank has been substituted.
+                </AppText>
+                <AppButton title="Retry Yapily" variant="secondary" onPress={() => void refreshInstitutions()} />
+              </View>
+            </AppCard>
+          ) : null}
+
           <AppCard>
             <View style={{ gap: 10 }}>
               <AppText variant="subheading" color={colors.textDarkPrimary}>
@@ -267,7 +301,7 @@ export default function FundingScreen() {
               </AppText>
 
               <AppText variant="caption" color={colors.textDarkSecondary}>
-                Card authorisation remains simulated. Open banking authorisation records a Yapily sandbox payment flow with visible step evidence on Track.
+                {"Card authorisation remains simulated. Pay by Bank opens Yapily's sandbox institution authorisation and continues only after Yapily creates a payment."}
               </AppText>
 
               <AppButton

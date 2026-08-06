@@ -2,6 +2,41 @@
 
 Purpose: durable record of meaningful implementation work, security/context fixes, validation, commits, and OTA deployments. New code changes should append an entry here before commit when practical.
 
+## 2026-08-07 - Genuine Yapily Sandbox Payment Flow
+
+Prompt / Objective:
+Replace simulated Yapily bank choices, consent references and payment steps with genuine provider interactions.
+
+Implementation:
+- Removed the hard-coded HSBC, Barclays and Lloyds Yapily funding records from Corporate and Private payment journeys.
+- Funding sources now load only payment-capable institutions returned by the NexusPay application's authenticated Yapily `/institutions` response.
+- Added real Yapily `payment-auth-requests`, provider authorisation URL, one-time-token callback exchange, `/payments` submission and `/payments/{id}` status retrieval.
+- Added a resumable mobile browser authorisation flow shared by Corporate and Private users.
+- Added provider-issued authorisation, consent and payment references to the persistent Track evidence model.
+- Added durable payment idempotency, callback correlation, duplicate callback handling and service-only AES-GCM encrypted consent-token storage.
+- Added migration `20260806000600_yapily_genuine_sandbox_payment_flow.sql` and deployed `nexuspay-open-banking-payment-flow`, `nexuspay-yapily-callback` and the updated partner connection test.
+- Updated canonical route evidence loading so a validated Yapily payment capability can become eligible after certification.
+
+Provider Evidence:
+- Yapily authentication and `GET /institutions`: HTTP `200`, genuine sandbox API response.
+- Configured payment-capable institution count: `0`.
+- Direct provider record checks confirmed sandbox institutions exist, but `POST /payment-auth-requests` returned `Institution credentials not found for application` for each attempted sandbox institution.
+- Invalid/unsigned callback test: HTTP `403`.
+- No consent, payment or completion reference was fabricated after the provider rejection.
+
+Validation:
+- `npx tsc --noEmit`: PASS.
+- `npm run lint`: PASS with zero errors and 37 pre-existing warnings.
+- `npx expo config --type public`: PASS; `nexuspayorchestrator` callback scheme present.
+- Supabase migration: APPLIED.
+- Edge Function bundling/deployment: PASS.
+- Genuine end-user payment certification: BLOCKED before authorisation by Yapily application institution registration.
+
+Release:
+- Status: PARTIAL PASS; end-to-end sandbox payment initiation is implemented but not yet certifiable.
+- OTA withheld until a preconfigured payment sandbox is added to the Yapily application and the full consent callback is verified.
+- Report: `governance/reports/YAPILY_GENUINE_SANDBOX_PAYMENT_FLOW_IMPLEMENTATION.md`.
+
 ## 2026-08-06 - Canonical Route Intelligence Transformation V1
 
 Prompt / Objective:

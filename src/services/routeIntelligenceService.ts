@@ -114,7 +114,7 @@ async function loadRouteEvidence() {
     supabase
       .from("partner_capabilities")
       .select("provider_id,capability_code,readiness_status,provenance,last_validated_at")
-      .eq("provider_id", "airwallex")
+      .in("provider_id", ["airwallex", "yapily"])
       .eq("environment", "sandbox"),
     supabase
       .from("execution_sessions")

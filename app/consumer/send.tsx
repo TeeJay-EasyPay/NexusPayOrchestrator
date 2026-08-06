@@ -14,7 +14,8 @@ import { corridors } from "../../src/data/corridors";
 import { useCanonicalRouteQuotes } from "../../src/hooks/useCanonicalRouteQuotes";
 import { useNexusAIScreenSetting } from "../../src/hooks/useNexusAISettings";
 import { explainRoute } from "../../src/services/nexusAIService";
-import { startOpenBankingPaymentFlow } from "../../src/services/openBankingPaymentFlowService";
+import { authoriseOpenBankingPayment } from "../../src/services/openBankingPaymentFlowService";
+import { usePaymentMethods } from "../../src/state/PaymentMethodsContext";
 import { useTransfer } from "../../src/state/TransferContext";
 import { useWallet } from "../../src/state/WalletContext";
 import { Currency, FundingMethod, Recipient } from "../../src/types/transfer";
@@ -45,6 +46,7 @@ export default function ConsumerSendScreen() {
   const params = useLocalSearchParams();
   const { rlusdBalance } = useWallet();
   const { transfer, createTransfer, startTransfer, setOpenBankingFlow } = useTransfer();
+  const { paymentMethods, loadingInstitutions, institutionError, refreshInstitutions } = usePaymentMethods();
   const { enabled: routeAIEnabled, settings: aiSettings } = useNexusAIScreenSetting("route_enabled");
 
   const [amount, setAmount] = useState(asString(params.amount) || "250");
@@ -56,6 +58,8 @@ export default function ConsumerSendScreen() {
   const [manualAccountNumber, setManualAccountNumber] = useState(asString(params.accountNumber));
   const [fundingMethod, setFundingMethod] = useState<FundingMethod>((asString(params.fundingMethod) as FundingMethod) || "CARD");
   const [fundingReference, setFundingReference] = useState(asString(params.fundingReference) || "Visa **** 4242");
+  const [fundingInstitutionId, setFundingInstitutionId] = useState("");
+  const [fundingInstitutionName, setFundingInstitutionName] = useState("");
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(
     asString(params.fundingReference)
@@ -326,12 +330,20 @@ export default function ConsumerSendScreen() {
 
     if (fundingMethod === "OPEN_BANKING") {
       try {
-        const flow = await startOpenBankingPaymentFlow({
+        if (!fundingInstitutionId || !fundingInstitutionName) {
+          throw new Error("Select an institution returned by Yapily before continuing.");
+        }
+        const flow = await authoriseOpenBankingPayment({
           transferId: newTransfer.id,
           amount: newTransfer.senderAmount,
           currency: newTransfer.senderCurrency,
           fundingReference,
+          institutionId: fundingInstitutionId,
+          institutionName: fundingInstitutionName,
         });
+        if (!flow.providerPaymentId || flow.status.includes("FAILED")) {
+          throw new Error(flow.failureReason ?? "Yapily did not create the sandbox payment.");
+        }
         setOpenBankingFlow(flow, newTransfer);
       } catch (error) {
         setErrorMessage(error instanceof Error ? error.message : "Open banking payment flow failed.");
@@ -566,20 +578,16 @@ export default function ConsumerSendScreen() {
               Select a card or Yapily sandbox bank source before execution.
             </AppText>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-              {[
-                { id: "Visa **** 4242", method: "CARD" as FundingMethod },
-                { id: "Visa **** 1088", method: "CARD" as FundingMethod },
-                { id: "Yapily Sandbox - Barclays UK", method: "OPEN_BANKING" as FundingMethod },
-                { id: "Yapily Sandbox - HSBC UK", method: "OPEN_BANKING" as FundingMethod },
-                { id: "Yapily Sandbox - Lloyds UK", method: "OPEN_BANKING" as FundingMethod },
-              ].map((source) => {
-                const active = fundingReference === source.id;
+              {paymentMethods.map((source) => {
+                const active = fundingReference === source.reference;
                 return (
                   <Pressable
                     key={source.id}
                     onPress={() => {
-                      setFundingMethod(source.method);
-                      setFundingReference(source.id);
+                      setFundingMethod(source.type === "OPEN_BANKING" ? "OPEN_BANKING" : "CARD");
+                      setFundingReference(source.reference);
+                      setFundingInstitutionId(source.institutionId ?? "");
+                      setFundingInstitutionName(source.institutionName ?? "");
                       setErrorMessage(null);
                     }}
                     style={{
@@ -595,12 +603,21 @@ export default function ConsumerSendScreen() {
                       variant="caption"
                       style={{ color: active ? consumerColors.blueDark : consumerColors.muted, fontWeight: "900" }}
                     >
-                      {source.id}
+                      {source.label}
                     </AppText>
                   </Pressable>
                 );
               })}
             </View>
+            {loadingInstitutions ? (
+              <AppText variant="caption" color={consumerColors.muted}>Loading Yapily institutions...</AppText>
+            ) : null}
+            {institutionError ? (
+              <>
+                <AppText variant="caption" color="#B42318">Yapily institutions are unavailable. No simulated bank has been substituted.</AppText>
+                <ConsumerAction label="Retry Yapily" icon="refresh-cw" secondary onPress={() => void refreshInstitutions()} />
+              </>
+            ) : null}
             <AppText color={consumerColors.muted}>
               Selected: {fundingMethod === "CARD" ? "Card" : "Bank account"} • {fundingReference}
             </AppText>

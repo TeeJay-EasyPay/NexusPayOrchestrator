@@ -201,6 +201,10 @@ export interface OpenBankingPaymentFlow {
   paymentRequestId?: string | null;
   consentId?: string | null;
   authorizationUrl?: string | null;
+  providerPaymentId?: string | null;
+  providerPaymentStatus?: string | null;
+  failureCode?: string | null;
+  failureReason?: string | null;
   status: string;
   amount: number;
   currency: Currency;

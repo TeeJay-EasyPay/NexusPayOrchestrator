@@ -220,7 +220,7 @@ export default function PaymentMethodsScreen() {
               </AppText>
 
               <AppText variant="caption" color={colors.textDarkSecondary}>
-                These actions are simulated for now. Later, card setup can connect to Stripe/Adyen and bank setup can connect to Open Banking.
+                {"Card setup remains simulated. Available Pay by Bank institutions are loaded from Yapily's sandbox API."}
               </AppText>
 
               <View style={{ flexDirection: "row", gap: 8 }}>
@@ -241,7 +241,7 @@ export default function PaymentMethodsScreen() {
                   onPress={() =>
                     Alert.alert(
                       "Connect bank",
-                      "Open Banking setup will be connected to a provider later. This prototype uses a simulated HSBC connection."
+                      "Select a Yapily sandbox institution during payment funding. NexusPay does not substitute simulated bank records when Yapily is unavailable."
                     )
                   }
                   style={{ flex: 1 }}

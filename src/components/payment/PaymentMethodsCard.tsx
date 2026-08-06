@@ -2,9 +2,10 @@ import { View } from "react-native";
 import { AppCard } from "../ui/AppCard";
 import { AppText } from "../ui/AppText";
 import { colors } from "../../theme";
-import { mockPaymentMethods } from "../../data/mockPaymentMethods";
+import { usePaymentMethods } from "../../state/PaymentMethodsContext";
 
 export function PaymentMethodsCard() {
+  const { paymentMethods } = usePaymentMethods();
   return (
     <AppCard>
       <View style={{ gap: 14 }}>
@@ -12,7 +13,7 @@ export function PaymentMethodsCard() {
           Payment methods
         </AppText>
 
-        {mockPaymentMethods.map((method) => (
+        {paymentMethods.map((method) => (
           <View
             key={method.id}
             style={{
