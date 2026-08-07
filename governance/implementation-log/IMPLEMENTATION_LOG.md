@@ -1423,3 +1423,13 @@ Deployment And Validation:
 - Targeted ESLint: PASS.
 - Canonical route validation: PASS; direct route eligible with score 100 and no eligibility reasons.
 - XRPL/RLUSD remains correctly blocked pending executable bridge evidence.
+
+Commit:
+- `f927a078741de2d594728eeed779286d627ded84`
+
+OTA:
+- Branch: `preview`
+- Update group: `e6a00bd2-40cc-42c6-8512-cf6409074ac0`
+- Android update: `019fd9af-83e2-778a-b9aa-ae4c56b0d055`
+- iOS update: `019fd9af-83e2-712b-9246-ccd1d1487f52`
+- Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/e6a00bd2-40cc-42c6-8512-cf6409074ac0`
