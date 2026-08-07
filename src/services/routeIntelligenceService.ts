@@ -1,6 +1,7 @@
 import { fetchLiveFxRate } from "../lib/fxFeed";
 import { createTransferId } from "../lib/id";
 import { supabase } from "../lib/supabase";
+import { getAirwallexBeneficiarySchema } from "./airwallexBeneficiarySchemaService";
 import type { CanonicalRoutePlan, RouteDataProvenance, RouteEvidence } from "../types/routePlan";
 import type { Currency, FundingMethod, PayoutMethod, RouteQuote } from "../types/transfer";
 
@@ -317,9 +318,25 @@ export async function generateCanonicalRouteQuotes(input: RouteGenerationInput):
   const sourceCurrency = input.sourceCurrency ?? "GBP";
   const generatedAt = new Date().toISOString();
   const quoteExpiresAt = new Date(Date.now() + QUOTE_TTL_MS).toISOString();
-  const [fx, routeEvidence] = await Promise.all([
+  const [fx, routeEvidence, airwallexSchemaResult] = await Promise.all([
     fetchLiveFxRate(sourceCurrency, input.destinationCurrency).catch(() => null),
     loadRouteEvidence(),
+    input.payoutMethod === "BANK"
+      ? getAirwallexBeneficiarySchema({
+          country: input.destinationCountry,
+          currency: input.destinationCurrency,
+        })
+          .then((schema) => ({ schema, error: null }))
+          .catch((error: unknown) => ({
+            schema: null,
+            error: error instanceof Error
+              ? error.message
+              : "Airwallex returned no supported beneficiary schema for this corridor.",
+          }))
+      : Promise.resolve({
+          schema: null,
+          error: "Airwallex V1 supports bank payouts only.",
+        }),
   ]);
   const yapilyTest = routeEvidence.tests.get("yapily");
   const airwallexTest = routeEvidence.tests.get("airwallex");
@@ -371,7 +388,7 @@ export async function generateCanonicalRouteQuotes(input: RouteGenerationInput):
     routeEvidence.executions,
     generatedAt,
   );
-  const corridor = routeEvidence.corridors.find((row) =>
+  const certifiedCorridor = routeEvidence.corridors.find((row) =>
     row.source_country === "United Kingdom" &&
     row.destination_country === input.destinationCountry &&
     row.source_currency === sourceCurrency &&
@@ -379,9 +396,23 @@ export async function generateCanonicalRouteQuotes(input: RouteGenerationInput):
     row.readiness_status === "Validated" &&
     isFresh(row.last_validated_at),
   );
-  const corridorEvidence = corridor
-    ? evidence(true, normalizeProvenance(corridor.provenance), "partner_supported_corridors", corridor.last_validated_at ?? generatedAt, 80, `Airwallex sandbox corridor readiness is ${corridor.readiness_status}.`)
-    : unavailable(false, "partner_supported_corridors", "No validated Airwallex sandbox corridor record matches this payment.");
+  const airwallexSchema = airwallexSchemaResult.schema;
+  const corridorEvidence = airwallexSchema
+    ? evidence(
+        true,
+        "SANDBOX",
+        airwallexSchema.source,
+        airwallexSchema.fetchedAt,
+        certifiedCorridor ? 90 : 75,
+        certifiedCorridor
+          ? `Airwallex returned current ${airwallexSchema.transferMethod} payout requirements and NexusPay has recent completed sandbox evidence for this corridor.`
+          : `Airwallex returned current ${airwallexSchema.transferMethod} payout requirements. This payment remains subject to Airwallex beneficiary and transfer validation.`,
+      )
+    : unavailable(
+        false,
+        "Airwallex Beneficiary Form Schema API",
+        airwallexSchemaResult.error ?? "Airwallex returned no supported beneficiary schema for this corridor.",
+      );
   const fxEvidence = fx
     ? evidence<number | null>(fx.rate, "LIVE", fx.provider, fx.date, 95, fx.providerStatus)
     : unavailable<number | null>(null, "live FX provider chain", "All live FX providers are unavailable; route approval is blocked.", generatedAt);
@@ -485,7 +516,10 @@ export async function generateCanonicalRouteQuotes(input: RouteGenerationInput):
       evidenceCoverage: ranking.coverage,
       decisionFactors: [
         "Yapily sandbox funding availability is taken from the latest authenticated connection test.",
-        "Airwallex sandbox payout availability and corridor support are mandatory.",
+        "Airwallex sandbox payout availability and current dynamic-schema support are mandatory.",
+        certifiedCorridor
+          ? "Recent completed sandbox payout evidence increases confidence but is not required for another sandbox attempt."
+          : "This corridor has no recent completed payout evidence; Airwallex will validate the beneficiary and transfer during execution.",
         "FX is sourced from the live FX failover service; fallback FX blocks approval.",
         "Unavailable provider fees, limits, liquidity and spread are disclosed and are not invented.",
       ],

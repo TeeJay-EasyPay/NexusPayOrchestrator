@@ -1551,3 +1551,31 @@ OTA:
 - Android update: `019fdbb6-7ad4-7cc3-8cb0-10cafeb48c3c`
 - iOS update: `019fdbb6-7ad4-714e-8c0d-96b8ea6d535f`
 - Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/c80d6f88-3886-4938-9062-46615fc7740c`
+
+## 2026-08-07 - Provider-Led Airwallex Sandbox Route Eligibility
+
+Prompt / Objective:
+Remove the requirement for a previously completed Airwallex sandbox payout before NexusPay may attempt a supported corridor, while retaining provider validation and truthful route blocking.
+
+Files Changed:
+- `src/services/routeIntelligenceService.ts`
+- `governance/implementation-log/IMPLEMENTATION_LOG.md`
+
+Summary:
+- Replaced the historical-success prerequisite with a current authenticated Airwallex Beneficiary Form Schema API check.
+- A bank corridor is eligible only when Airwallex returns current payout requirements; beneficiary and transfer validation remain mandatory during execution.
+- Recent completed sandbox evidence now increases route confidence but is not required for the first payout attempt.
+- Unsupported provider responses remain unavailable. No production route or real-money control was weakened.
+
+Provider and Emulator Evidence:
+- Eligible in the Pixel 9 emulator: Philippines/PHP, Malaysia/MYR, UAE/AED, Saudi Arabia/SAR, Qatar/QAR, Kuwait/KWD, Bahrain/BHD, Oman/OMR, Singapore/SGD and Thailand/THB.
+- Unavailable in the Pixel 9 emulator: Indonesia/IDR and Vietnam/VND.
+- Airwallex returned `SCHEMA_DEFINITION_NOT_FOUND` for Indonesia and Vietnam in the current sandbox account/API scenario; NexusPay displayed these routes as unavailable.
+- The emulator test covered provider schema preflight and canonical route eligibility for all configured bank corridors. It did not submit a payout in every country.
+
+Validation:
+- TypeScript: PASS.
+- Expo lint: PASS with zero errors; existing repository warnings remain.
+- Canonical route validation: PASS.
+- Authenticated Airwallex sandbox schema matrix: PASS for ten supported corridors; two provider-declared unsupported corridors were correctly blocked.
+- Pixel 9 configured-corridor route matrix: PASS.
