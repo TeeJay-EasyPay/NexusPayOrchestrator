@@ -1543,7 +1543,11 @@ Validation:
 - Local Deno check: NOT RUN because Deno is not installed; Supabase function deployment validation passed.
 
 Commit:
-- Pending.
+- `f5c97b2eee7d7c60adf9284bbabfed2afce61633`
 
 OTA:
-- Pending.
+- Branch: `preview`
+- Update group: `c80d6f88-3886-4938-9062-46615fc7740c`
+- Android update: `019fdbb6-7ad4-7cc3-8cb0-10cafeb48c3c`
+- iOS update: `019fdbb6-7ad4-714e-8c0d-96b8ea6d535f`
+- Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/c80d6f88-3886-4938-9062-46615fc7740c`
