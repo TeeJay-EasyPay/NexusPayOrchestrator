@@ -1433,3 +1433,27 @@ OTA:
 - Android update: `019fd9af-83e2-778a-b9aa-ae4c56b0d055`
 - iOS update: `019fd9af-83e2-712b-9246-ccd1d1487f52`
 - Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/e6a00bd2-40cc-42c6-8512-cf6409074ac0`
+
+## 2026-08-07 - Route Candidate Truthfulness Remediation
+
+Prompt / Objective:
+Correct the Routes screen where the blocked XRPL candidate appeared as a zero-scored second-ranked route and received positive fallback AI commentary.
+
+Files Changed:
+- `app/routes.tsx`
+- `src/services/routeIntelligenceService.ts`
+- `governance/automation/scripts/validateCanonicalRouteIntelligence.ts`
+- `governance/implementation-log/IMPLEMENTATION_LOG.md`
+
+Summary:
+- Canonical route titles now display the complete provider path, including `XRPL Testnet` for bridge candidates.
+- Ineligible candidates are labelled `Unavailable candidate` instead of receiving a route rank.
+- Missing score, ETA, FX and recipient amount are displayed as unavailable rather than zero or inherited values.
+- Nexus AI is not invoked for blocked candidates; the UI displays deterministic eligibility reasons from the canonical Route Plan.
+- Removed positive fallback commentary from ineligible routes.
+
+Validation:
+- TypeScript: PASS.
+- Targeted ESLint: PASS.
+- Canonical route validation: PASS.
+- Automated checks confirm the blocked bridge candidate names XRPL Testnet, has no fabricated score and has no inherited ETA.

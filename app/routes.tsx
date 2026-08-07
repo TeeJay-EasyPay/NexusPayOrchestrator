@@ -123,6 +123,10 @@ function RouteOptionCard({
   routeExplanation?: { data: RouteExplanationResult; source: "edge_function" | "fallback" };
 }) {
   const isRecommended = route.routePlan?.eligible === true && route.routePlan.rank === 1;
+  const isEligible = route.routePlan?.eligible !== false;
+  const evidenceScore = route.routePlan ? route.routePlan.score.value : route.score;
+  const recipientAmount = route.routePlan?.economics.estimatedRecipientAmount.value;
+  const fxRate = route.routePlan?.economics.fxRate.value;
   const borderColor = isSelected ? colors.gold : isRecommended ? "#BFE7D0" : "#E2E8F0";
   const backgroundColor = isSelected ? "#FFF8E1" : "#FFFFFF";
 
@@ -148,7 +152,7 @@ function RouteOptionCard({
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
                 {isRecommended ? <RouteBadge label="Recommended" tone="green" /> : null}
                 {isSelected ? <RouteBadge label="Selected" tone="gold" /> : null}
-                <RouteBadge label={`Rank #${index + 1}`} />
+                <RouteBadge label={isEligible ? `Rank #${index + 1}` : "Unavailable candidate"} />
               </View>
 
               <AppText variant="subheading" color={colors.textDarkPrimary}>
@@ -161,15 +165,15 @@ function RouteOptionCard({
             </View>
 
             <View style={{ alignItems: "flex-end", gap: 3 }}>
-              <AppText variant="title" style={{ color: scoreColor(route.score) }}>
-                {route.score}
+              <AppText variant={evidenceScore == null ? "caption" : "title"} style={{ color: evidenceScore == null ? colors.textDarkMuted : scoreColor(evidenceScore) }}>
+                {evidenceScore == null ? "Unavailable" : evidenceScore}
               </AppText>
 
-                <AppText variant="caption" color={colors.textDarkMuted}>/100 evidence score</AppText>
+              <AppText variant="caption" color={colors.textDarkMuted}>{evidenceScore == null ? "evidence score" : "/100 evidence score"}</AppText>
             </View>
           </View>
 
-          <ScoreBar value={route.score} />
+          {evidenceScore == null ? null : <ScoreBar value={evidenceScore} />}
 
           {route.routePlan ? (
             <View style={{ gap: 10 }}>
@@ -195,11 +199,11 @@ function RouteOptionCard({
             </AppText>
 
             <AppText variant="title" color="#FFFFFF">
-              {formatMoney(route.receiveAmount)} {recipientCurrency}
+              {recipientAmount == null ? "Unavailable" : `${formatMoney(recipientAmount)} ${recipientCurrency}`}
             </AppText>
 
             <AppText variant="caption" color="#BFEAF1">
-              FX: 1 GBP ≈ {route.fxRate.toFixed(4)} {recipientCurrency} • Fee {route.routePlan?.economics.providerFees.value == null ? "Unavailable" : `£${route.fee.toFixed(2)}`}
+              {fxRate == null ? "FX unavailable" : `FX: 1 GBP ≈ ${fxRate.toFixed(4)} ${recipientCurrency}`} • Fee {route.routePlan?.economics.providerFees.value == null ? "Unavailable" : `£${route.fee.toFixed(2)}`}
             </AppText>
           </View>
 
@@ -226,10 +230,13 @@ function RouteOptionCard({
                 </AppText>
 
                 <AppText variant="body" color={colors.textDarkPrimary} style={{ fontWeight: "900" }}>
-                  {routeExplanation?.data.title ?? route.aiRecommendation}
+                  {isEligible ? routeExplanation?.data.title ?? route.aiRecommendation : "Why this route is unavailable"}
                 </AppText>
 
-                {(routeExplanation?.data.bullets ?? route.routePlan?.intelligence.decisionFactors ?? [route.corridorInsight]).filter(Boolean).map((line, lineIndex) => (
+                {(isEligible
+                  ? routeExplanation?.data.bullets ?? route.routePlan?.intelligence.decisionFactors ?? [route.corridorInsight]
+                  : route.routePlan?.eligibilityReasons ?? [route.aiRecommendation]
+                ).filter(Boolean).map((line, lineIndex) => (
                   <AppText
                     key={`${route.id}-explain-${lineIndex}`}
                     variant="caption"
@@ -252,7 +259,7 @@ function RouteOptionCard({
 
                   <MiniStat
                     label="AI source"
-                    value={routeExplanation?.source === "edge_function" ? "DERIVED" : "FALLBACK"}
+                    value={!isEligible ? "NOT USED" : routeExplanation?.source === "edge_function" ? "DERIVED" : "FALLBACK"}
                   />
                 </View>
               </View>
@@ -398,7 +405,7 @@ export default function RoutesScreen() {
 
     async function hydrateRouteExplanations() {
       const nextEntries = await Promise.all(
-        activeRoutes.map(async (route) => {
+        activeRoutes.filter((route) => route.routePlan?.eligible !== false).map(async (route) => {
           const corridor = route.treasuryCorridor ?? `${transfer?.senderCurrency ?? "GBP"} → ${transfer?.recipient.currency ?? "PHP"}`;
 
           const result = await explainRoute(
@@ -502,7 +509,7 @@ export default function RoutesScreen() {
             </AppText>
 
             <AppText variant="body" color={colors.textSecondary}>
-              NexusPay AI has ranked available rails by liquidity, reliability, payout risk and corridor health.
+              NexusPay has ranked executable routes and separately disclosed unavailable candidates with their blocking evidence.
             </AppText>
           </View>
 
@@ -560,7 +567,7 @@ export default function RoutesScreen() {
               <AppText variant="caption" color={colors.textDarkSecondary}>
                 {selectedRoute
                   ? `${selectedRoute.provider} is ready for funding authorisation.`
-                  : "Select one of the ranked route options to continue."}
+                  : "Select an eligible ranked route to continue."}
               </AppText>
             </View>
 

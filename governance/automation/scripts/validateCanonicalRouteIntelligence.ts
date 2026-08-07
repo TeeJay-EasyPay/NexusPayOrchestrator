@@ -62,6 +62,8 @@ async function main() {
   assert(xrpl?.routePlan?.settlementMethod.value === "XRPL_BRIDGE", "XRPL settlement plan missing.");
   assert(xrpl.routePlan?.eligible === false, "XRPL/RLUSD must remain blocked without executable path evidence.");
   assert(xrpl.routePlan?.score.value === null, "Blocked XRPL route must not carry a fabricated score.");
+  assert(xrpl.provider.includes("XRPL Testnet"), "Blocked bridge candidate must identify XRPL Testnet in its provider path.");
+  assert(xrpl.estimatedTime === "Unavailable", "Blocked bridge candidate must not display an inherited settlement ETA.");
 
   const persistenceTransferId = crypto.randomUUID();
   const persistedRoutes = routeModule.bindRouteQuotesToTransfer(first, persistenceTransferId);

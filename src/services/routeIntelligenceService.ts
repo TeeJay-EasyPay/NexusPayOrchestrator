@@ -262,10 +262,13 @@ function planToRouteQuote(plan: CanonicalRoutePlan): RouteQuote {
   const fxRate = plan.economics.fxRate.value ?? 0;
   const eta = plan.intelligence.etaMinutes.value;
   const payoutProvider = plan.payout.provider;
+  const providerPath = plan.bridge.required
+    ? `${plan.funding.provider.providerName} → ${plan.bridge.provider?.providerName ?? "Bridge unavailable"} → ${payoutProvider.providerName}`
+    : `${plan.funding.provider.providerName} → ${payoutProvider.providerName}`;
   return {
     id: plan.id,
     rail: plan.bridge.required ? "HYBRID" : "FIAT",
-    provider: payoutProvider.providerName,
+    provider: providerPath,
     sendAmount: plan.economics.sendAmount,
     receiveAmount: recipientAmount,
     fxRate,
@@ -535,6 +538,7 @@ export async function generateCanonicalRouteQuotes(input: RouteGenerationInput):
     },
     intelligence: {
       ...bankingPlan.intelligence,
+      etaMinutes: unavailable<number | null>(null, "XRPL pathfinding", "Settlement time is unavailable without an executable XRPL path quote.", generatedAt),
       confidence: evidence(0, "DERIVED", "canonical_route_engine_v1", generatedAt, 100, "Mandatory bridge evidence is missing."),
       risk: evidence(100, "DERIVED", "canonical_route_engine_v1", generatedAt, 100, "Route is blocked, not risk-scored."),
       liquidity: actualBalance == null
