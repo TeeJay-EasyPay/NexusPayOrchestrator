@@ -1579,3 +1579,13 @@ Validation:
 - Canonical route validation: PASS.
 - Authenticated Airwallex sandbox schema matrix: PASS for ten supported corridors; two provider-declared unsupported corridors were correctly blocked.
 - Pixel 9 configured-corridor route matrix: PASS.
+
+Commit:
+- `260f3f2629d365b73de42a660915648a7de14a42`
+
+OTA:
+- Branch: `preview`
+- Update group: `36dd30c6-b66e-4891-8da2-b1c7d09d2a0f`
+- Android update: `019fdca5-3c70-70f3-b9de-2ca1a75737bf`
+- iOS update: `019fdca5-3c70-788c-915d-05fb02176fc4`
+- Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/36dd30c6-b66e-4891-8da2-b1c7d09d2a0f`
