@@ -1467,3 +1467,30 @@ OTA:
 - Android update: `019fd9c9-1903-7cf9-9667-9f9dc0c52964`
 - iOS update: `019fd9c9-1903-7ca5-a116-910584c78cdf`
 - Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/70916a0b-9d1d-4158-8ba2-654c2bbd6ccb`
+
+## 2026-08-07 - Yapily App Return Route Remediation
+
+Prompt / Objective:
+Resolve the Expo Router `Unmatched Route` screen shown after the Modelo sandbox accepted a Yapily payment authorisation.
+
+Files Changed:
+- `app/open-banking-return.tsx`
+- `governance/implementation-log/IMPLEMENTATION_LOG.md`
+
+Summary:
+- Added the missing in-app destination for Yapily's configured `nexuspayorchestrator://open-banking-return` callback.
+- The callback completes the browser authorisation session and returns control to the originating Corporate or Consumer funding flow.
+- The callback does not create or resubmit a payment. Existing logic resumes the persisted Yapily flow and verifies the provider payment reference before continuing.
+- No provider credentials, callback tokens, flow identifiers or recipient data are displayed.
+
+Validation:
+- TypeScript: PASS.
+- Targeted ESLint: PASS.
+- Android Expo export: PASS.
+- Expo Router generated `/open-banking-return` in the typed route manifest: PASS.
+
+Commit:
+- Pending.
+
+OTA:
+- Pending.
