@@ -1384,4 +1384,14 @@ Validation:
 - Payment authorisation creation: PASS.
 - Provider-issued authorisation state: `AWAITING_AUTHORIZATION`.
 - No secrets, authorisation URL, or callback token were logged in this record.
-- No migration or OTA update was required.
+- No migration was required.
+
+Commit:
+- `f8abbf0f46e0fee05053752f5567be58c7842c70`
+
+OTA:
+- Branch: `preview`
+- Update group: `17580ae9-a250-4731-babe-533ddca98f3a`
+- Android update: `019fd9a3-34f2-7a2b-a85f-25efa358b116`
+- iOS update: `019fd9a3-34f2-7c45-8d83-827d41fde2ae`
+- Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/17580ae9-a250-4731-babe-533ddca98f3a`
