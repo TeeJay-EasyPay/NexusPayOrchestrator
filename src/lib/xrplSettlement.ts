@@ -1,80 +1,41 @@
-import * as SecureStore from "expo-secure-store";
-import * as xrpl from "xrpl";
-
-import { getXrplClient } from "./xrplClient";
-import { getOrCreateWallet } from "./xrplWallet";
-
-const DESTINATION_SEED_KEY = "nexuspay_test_destination_wallet";
+import { executeXrplTestnetRlusdTransfer } from "../services/xrplTestnetService";
 
 type SettlementInput = {
-  gbpAmount: number;
+  transferId: string;
+  routePlanId: string;
+  rlusdAmount: number;
+  settlementRate: number;
 };
 
 export type XrplSettlementResult = {
   txHash: string;
   sourceAddress: string;
   destinationAddress: string;
-  xrpAmount: string;
+  rlusdAmount: string;
+  networkFeeXrp: string;
+  ledgerIndex: number;
+  transactionResult: string;
   settlementRate: number;
 };
 
-const DEMO_XRP_PER_GBP = 0.05;
-const MAX_TESTNET_XRP_SEND = 25;
-
-async function getOrCreateDestinationWallet() {
-  const existingSeed = await SecureStore.getItemAsync(DESTINATION_SEED_KEY);
-
-  if (existingSeed) {
-    return xrpl.Wallet.fromSeed(existingSeed);
-  }
-
-  const client = await getXrplClient();
-  const fundedWallet = await client.fundWallet();
-
-  await SecureStore.setItemAsync(
-    DESTINATION_SEED_KEY,
-    fundedWallet.wallet.seed!
-  );
-
-  return fundedWallet.wallet;
-}
-
-function calculateDemoXrpAmount(gbpAmount: number) {
-  const rawAmount = gbpAmount * DEMO_XRP_PER_GBP;
-  const cappedAmount = Math.min(rawAmount, MAX_TESTNET_XRP_SEND);
-  const safeAmount = Math.max(cappedAmount, 0.000001);
-
-  return safeAmount.toFixed(6);
-}
-
 export async function executeXrplTestnetSettlement({
-  gbpAmount,
+  transferId,
+  routePlanId,
+  rlusdAmount,
+  settlementRate,
 }: SettlementInput): Promise<XrplSettlementResult> {
-  const client = await getXrplClient();
-
-  const sourceWallet = await getOrCreateWallet();
-  const destinationWallet = await getOrCreateDestinationWallet();
-
-  const xrpAmount = calculateDemoXrpAmount(gbpAmount);
-
-  const payment: xrpl.Payment = {
-    TransactionType: "Payment",
-    Account: sourceWallet.address,
-    Destination: destinationWallet.address,
-    Amount: xrpl.xrpToDrops(xrpAmount),
-  };
-
-  const result = await client.submitAndWait(payment, {
-    wallet: sourceWallet,
-  });
-
-  const txHash = result.result.hash;
-
+  const result = await executeXrplTestnetRlusdTransfer({ transferId, routePlanId, amountRlusd: rlusdAmount });
+  if (!result.validated || result.canonical_status !== "VALIDATED") {
+    throw new Error(`XRPL Testnet transaction ended in ${result.canonical_status}.`);
+  }
   return {
-    txHash,
-    sourceAddress: sourceWallet.address,
-    destinationAddress: destinationWallet.address,
-    xrpAmount,
-    settlementRate: DEMO_XRP_PER_GBP,
+    txHash: result.tx_hash,
+    sourceAddress: result.source_address,
+    destinationAddress: result.destination_address,
+    rlusdAmount: String(result.amount_rlusd),
+    networkFeeXrp: String(result.network_fee_xrp),
+    ledgerIndex: result.ledger_index,
+    transactionResult: result.engine_result,
+    settlementRate,
   };
 }

@@ -2,6 +2,7 @@ import { fetchLiveFxRate } from "../lib/fxFeed";
 import { createTransferId } from "../lib/id";
 import { supabase } from "../lib/supabase";
 import { getAirwallexBeneficiarySchema } from "./airwallexBeneficiarySchemaService";
+import { getXrplTestnetStatus } from "./xrplTestnetService";
 import type { CanonicalRoutePlan, RouteDataProvenance, RouteEvidence } from "../types/routePlan";
 import type { Currency, FundingMethod, PayoutMethod, RouteQuote } from "../types/transfer";
 
@@ -318,8 +319,9 @@ export async function generateCanonicalRouteQuotes(input: RouteGenerationInput):
   const sourceCurrency = input.sourceCurrency ?? "GBP";
   const generatedAt = new Date().toISOString();
   const quoteExpiresAt = new Date(Date.now() + QUOTE_TTL_MS).toISOString();
-  const [fx, routeEvidence, airwallexSchemaResult] = await Promise.all([
+  const [fx, bridgeFx, routeEvidence, airwallexSchemaResult] = await Promise.all([
     fetchLiveFxRate(sourceCurrency, input.destinationCurrency).catch(() => null),
+    fetchLiveFxRate(sourceCurrency, "USD").catch(() => null),
     loadRouteEvidence(),
     input.payoutMethod === "BANK"
       ? getAirwallexBeneficiarySchema({
@@ -338,6 +340,13 @@ export async function generateCanonicalRouteQuotes(input: RouteGenerationInput):
           error: "Airwallex V1 supports bank payouts only.",
         }),
   ]);
+  const requiredRlusd = bridgeFx ? input.amount * bridgeFx.rate : null;
+  const xrplStatusResult = await getXrplTestnetStatus(requiredRlusd ?? undefined)
+    .then((status) => ({ status, error: null }))
+    .catch((error: unknown) => ({
+      status: null,
+      error: error instanceof Error ? error.message : "XRPL Testnet evidence is unavailable.",
+    }));
   const yapilyTest = routeEvidence.tests.get("yapily");
   const airwallexTest = routeEvidence.tests.get("airwallex");
   const rippleTest = routeEvidence.tests.get("ripple");
@@ -539,50 +548,100 @@ export async function generateCanonicalRouteQuotes(input: RouteGenerationInput):
     quoteExpiresAt,
   };
 
-  const xrplStatus = providerAvailability("XRPL", rippleTest, "TESTNET");
-  const actualBalance = input.actualRlusdBalance;
+  const xrplNetwork = xrplStatusResult.status;
+  const pathQuote = xrplNetwork?.pathQuote ?? null;
+  const routeCapacityRlusd = pathQuote && pathQuote.xrpPerRlusd > 0
+    ? xrplNetwork!.spendableSourceXrp / (pathQuote.xrpPerRlusd * 1.01)
+    : null;
+  const xrplStatus = xrplNetwork
+    ? evidence<"AVAILABLE">(
+        "AVAILABLE",
+        "TESTNET",
+        xrplNetwork.evidenceSource,
+        xrplNetwork.fetchedAt,
+        95,
+        `XRPL Testnet ledger ${xrplNetwork.ledgerIndex} returned current wallet, trustline and fee evidence.`,
+      )
+    : unavailable<"UNAVAILABLE">(
+        "UNAVAILABLE",
+        "XRPL Testnet JSON-RPC",
+        xrplStatusResult.error ?? rippleTest?.readiness ?? "XRPL Testnet evidence is unavailable.",
+      );
   const xrplReasons = [
+    ...bankingPlan.eligibilityReasons,
     xrplStatus.value !== "AVAILABLE" ? xrplStatus.reason : null,
-    actualBalance == null ? "Validated RLUSD trustline and balance evidence is unavailable." : null,
-    "No executable GBP-to-RLUSD path quote, order-book/AMM depth or slippage quote is implemented.",
-    "The current XRPL executor submits XRP rather than the advertised RLUSD asset.",
+    !xrplNetwork?.source.trustlineActive ? "The backend source wallet has no active Ripple Testnet RLUSD trustline." : null,
+    !xrplNetwork?.destination.trustlineActive ? "The backend destination wallet has no active Ripple Testnet RLUSD trustline." : null,
+    bridgeFx?.source !== "LIVE" ? "A current live GBP/USD reference rate is unavailable." : null,
+    requiredRlusd == null ? "The required RLUSD Testnet destination amount is unavailable." : null,
+    !pathQuote ? "XRPL Testnet returned no executable XRP-to-RLUSD order-book path for this amount." : null,
+    pathQuote && !pathQuote.sufficientSourceXrp
+      ? `Insufficient spendable Testnet XRP for this path. Required ${pathQuote.sourceAmountXrp.toFixed(6)} XRP plus a 1% execution ceiling; available ${xrplNetwork!.spendableSourceXrp.toFixed(6)} XRP.`
+      : null,
+    xrplNetwork && xrplNetwork.networkFeeXrp <= 0 ? "XRPL Testnet returned no usable network fee evidence." : null,
   ].filter((value): value is string => Boolean(value));
+  const xrplEligible = xrplReasons.length === 0;
+  const bridgeRateEvidence = bridgeFx?.source === "LIVE"
+    ? evidence<number | null>(
+        bridgeFx.rate,
+        "DERIVED",
+        `${bridgeFx.provider} GBP/USD reference; RLUSD Testnet denomination`,
+        bridgeFx.date,
+        75,
+        "This is a live fiat reference used to size a Testnet RLUSD transfer, not an executable GBP-to-RLUSD conversion quote.",
+      )
+    : unavailable<number | null>(null, "live FX provider chain", "A live GBP/USD reference rate is unavailable.", generatedAt);
+  const networkFeeEvidence = xrplNetwork
+    ? evidence<number | null>(xrplNetwork.networkFeeXrp, "TESTNET", "XRPL fee JSON-RPC", xrplNetwork.fetchedAt, 95, "Current open-ledger fee evidence in XRP.")
+    : unavailable<number | null>(null, "XRPL fee JSON-RPC", "A transaction fee could not be retrieved.", generatedAt);
   const xrplPlan: CanonicalRoutePlan = {
     ...bankingPlan,
     id: createTransferId(),
-    eligible: false,
+    eligible: xrplEligible,
     eligibilityReasons: xrplReasons,
-    rank: null,
-    score: unavailable<number | null>(null, "canonical_route_engine_v1", "XRPL/RLUSD route is excluded until all mandatory bridge evidence exists.", generatedAt),
+    rank: xrplEligible ? (bankingPlan.eligible ? 2 : 1) : null,
+    score: xrplEligible
+      ? evidence<number | null>(75, "DERIVED", "canonical_route_engine_v1", generatedAt, 80, "Executable Testnet evidence is complete; commercial GBP-to-RLUSD conversion pricing remains outside Phase 1.")
+      : unavailable<number | null>(null, "canonical_route_engine_v1", "XRPL/RLUSD route is excluded until all mandatory Testnet evidence exists.", generatedAt),
     bridge: {
       required: true,
       rail: evidence("HYBRID", "DERIVED", "canonical_route_engine_v1", generatedAt, 100),
-      asset: evidence<Currency | null>("RLUSD", "TESTNET", "XRPL testnet trustline", generatedAt, actualBalance == null ? 0 : 80),
+      asset: evidence<Currency | null>("RLUSD", "TESTNET", "XRPL Testnet trustline and ripple_path_find", generatedAt, pathQuote ? 95 : 0),
       provider: { providerId: "ripple", providerName: "XRPL Testnet", environment: "testnet", status: xrplStatus },
-      pathQuote: unavailable<number | null>(null, "XRPL pathfinding", "No executable GBP-to-RLUSD path quote is available.", generatedAt),
-      networkFee: unavailable<number | null>(null, "XRPL fee RPC", "A transaction-specific network fee has not been quoted.", generatedAt),
-      slippageBps: unavailable<number | null>(null, "XRPL order book / AMM", "Market depth and slippage have not been quoted.", generatedAt),
+      pathQuote: bridgeRateEvidence,
+      networkFee: networkFeeEvidence,
+      slippageBps: unavailable<number | null>(null, "XRPL Testnet order book", "The executable path includes a 1% SendMax ceiling; a separate slippage estimate is not exposed.", generatedAt),
     },
-    settlementMethod: evidence("XRPL_BRIDGE", "DERIVED", "canonical_route_engine_v1", generatedAt, 100, "Candidate bridge settlement; blocked until executable evidence exists."),
+    settlementMethod: evidence("XRPL_BRIDGE", "DERIVED", "canonical_route_engine_v1", generatedAt, 100, "RLUSD Testnet bridge settlement followed by sandbox bank payout."),
     economics: {
       ...bankingPlan.economics,
-      networkFees: unavailable<number | null>(null, "XRPL fee RPC", "Network fee unavailable.", generatedAt),
+      networkFees: networkFeeEvidence,
       totalCost: unavailable<number | null>(null, "canonical_route_engine_v1", "Bridge economics are incomplete.", generatedAt),
       estimatedRecipientAmount: unavailable<number | null>(null, "canonical_route_engine_v1", "Recipient amount cannot be calculated without an executable bridge quote.", generatedAt),
     },
     intelligence: {
       ...bankingPlan.intelligence,
       etaMinutes: unavailable<number | null>(null, "XRPL pathfinding", "Settlement time is unavailable without an executable XRPL path quote.", generatedAt),
-      confidence: evidence(0, "DERIVED", "canonical_route_engine_v1", generatedAt, 100, "Mandatory bridge evidence is missing."),
-      risk: evidence(100, "DERIVED", "canonical_route_engine_v1", generatedAt, 100, "Route is blocked, not risk-scored."),
-      liquidity: actualBalance == null
-        ? unavailable<number | null>(null, "XRPL account_lines", "RLUSD balance unavailable.", generatedAt)
-        : evidence(actualBalance, "TESTNET", "XRPL account_lines", generatedAt, 80, "Actual testnet trustline balance; not production liquidity."),
-      capacity: unavailable<number | null>(null, "XRPL order book / AMM", "Executable path capacity unavailable.", generatedAt),
-      evidenceCoverage: 0,
-      decisionFactors: xrplReasons,
+      confidence: evidence(xrplEligible ? 75 : 0, "DERIVED", "canonical_route_engine_v1", generatedAt, 80, xrplEligible ? "Testnet execution evidence is complete; commercial conversion evidence is not." : "Mandatory bridge evidence is missing."),
+      risk: evidence(xrplEligible ? 25 : 100, "DERIVED", "canonical_route_engine_v1", generatedAt, 75, xrplEligible ? "Residual risk reflects Testnet and non-commercial conversion evidence." : "Route is blocked, not risk-scored."),
+      liquidity: pathQuote
+        ? evidence(pathQuote.sourceAmountXrp, "TESTNET", "XRPL ripple_path_find", xrplNetwork?.fetchedAt ?? generatedAt, 95, "Executable source XRP quoted for the requested RLUSD Testnet destination amount; not production liquidity depth.")
+        : unavailable<number | null>(null, "XRPL ripple_path_find", "No executable Testnet path quote is available.", generatedAt),
+      capacity: routeCapacityRlusd == null
+        ? unavailable<number | null>(null, "XRPL account_info and ripple_path_find", "RLUSD Testnet route capacity unavailable.", generatedAt)
+        : evidence(routeCapacityRlusd, "DERIVED", "XRPL account_info reserve and ripple_path_find", xrplNetwork?.fetchedAt ?? generatedAt, 90, "Approximate RLUSD Testnet capacity from spendable XRP and the current path quote, including a 1% SendMax ceiling."),
+      evidenceCoverage: xrplEligible ? 80 : 0,
+      decisionFactors: xrplEligible
+        ? [
+            "Both backend wallets have active Ripple Testnet RLUSD trustlines.",
+            "XRPL returned an executable XRP-to-RLUSD path for the proposed destination amount.",
+            "The backend source wallet has sufficient spendable Testnet XRP after ledger reserve and fee requirements.",
+            "XRPL supplied current ledger, reserve and network-fee evidence.",
+            "GBP-to-RLUSD sizing uses a live GBP/USD reference and is DERIVED, not an executable conversion quote.",
+          ]
+        : xrplReasons,
     },
-    sourceProvenance: ["TESTNET", "DERIVED", "UNAVAILABLE"],
+    sourceProvenance: xrplEligible ? ["TESTNET", "LIVE", "DERIVED", "UNAVAILABLE"] : ["TESTNET", "DERIVED", "UNAVAILABLE"],
   };
 
   return [bankingPlan, xrplPlan].map(planToRouteQuote);

@@ -924,6 +924,38 @@ Implemented pending Android EAS build validation
 
 ---
 
+## Decision ID
+D-014
+
+## Title
+Backend-Controlled XRPL Testnet RLUSD Settlement
+
+## Date
+2026-08-07
+
+## Decision Owner
+Chief Technology Officer
+
+## Decision
+Use a Supabase Edge Function as the sole XRPL Testnet signing and submission boundary. Generate XRPL candidates from current ledger, trustline, reserve, fee and path evidence, and execute only the persisted approved Route Plan version.
+
+## Rationale
+Device-held settlement keys and demonstration exchange rates do not provide an auditable orchestration boundary. Server-side idempotency and transaction-hash reconciliation prevent duplicate submission and preserve evidence across application interruption.
+
+## Constraints
+- All XRPL evidence is `TESTNET` and has no monetary value.
+- Live GBP/USD is a reference used for Testnet sizing, not an executable on-ramp quote.
+- Production use requires regulated conversion/off-ramp services and compliance approval.
+
+## Status
+Implemented and Testnet validated
+
+## Reference Documents
+- [../reports/XRPL_TESTNET_RLUSD_PHASE1_IMPLEMENTATION_REPORT.md](../reports/XRPL_TESTNET_RLUSD_PHASE1_IMPLEMENTATION_REPORT.md)
+- [../reports/NEXUSPAY_CRYPTO_VALUE_ORCHESTRATION_CURRENT_STATE_AND_ROADMAP.md](../reports/NEXUSPAY_CRYPTO_VALUE_ORCHESTRATION_CURRENT_STATE_AND_ROADMAP.md)
+
+---
+
 ## Register Maintenance Guidance
 
 1. Add new decisions in ascending ID order.

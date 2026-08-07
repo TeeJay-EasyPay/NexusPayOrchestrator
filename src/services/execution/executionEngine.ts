@@ -509,14 +509,21 @@ export async function runTransferExecution({
 
         try {
           xrplProof = await withTimeout(
-            executeXrplTestnetSettlement({ gbpAmount: transfer.senderAmount ?? 0 }),
-            Math.max(getTimeoutMs(activeRoute), 15000),
+            executeXrplTestnetSettlement({
+              transferId,
+              routePlanId: activeRoute.routePlan!.id,
+              rlusdAmount: (transfer.senderAmount ?? 0) * (activeRoute.routePlan!.bridge.pathQuote.value ?? 0),
+              settlementRate: activeRoute.routePlan!.bridge.pathQuote.value ?? 0,
+            }),
+            Math.max(getTimeoutMs(activeRoute), 45000),
             "XRPL settlement"
           );
           xrplStatus = "COMPLETED";
           steps = completeStep(steps, "bridge_settlement", {
             tx_hash: xrplProof.txHash,
-            xrp_amount: xrplProof.xrpAmount,
+            rlusd_amount: xrplProof.rlusdAmount,
+            network_fee_xrp: xrplProof.networkFeeXrp,
+            ledger_index: xrplProof.ledgerIndex,
             settlement_rate: xrplProof.settlementRate,
           });
           await refreshXrpBalance?.();
@@ -525,7 +532,9 @@ export async function runTransferExecution({
           });
           await audit("XRPL_VALIDATED", "SUCCESS", "XRPL bridge settlement validated.", {
             tx_hash: xrplProof.txHash,
-            xrp_amount: xrplProof.xrpAmount,
+            rlusd_amount: xrplProof.rlusdAmount,
+            network_fee_xrp: xrplProof.networkFeeXrp,
+            ledger_index: xrplProof.ledgerIndex,
           });
         } catch (caughtError) {
           xrplStatus = "FAILED";

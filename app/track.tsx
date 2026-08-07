@@ -760,8 +760,9 @@ export default function TrackScreen() {
                   {xrplProof ? (
                     <View style={{ gap: 8 }}>
                       <View style={{ flexDirection: "row", gap: 8 }}>
-                        <DetailMetric label="XRP settled" value={`${xrplProof?.xrpAmount ?? "0"} XRP`} />
-                        <DetailMetric label="Rate" value={(xrplProof?.settlementRate ?? 0).toFixed(4)} />
+                        <DetailMetric label="RLUSD settled" value={`${xrplProof?.rlusdAmount ?? "0"} RLUSD`} />
+                        <DetailMetric label="GBP/RLUSD reference" value={(xrplProof?.settlementRate ?? 0).toFixed(4)} />
+                        <DetailMetric label="Network fee" value={`${xrplProof?.networkFeeXrp ?? "0"} XRP`} />
                       </View>
 
                       {xrplProof.txHash ? (

@@ -8,12 +8,9 @@ import React, {
 
 import { supabase } from "../lib/supabase";
 import {
-  ensureRlusdTrustline,
-  getOrCreateWallet,
-  getXrplTestnetRlusdBalance,
-  getXrplTestnetXrpBalance,
+  getXrplTestnetStatus,
   RLUSD_TESTNET_ISSUER,
-} from "../lib/xrplWallet";
+} from "../services/xrplTestnetService";
 
 import {
   addSimulatedRlusd,
@@ -32,11 +29,8 @@ type WalletContextType = {
   rlusdIssuer: string;
 
   isRefreshingXrpBalance: boolean;
-  isSettingRlusdTrustline: boolean;
-
   refreshXrpBalance: () => Promise<void>;
   refreshAllXrplBalances: () => Promise<void>;
-  setupRlusdTrustline: () => Promise<void>;
 
   fundSimulatedRlusd: (amount: number) => Promise<void>;
   resetRlusdSimulation: () => Promise<void>;
@@ -53,7 +47,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [simulatedRlusdBalance, setSimulatedRlusdBalanceState] = useState(0);
 
   const [isRefreshingXrpBalance, setIsRefreshingXrpBalance] = useState(false);
-  const [isSettingRlusdTrustline, setIsSettingRlusdTrustline] = useState(false);
 
   function debitGbp(amount: number) {
     setGbpBalance((current) => Math.max(0, current - amount));
@@ -76,19 +69,14 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     setIsRefreshingXrpBalance(true);
 
     try {
-      const wallet = await getOrCreateWallet();
+      const [status, simulatedBalance] = await Promise.all([
+        getXrplTestnetStatus(),
+        getSimulatedRlusdBalance(),
+      ]);
 
-      setXrplAddress(wallet.address);
-
-      const [liveXrpBalance, liveRlusdBalance, simulatedBalance] =
-        await Promise.all([
-          getXrplTestnetXrpBalance(wallet.address),
-          getXrplTestnetRlusdBalance(wallet.address),
-          getSimulatedRlusdBalance(),
-        ]);
-
-      setXrpBalance(liveXrpBalance);
-      setRlusdBalance(liveRlusdBalance);
+      setXrplAddress(status.source.address);
+      setXrpBalance(status.source.xrpBalance);
+      setRlusdBalance(status.source.rlusdBalance);
       setSimulatedRlusdBalanceState(simulatedBalance);
     } catch (error) {
       console.warn("XRPL wallet refresh skipped", error);
@@ -101,23 +89,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   const refreshXrpBalance = useCallback(async () => {
     await refreshAllXrplBalances();
-  }, [refreshAllXrplBalances]);
-
-  const setupRlusdTrustline = useCallback(async () => {
-    setIsSettingRlusdTrustline(true);
-
-    try {
-      const wallet = await getOrCreateWallet();
-
-      setXrplAddress(wallet.address);
-
-      await ensureRlusdTrustline(wallet);
-      await refreshAllXrplBalances();
-    } catch (error) {
-      console.warn("Failed to set RLUSD trustline", error);
-    } finally {
-      setIsSettingRlusdTrustline(false);
-    }
   }, [refreshAllXrplBalances]);
 
   const fundSimulatedRlusd = useCallback(async (amount: number) => {
@@ -148,11 +119,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         rlusdIssuer: RLUSD_TESTNET_ISSUER,
 
         isRefreshingXrpBalance,
-        isSettingRlusdTrustline,
-
         refreshXrpBalance,
         refreshAllXrplBalances,
-        setupRlusdTrustline,
 
         fundSimulatedRlusd,
         resetRlusdSimulation,
