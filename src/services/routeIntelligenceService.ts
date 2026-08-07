@@ -373,7 +373,8 @@ export async function generateCanonicalRouteQuotes(input: RouteGenerationInput):
     row.destination_country === input.destinationCountry &&
     row.source_currency === sourceCurrency &&
     row.destination_currency === input.destinationCurrency &&
-    row.readiness_status !== "Blocked",
+    row.readiness_status === "Validated" &&
+    isFresh(row.last_validated_at),
   );
   const corridorEvidence = corridor
     ? evidence(true, normalizeProvenance(corridor.provenance), "partner_supported_corridors", corridor.last_validated_at ?? generatedAt, 80, `Airwallex sandbox corridor readiness is ${corridor.readiness_status}.`)

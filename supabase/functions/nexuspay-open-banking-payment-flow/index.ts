@@ -239,6 +239,16 @@ async function startFlow(userId: string, body: Record<string, unknown>) {
     http_status: authResult.response.status,
     response_time_ms: authResult.responseTimeMs,
   }));
+  const capabilityValidatedAt = new Date().toISOString();
+  const { error: capabilityError } = await client.from('partner_capabilities').update({
+    enabled: true,
+    readiness_status: 'Validated',
+    provenance: 'SANDBOX',
+    last_validated_at: capabilityValidatedAt,
+    notes: 'Yapily accepted a sandbox payment authorisation request and issued provider references; customer consent and payment creation remain flow-level evidence.',
+    updated_at: capabilityValidatedAt,
+  }).eq('provider_id', 'yapily').eq('capability_code', 'PAYMENT_INITIATION').eq('environment', 'sandbox');
+  if (capabilityError) console.error('Yapily capability evidence update failed.', capabilityError.message);
   await saveStep(step(flow, 'customer_authorization', 'Waiting for customer authorisation in the Yapily sandbox bank', 'PENDING', 3));
   await client.from('transfers').update({ open_banking_flow_id: flowId, open_banking_provider: 'yapily', open_banking_status: 'AWAITING_AUTHORIZATION', updated_at: now }).eq('id', transferId).eq('user_id', userId);
   const result = await readFlow(flowId, userId);

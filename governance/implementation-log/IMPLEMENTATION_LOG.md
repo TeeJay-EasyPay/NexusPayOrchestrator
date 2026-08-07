@@ -1395,3 +1395,31 @@ OTA:
 - Android update: `019fd9a3-34f2-7a2b-a85f-25efa358b116`
 - iOS update: `019fd9a3-34f2-7c45-8d83-827d41fde2ae`
 - Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/17580ae9-a250-4731-babe-533ddca98f3a`
+
+## 2026-08-07 - Provider Readiness And Route Eligibility Remediation
+
+Prompt / Objective:
+Resolve the Corporate Send failure that reported no executable route before the first-leg Yapily journey could begin.
+
+Files Changed:
+- `src/services/routeIntelligenceService.ts`
+- `supabase/functions/nexuspay-open-banking-payment-flow/index.ts`
+- `supabase/functions/nexuspay-submit-payout/index.ts`
+- `supabase/migrations/20260807000100_provider_execution_readiness_evidence.sql`
+- `governance/implementation-log/IMPLEMENTATION_LOG.md`
+
+Summary:
+- Removed the circular route gate that required a completed Yapily payment before allowing the first genuine Yapily authorisation journey.
+- Yapily now records `PAYMENT_INITIATION` as validated when Yapily accepts the sandbox authorisation request and returns provider references.
+- Airwallex now records beneficiary, transfer and corridor readiness after authenticated sandbox validation and transfer creation succeeds.
+- Route eligibility now requires an exactly `Validated`, fresh corridor record; statuses such as `Blocked - payout scope unavailable` can no longer pass accidentally.
+- Backfilled only provider evidence already stored in NexusPay. Malaysia and Philippines are validated from completed Airwallex sandbox payouts. Saudi Arabia remains unavailable because no validated Airwallex corridor exists.
+
+Deployment And Validation:
+- Migration `20260807000100_provider_execution_readiness_evidence.sql`: applied and verified remotely.
+- `nexuspay-open-banking-payment-flow`: deployed.
+- `nexuspay-submit-payout`: deployed.
+- TypeScript: PASS.
+- Targeted ESLint: PASS.
+- Canonical route validation: PASS; direct route eligible with score 100 and no eligibility reasons.
+- XRPL/RLUSD remains correctly blocked pending executable bridge evidence.

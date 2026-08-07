@@ -121,6 +121,38 @@ function requestIdForTransfer(transferId: string) {
   return `npx-${compact}`;
 }
 
+async function recordAirwallexExecutionEvidence(sourceCurrency: string, destinationCountry: string, destinationCurrency: string) {
+  const db = buildServiceClient();
+  const validatedAt = new Date().toISOString();
+  const capabilityResult = await db.from('partner_capabilities').update({
+    enabled: true,
+    readiness_status: 'Validated',
+    provenance: 'SANDBOX',
+    last_validated_at: validatedAt,
+    notes: 'Authenticated Airwallex sandbox beneficiary validation, transfer validation and transfer creation have succeeded.',
+    updated_at: validatedAt,
+  }).eq('provider_id', 'airwallex').eq('environment', 'sandbox').in('capability_code', [
+    'BENEFICIARY_VALIDATION',
+    'TRANSFER_VALIDATION',
+    'TRANSFER_CREATION',
+  ]);
+  if (capabilityResult.error) console.error('Airwallex capability evidence update failed.', capabilityResult.error.message);
+
+  const corridorResult = await db.from('partner_supported_corridors').update({
+    readiness_status: 'Validated',
+    provenance: 'SANDBOX',
+    last_validated_at: validatedAt,
+    notes: 'Validated by an authenticated Airwallex sandbox beneficiary and transfer submission for this corridor.',
+    updated_at: validatedAt,
+  }).eq('provider_id', 'airwallex')
+    .eq('environment', 'sandbox')
+    .eq('source_country', 'United Kingdom')
+    .eq('destination_country', destinationCountry)
+    .eq('source_currency', sourceCurrency)
+    .eq('destination_currency', destinationCurrency);
+  if (corridorResult.error) console.error('Airwallex corridor evidence update failed.', corridorResult.error.message);
+}
+
 function redactPayload(payload: Record<string, unknown>) {
   const copy = { ...payload };
   delete copy.Authorization;
@@ -684,6 +716,11 @@ async function handleAirwallexCreate(body: Record<string, unknown>) {
     providerStatus = lifecycle.providerStatus;
     providerJourney = lifecycle.journey;
     simulationSummary = lifecycle.simulationSummary;
+    await recordAirwallexExecutionEvidence(
+      safeString(body.sourceCurrency, 'GBP'),
+      safeString(recipient.country),
+      destinationCurrency,
+    );
   }
 
   const canonicalStatus = mapAirwallexStatus(providerStatus);
