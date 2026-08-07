@@ -1490,7 +1490,11 @@ Validation:
 - Expo Router generated `/open-banking-return` in the typed route manifest: PASS.
 
 Commit:
-- Pending.
+- `601f87d855339951faef416dbb14b764cb943f78`
 
 OTA:
-- Pending.
+- Branch: `preview`
+- Update group: `5065d8c8-12eb-4dfb-9c28-b0949096ad2c`
+- Android update: `019fd9d6-9bff-7f21-a586-4973620fb90e`
+- iOS update: `019fd9d6-9bff-70a3-84d1-09e90a5c4285`
+- Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/5065d8c8-12eb-4dfb-9c28-b0949096ad2c`
