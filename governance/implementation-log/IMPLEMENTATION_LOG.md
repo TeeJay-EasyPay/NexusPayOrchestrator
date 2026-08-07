@@ -1589,3 +1589,61 @@ OTA:
 - Android update: `019fdca5-3c70-70f3-b9de-2ca1a75737bf`
 - iOS update: `019fdca5-3c70-788c-915d-05fb02176fc4`
 - Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/36dd30c6-b66e-4891-8da2-b1c7d09d2a0f`
+
+## 2026-08-07 - XRPL Testnet and RLUSD Phase 1
+
+Prompt / Objective:
+Implement backend-controlled XRPL Testnet and RLUSD orchestration, wire it into canonical route selection, execution and tracking, and document the current and planned crypto value architecture.
+
+Files Changed:
+- `app/track.tsx`
+- `app/xrpl-test.tsx`
+- `src/lib/xrplClient.ts` (removed)
+- `src/lib/xrplSettlement.ts`
+- `src/lib/xrplWallet.ts` (removed)
+- `src/services/execution/executionEngine.ts`
+- `src/services/routeIntelligenceService.ts`
+- `src/services/xrplTestnetService.ts`
+- `src/state/WalletContext.tsx`
+- `supabase/functions/nexuspay-xrpl-testnet/index.ts`
+- `supabase/migrations/20260807000300_xrpl_rlusd_testnet_backend.sql`
+- `governance/reports/NEXUSPAY_CRYPTO_VALUE_ORCHESTRATION_CURRENT_STATE_AND_ROADMAP.md`
+- `governance/reports/XRPL_TESTNET_RLUSD_PHASE1_IMPLEMENTATION_REPORT.md`
+- `governance/governance-core/DECISION_REGISTER.md`
+- `governance/implementation-log/IMPLEMENTATION_LOG.md`
+
+Summary:
+- Created two backend XRPL Testnet wallets, funded them with Testnet XRP and established official Ripple Testnet RLUSD trustlines.
+- Moved signing from device SecureStore to Supabase Edge Function secrets.
+- Added authenticated ledger status, reserve, fee and XRP-to-RLUSD path evidence.
+- Canonical XRPL routes are eligible only when current Testnet evidence supports the requested amount.
+- Executed and persisted a genuine `1 RLUSD` Testnet settlement with `tesSUCCESS`.
+- Verified duplicate execution returns the same record and hash.
+- Added RLUSD amount, XRP fee and ledger evidence to execution persistence and Track.
+
+Evidence:
+- Transaction: `FDAB8727AF32E4E749EC594EB0CAAC884A401F1191B30976FE8232DD21E732A0`
+- Ledger: `19713706`
+- Transfer: `746bc675-5608-4c5a-a4d6-ea295e571948`
+- Route Plan: `4fa4e4d3-da32-4831-921f-b352f86c54a8`
+
+Validation:
+- Migration applied and local/remote versions match: PASS.
+- Edge Function deployment: PASS.
+- Authenticated status and path quote: PASS.
+- RLUSD Testnet settlement: PASS.
+- Idempotency replay: PASS.
+- RLS read/write boundaries: PASS.
+- TypeScript: PASS.
+- Expo lint: PASS with zero errors; existing warnings remain.
+- Canonical route validation: PASS.
+- Pixel 9 diagnostic rendering: PASS.
+- Local Deno check: NOT RUN because Deno is not installed; Supabase deployment bundling passed.
+
+Release:
+- Implementation commit: `23efefdec43839a2bcf13e9fef7b94e65384f367`
+- OTA branch: `preview`
+- Update group: `ab4b010d-bcd2-4b8c-ae1c-32d2d28b37e8`
+- Android update: `019fdd41-66c1-7815-9fff-954456104097`
+- iOS update: `019fdd41-66c1-7afe-beef-9e865a5e7450`
+- Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/ab4b010d-bcd2-4b8c-ae1c-32d2d28b37e8`

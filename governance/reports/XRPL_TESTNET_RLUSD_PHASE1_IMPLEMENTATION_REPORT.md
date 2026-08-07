@@ -65,3 +65,10 @@ This is Testnet orchestration, not a production or real-money conversion. Yapily
 - Testnet order-book liquidity and faucet assets have no monetary value and may change without notice.
 - A complete Yapily to XRPL to Airwallex user journey still combines sandbox/testnet legs rather than movement of one real monetary asset between providers.
 - Phase 2 requires a regulated conversion/off-ramp provider, compliance design and commercial onboarding.
+
+## Release
+
+- Implementation commit: `23efefdec43839a2bcf13e9fef7b94e65384f367`
+- Preview OTA update group: `ab4b010d-bcd2-4b8c-ae1c-32d2d28b37e8`
+- Android update: `019fdd41-66c1-7815-9fff-954456104097`
+- iOS update: `019fdd41-66c1-7afe-beef-9e865a5e7450`
