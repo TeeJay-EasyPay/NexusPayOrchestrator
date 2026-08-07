@@ -1457,3 +1457,13 @@ Validation:
 - Targeted ESLint: PASS.
 - Canonical route validation: PASS.
 - Automated checks confirm the blocked bridge candidate names XRPL Testnet, has no fabricated score and has no inherited ETA.
+
+Commit:
+- `b1391cd224a405cb48c1b38db792d60429ede079`
+
+OTA:
+- Branch: `preview`
+- Update group: `70916a0b-9d1d-4158-8ba2-654c2bbd6ccb`
+- Android update: `019fd9c9-1903-7cf9-9667-9f9dc0c52964`
+- iOS update: `019fd9c9-1903-7ca5-a116-910584c78cdf`
+- Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/70916a0b-9d1d-4158-8ba2-654c2bbd6ccb`
