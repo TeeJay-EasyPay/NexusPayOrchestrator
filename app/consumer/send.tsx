@@ -9,11 +9,17 @@ import {
     ConsumerShell,
     consumerColors,
 } from "../../src/components/consumer/ConsumerShell";
+import { AirwallexBeneficiaryFields } from "../../src/components/payments/AirwallexBeneficiaryFields";
 import { AppText } from "../../src/components/ui/AppText";
 import { corridors } from "../../src/data/corridors";
+import { useAirwallexBeneficiarySchema } from "../../src/hooks/useAirwallexBeneficiarySchema";
 import { useCanonicalRouteQuotes } from "../../src/hooks/useCanonicalRouteQuotes";
 import { useNexusAIScreenSetting } from "../../src/hooks/useNexusAISettings";
 import { explainRoute } from "../../src/services/nexusAIService";
+import {
+  materializeAirwallexBeneficiaryFields,
+  validateAirwallexBeneficiaryFields,
+} from "../../src/services/airwallexBeneficiarySchemaService";
 import { authoriseOpenBankingPayment } from "../../src/services/openBankingPaymentFlowService";
 import { usePaymentMethods } from "../../src/state/PaymentMethodsContext";
 import { useTransfer } from "../../src/state/TransferContext";
@@ -56,6 +62,7 @@ export default function ConsumerSendScreen() {
   const [selectedBank, setSelectedBank] = useState(asString(params.bankName));
   const [manualSortCode, setManualSortCode] = useState(asString(params.bankCode));
   const [manualAccountNumber, setManualAccountNumber] = useState(asString(params.accountNumber));
+  const [airwallexFields, setAirwallexFields] = useState<Record<string, string>>({});
   const [fundingMethod, setFundingMethod] = useState<FundingMethod>((asString(params.fundingMethod) as FundingMethod) || "CARD");
   const [fundingReference, setFundingReference] = useState(asString(params.fundingReference) || "Visa **** 4242");
   const [fundingInstitutionId, setFundingInstitutionId] = useState("");
@@ -85,6 +92,38 @@ export default function ConsumerSendScreen() {
   }, [selectedCorridor]);
 
   const manualCurrency = (selectedCorridor?.currency ?? "PHP") as Currency;
+  const airwallexSchema = useAirwallexBeneficiarySchema({
+    country: selectedCorridor?.country,
+    currency: manualCurrency,
+    enabled: true,
+  });
+  const fixedAirwallexFields = useMemo(() => {
+    const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
+    return {
+      "beneficiary.type": "BANK_ACCOUNT",
+      "beneficiary.entity_type": "PERSONAL",
+      "beneficiary.first_name": firstName.trim(),
+      "beneficiary.last_name": lastName.trim(),
+      "beneficiary.address.country_code": airwallexSchema.schema?.bankCountryCode ?? "",
+      "beneficiary.bank_details.account_name": fullName,
+      "beneficiary.bank_details.account_currency": manualCurrency,
+      "beneficiary.bank_details.bank_country_code": airwallexSchema.schema?.bankCountryCode ?? "",
+      "beneficiary.bank_details.bank_name": selectedBank.trim(),
+    };
+  }, [airwallexSchema.schema?.bankCountryCode, firstName, lastName, manualCurrency, selectedBank]);
+  useEffect(() => {
+    if (!airwallexSchema.schema || Object.keys(airwallexFields).length > 0) return;
+    const nextValues: Record<string, string> = {};
+    const accountField = airwallexSchema.schema.fields.find((field) =>
+      field.path.endsWith(".account_number") || field.path.endsWith(".iban")
+    );
+    const routingField = airwallexSchema.schema.fields.find((field) =>
+      field.path.endsWith(".account_routing_value1") || field.path.endsWith(".swift_code")
+    );
+    if (accountField && manualAccountNumber.trim()) nextValues[accountField.path] = manualAccountNumber.trim();
+    if (routingField && manualSortCode.trim()) nextValues[routingField.path] = manualSortCode.trim();
+    if (Object.keys(nextValues).length > 0) setAirwallexFields(nextValues);
+  }, [airwallexFields, airwallexSchema.schema, manualAccountNumber, manualSortCode]);
   const visibleCorridors = useMemo(() => {
     const selected = corridors.find((item) => item.country === manualCountry);
     const compact = corridors.slice(0, 6);
@@ -121,9 +160,26 @@ export default function ConsumerSendScreen() {
       return null;
     }
 
-    if (!manualSortCode.trim() || !manualAccountNumber.trim()) {
+    const validationError = validateAirwallexBeneficiaryFields(
+      airwallexSchema.schema,
+      airwallexFields,
+      fixedAirwallexFields,
+    );
+    if (validationError) {
       return null;
     }
+
+    const materializedFields = materializeAirwallexBeneficiaryFields(
+      airwallexSchema.schema!,
+      airwallexFields,
+      fixedAirwallexFields,
+    );
+    const providerAccountReference = materializedFields["beneficiary.bank_details.account_number"]
+      ?? materializedFields["beneficiary.bank_details.iban"]
+      ?? manualAccountNumber.trim();
+    const providerRoutingReference = materializedFields["beneficiary.bank_details.account_routing_value1"]
+      ?? materializedFields["beneficiary.bank_details.swift_code"]
+      ?? manualSortCode.trim();
 
     return {
       name: normalizedName,
@@ -133,10 +189,13 @@ export default function ConsumerSendScreen() {
       currency: manualCurrency,
       payoutMethod: "BANK",
       bankName: selectedBank.trim(),
-      bankCode: manualSortCode.trim(),
-      accountNumber: manualAccountNumber.trim(),
+      bankCode: providerRoutingReference,
+      accountNumber: providerAccountReference,
+      airwallexTransferMethod: airwallexSchema.schema!.transferMethod,
+      airwallexBeneficiaryFields: materializedFields,
+      airwallexSchemaFetchedAt: airwallexSchema.schema!.fetchedAt,
     };
-  }, [firstName, lastName, manualAccountNumber, manualCountry, manualCurrency, manualSortCode, selectedBank]);
+  }, [airwallexFields, airwallexSchema.schema, firstName, fixedAirwallexFields, lastName, manualAccountNumber, manualCountry, manualCurrency, manualSortCode, selectedBank]);
 
   const canonicalRouteResult = useCanonicalRouteQuotes({
     amount: sendAmount,
@@ -153,8 +212,7 @@ export default function ConsumerSendScreen() {
   const recipientNameValid = firstName.trim().length > 0 && lastName.trim().length > 0;
   const recipientBankValid =
     selectedBank.trim().length > 0 &&
-    manualSortCode.trim().length > 0 &&
-    manualAccountNumber.trim().length > 0;
+    !validateAirwallexBeneficiaryFields(airwallexSchema.schema, airwallexFields, fixedAirwallexFields);
   const recipientReady = Boolean(recipient);
   const fundingReady = fundingReference.trim().length > 0;
   const routeReady = Boolean(selectedRoute?.routePlan?.eligible);
@@ -167,7 +225,13 @@ export default function ConsumerSendScreen() {
     }
 
     if (!recipientReady) {
-      setErrorMessage("Complete recipient details before continuing.");
+      setErrorMessage(
+        airwallexSchema.loading
+          ? "Wait for Airwallex recipient requirements to load."
+          : airwallexSchema.error
+            ?? validateAirwallexBeneficiaryFields(airwallexSchema.schema, airwallexFields, fixedAirwallexFields)
+            ?? "Complete recipient details before continuing."
+      );
       setCurrentStep(1);
       return;
     }
@@ -210,6 +274,7 @@ export default function ConsumerSendScreen() {
     setSelectedBank("");
     setManualSortCode("");
     setManualAccountNumber("");
+    setAirwallexFields({});
     setFundingMethod("CARD");
     setFundingReference("Visa **** 4242");
     setSelectedRouteId(null);
@@ -269,20 +334,8 @@ export default function ConsumerSendScreen() {
       return;
     }
 
-    if (!recipient.bankCode?.trim()) {
-      setErrorMessage("Recipient sort code is required.");
-      setCurrentStep(1);
-      return;
-    }
-
-    if (!recipient.accountNumber?.trim()) {
-      setErrorMessage("Recipient account number is required.");
-      setCurrentStep(1);
-      return;
-    }
-
     if (recipient.payoutMethod !== "BANK") {
-      setErrorMessage("Recipient must be configured for bank payout with sort code and account number.");
+      setErrorMessage("Recipient must be configured for bank payout.");
       setCurrentStep(1);
       return;
     }
@@ -433,6 +486,7 @@ export default function ConsumerSendScreen() {
                     onPress={() => {
                       setManualCountry(corridor.country);
                       setSelectedBank("");
+                      setAirwallexFields({});
                       setErrorMessage(null);
                     }}
                     style={{
@@ -471,6 +525,9 @@ export default function ConsumerSendScreen() {
                     key={provider}
                     onPress={() => {
                       setSelectedBank(provider);
+                      setManualSortCode("");
+                      setManualAccountNumber("");
+                      setAirwallexFields({});
                       setErrorMessage(null);
                     }}
                     style={{
@@ -523,32 +580,22 @@ export default function ConsumerSendScreen() {
             </AppText>
 
             <AppText variant="caption" color={consumerColors.muted}>
-              Step 4: Enter recipient bank details
+              Step 4: Enter Airwallex recipient details
             </AppText>
-            <View style={{ flexDirection: "row", gap: 8 }}>
-              <TextInput
-                value={manualSortCode}
-                onChangeText={(value) => {
-                  setManualSortCode(value);
-                  setErrorMessage(null);
-                }}
-                placeholder="Sort code"
-                placeholderTextColor={consumerColors.muted}
-                style={[inputStyle(), { flex: 1 }]}
-              />
-              <TextInput
-                value={manualAccountNumber}
-                onChangeText={(value) => {
-                  setManualAccountNumber(value);
-                  setErrorMessage(null);
-                }}
-                placeholder="Account number"
-                placeholderTextColor={consumerColors.muted}
-                style={[inputStyle(), { flex: 1 }]}
-              />
-            </View>
+            <AirwallexBeneficiaryFields
+              schema={airwallexSchema.schema}
+              loading={airwallexSchema.loading}
+              error={airwallexSchema.error}
+              values={airwallexFields}
+              fixedValues={fixedAirwallexFields}
+              onChange={(path, value) => {
+                setAirwallexFields((current) => ({ ...current, [path]: value }));
+                setErrorMessage(null);
+              }}
+              onRetry={airwallexSchema.reload}
+            />
             <AppText variant="caption" style={{ color: recipientBankValid ? consumerColors.success : consumerColors.muted }}>
-              {recipientBankValid ? "Bank details complete" : "Select bank and enter sort code + account number"}
+              {recipientBankValid ? "Airwallex recipient details complete" : "Complete the provider-required fields"}
             </AppText>
 
             <ConsumerAction label="Continue to funding" icon="arrow-right" onPress={continueToFunding} />

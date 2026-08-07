@@ -18,6 +18,7 @@ export type Currency =
 export type RailType = "FIAT" | "CRYPTO" | "HYBRID";
 
 export type PayoutMethod = "BANK" | "MOBILE_WALLET";
+export type AirwallexTransferMethod = "LOCAL" | "SWIFT";
 
 export type FundingMethod = "OPEN_BANKING" | "CARD";
 export type AccountScope = "demo" | "personal";
@@ -86,6 +87,9 @@ export interface Recipient {
   bankName?: string;
   bankCode?: string;
   accountNumber?: string;
+  airwallexTransferMethod?: AirwallexTransferMethod;
+  airwallexBeneficiaryFields?: Record<string, string>;
+  airwallexSchemaFetchedAt?: string;
 
   mobileWalletProvider?: string;
   mobileNumber?: string;

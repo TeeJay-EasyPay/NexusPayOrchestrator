@@ -103,6 +103,47 @@ function getCountryCode(country: string) {
   return map[country] ?? country.slice(0, 2).toUpperCase();
 }
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
+function optionalNumber(value: unknown) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) && numeric >= 0 ? numeric : undefined;
+}
+
+function normalizeBeneficiarySchemaField(value: unknown) {
+  const row = asRecord(value);
+  const field = asRecord(row.field);
+  const rule = asRecord(row.rule);
+  const path = safeString(row.path);
+  if (!path.startsWith('beneficiary.') || path.includes('__proto__') || path.includes('constructor')) return null;
+
+  const options = Array.isArray(field.options)
+    ? field.options.map((option) => {
+      const item = asRecord(option);
+      return { label: safeString(item.label, safeString(item.value)), value: safeString(item.value) };
+    }).filter((option) => option.value)
+    : [];
+
+  return {
+    path,
+    required: row.required === true,
+    enabled: row.enabled !== false,
+    label: safeString(field.label, safeString(field.key, path.split('.').at(-1) ?? 'Recipient field')),
+    placeholder: safeString(field.placeholder),
+    description: safeString(field.description) || safeString(field.tip) || undefined,
+    type: safeString(field.type, 'TEXT'),
+    defaultValue: safeString(field.default) || undefined,
+    options,
+    pattern: safeString(rule.pattern) || undefined,
+    minLength: optionalNumber(rule.min_length ?? rule.minLength),
+    maxLength: optionalNumber(rule.max_length ?? rule.maxLength),
+  };
+}
+
 function mapAirwallexStatus(status: unknown): CanonicalPayoutStatus {
   const value = String(status ?? '').toUpperCase();
   if (['PAID', 'SETTLED', 'COMPLETED'].includes(value)) return 'PAID_OUT';
@@ -225,6 +266,63 @@ async function airwallexRequest(
   }
 
   return payload as Record<string, unknown>;
+}
+
+async function handleAirwallexBeneficiarySchema(body: Record<string, unknown>) {
+  const destinationCountry = safeString(body.destinationCountry);
+  const destinationCurrency = safeString(body.destinationCurrency);
+  if (!destinationCountry || !destinationCurrency) {
+    throw new Error('Destination country and currency are required for Airwallex recipient requirements.');
+  }
+
+  const bankCountryCode = getCountryCode(destinationCountry);
+  const entityType = safeString(body.entityType, 'PERSONAL').toUpperCase() === 'COMPANY' ? 'COMPANY' : 'PERSONAL';
+  const requestedMethod = safeString(body.transferMethod).toUpperCase();
+  const methods = requestedMethod === 'LOCAL' || requestedMethod === 'SWIFT'
+    ? [requestedMethod]
+    : ['LOCAL', 'SWIFT'];
+  let lastError: unknown;
+
+  for (const transferMethod of methods) {
+    try {
+      const result = await airwallexRequest('/api/v1/beneficiary_form_schemas/generate', {
+        method: 'POST',
+        operation: `beneficiary_form_schema_${transferMethod.toLowerCase()}`,
+        correlationId: crypto.randomUUID(),
+        body: JSON.stringify({
+          account_currency: destinationCurrency,
+          bank_country_code: bankCountryCode,
+          entity_type: entityType,
+          transfer_method: transferMethod,
+        }),
+      });
+      const fields = Array.isArray(result.fields)
+        ? result.fields.map(normalizeBeneficiarySchemaField).filter(Boolean)
+        : [];
+      if (fields.length === 0) throw new Error('Airwallex returned an empty beneficiary form schema.');
+
+      return {
+        provider: 'Airwallex Sandbox',
+        provenance: 'SANDBOX',
+        source: 'Airwallex Beneficiary Form Schema API',
+        transferMethod,
+        bankCountryCode,
+        accountCurrency: destinationCurrency,
+        entityType,
+        fields,
+        fetchedAt: new Date().toISOString(),
+      };
+    } catch (error) {
+      lastError = error;
+      const unsupported = error instanceof AirwallexApiError &&
+        (error.httpStatus === 400 || error.providerCode === 'SCHEMA_DEFINITION_NOT_FOUND');
+      if (!unsupported) throw error;
+    }
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error('Airwallex returned no supported beneficiary schema for this corridor.');
 }
 
 async function getAirwallexToken(baseUrl: string) {
@@ -416,9 +514,51 @@ async function runAirwallexSandboxLifecycle(
   }
 }
 
+function applyBeneficiaryFields(target: Record<string, unknown>, values: Record<string, unknown>) {
+  for (const [path, rawValue] of Object.entries(values)) {
+    if (!path.startsWith('beneficiary.') || path.includes('__proto__') || path.includes('constructor')) continue;
+    const segments = path.split('.').slice(1);
+    if (segments.length === 0 || segments.some((segment) => !/^[a-zA-Z0-9_]+$/.test(segment))) continue;
+    let cursor = target;
+    for (const segment of segments.slice(0, -1)) {
+      const existing = cursor[segment];
+      if (!existing || typeof existing !== 'object' || Array.isArray(existing)) cursor[segment] = {};
+      cursor = cursor[segment] as Record<string, unknown>;
+    }
+    const value = typeof rawValue === 'string' ? rawValue.trim() : rawValue;
+    if (value !== '' && value !== null && value !== undefined) cursor[segments.at(-1)!] = value;
+  }
+}
+
+function recipientAccountReference(recipient: Record<string, unknown>) {
+  const fields = asRecord(recipient.airwallexBeneficiaryFields);
+  return safeString(fields['beneficiary.bank_details.account_number']) ||
+    safeString(fields['beneficiary.bank_details.iban']) ||
+    safeString(recipient.accountNumber);
+}
+
 function buildBeneficiary(recipient: Record<string, unknown>, destinationCurrency: string) {
   const countryCode = getCountryCode(safeString(recipient.country));
   const accountName = safeString(recipient.name, 'NexusPay Sandbox Recipient');
+  const dynamicFields = asRecord(recipient.airwallexBeneficiaryFields);
+  if (Object.keys(dynamicFields).length > 0) {
+    const beneficiary: Record<string, unknown> = {
+      entity_type: 'PERSONAL',
+      type: 'BANK_ACCOUNT',
+      first_name: safeString(recipient.firstName, accountName.split(' ')[0]),
+      last_name: safeString(recipient.surname, accountName.split(' ').slice(1).join(' ') || 'Recipient'),
+      address: { country_code: countryCode },
+      bank_details: {
+        account_currency: destinationCurrency,
+        account_name: accountName,
+        bank_country_code: countryCode,
+        bank_name: safeString(recipient.bankName),
+      },
+    };
+    applyBeneficiaryFields(beneficiary, dynamicFields);
+    return beneficiary;
+  }
+
   const accountNumber = safeString(recipient.accountNumber, '00000000');
   const bankCode = safeString(recipient.bankCode);
 
@@ -469,6 +609,7 @@ function buildBeneficiary(recipient: Record<string, unknown>, destinationCurrenc
 
   return {
     entity_type: 'PERSONAL',
+    type: 'BANK_ACCOUNT',
     first_name: safeString(recipient.firstName, accountName.split(' ')[0]),
     last_name: safeString(recipient.surname, accountName.split(' ').slice(1).join(' ') || 'Recipient'),
     address: {
@@ -550,7 +691,7 @@ function toPayoutResult(
     currency,
     country,
     recipientName: safeString(recipient?.name, 'Sandbox recipient'),
-    destinationLabel: `${safeString(recipient?.bankName, 'Bank')} - ${maskAccount(safeString(recipient?.accountNumber))}`,
+    destinationLabel: `${safeString(recipient?.bankName, 'Bank')} - ${maskAccount(recipientAccountReference(recipient))}`,
     estimatedArrival: 'Airwallex sandbox lifecycle',
     createdAt: safeString(intent.created_at, new Date().toISOString()),
     updatedAt: new Date().toISOString(),
@@ -574,7 +715,7 @@ async function handleAirwallexCreate(body: Record<string, unknown>) {
 
   const providerRequestId = requestIdForTransfer(transferId);
   const destinationCurrency = safeString(body.destinationCurrency, safeString(recipient.currency));
-  const beneficiarySummary = `${safeString(recipient.name, 'Recipient')} - ${safeString(recipient.bankName, 'Bank')} - ${maskAccount(safeString(recipient.accountNumber))}`;
+  const beneficiarySummary = `${safeString(recipient.name, 'Recipient')} - ${safeString(recipient.bankName, 'Bank')} - ${maskAccount(recipientAccountReference(recipient))}`;
   let intent = await upsertIntent(body, providerRequestId, beneficiarySummary);
   const correlationId = crypto.randomUUID();
 
@@ -619,10 +760,13 @@ async function handleAirwallexCreate(body: Record<string, unknown>) {
   }
 
   const beneficiary = buildBeneficiary(recipient, destinationCurrency);
+  const transferMethod = safeString(recipient.airwallexTransferMethod, 'LOCAL').toUpperCase() === 'SWIFT'
+    ? 'SWIFT'
+    : 'LOCAL';
   const beneficiaryPayload = {
     beneficiary,
     nickname: safeString(recipient.name, 'NexusPay Sandbox Recipient').slice(0, 64),
-    transfer_methods: ['LOCAL'],
+    transfer_methods: [transferMethod],
   };
   await airwallexRequest('/api/v1/beneficiaries/validate', {
     method: 'POST',
@@ -667,7 +811,7 @@ async function handleAirwallexCreate(body: Record<string, unknown>) {
     transfer_amount: String(Number(body.destinationAmount ?? body.amount ?? 0)),
     transfer_currency: destinationCurrency,
     source_currency: safeString(body.sourceCurrency, 'GBP'),
-    transfer_method: 'LOCAL',
+    transfer_method: transferMethod,
     reason: 'business_expenses',
     reference: safeString(body.reference, `NexusPay ${transferId.slice(0, 8)}`).slice(0, 35),
     request_id: providerRequestId,
@@ -879,6 +1023,9 @@ serve(async (req: Request) => {
     }
 
     if (providerId === 'airwallex') {
+      if (safeString(body.operation) === 'beneficiary_schema') {
+        return json(await handleAirwallexBeneficiarySchema(body));
+      }
       if (safeString(body.operation) === 'retrieve') {
         return json(await handleAirwallexRetrieve(body));
       }

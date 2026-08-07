@@ -4,6 +4,7 @@ import { Alert, Pressable, ScrollView, TextInput, View } from "react-native";
 
 import { NexusAIToggleCard } from "../src/components/intelligence/NexusAIToggleCard";
 import { DataProvenanceBadge } from "../src/components/operations-v2/DataProvenanceBadge";
+import { AirwallexBeneficiaryFields } from "../src/components/payments/AirwallexBeneficiaryFields";
 import { SavedRecipientsCard } from "../src/components/recipients/SavedRecipientsCard";
 import { AppButton } from "../src/components/ui/AppButton";
 import { AppCard } from "../src/components/ui/AppCard";
@@ -13,7 +14,12 @@ import { Screen } from "../src/components/ui/Screen";
 import { corridors } from "../src/data/corridors";
 import { useNexusAIScreenSetting } from "../src/hooks/useNexusAISettings";
 import { useCanonicalRouteQuotes } from "../src/hooks/useCanonicalRouteQuotes";
+import { useAirwallexBeneficiarySchema } from "../src/hooks/useAirwallexBeneficiarySchema";
 import { writeAuditLog } from "../src/services/auditLog";
+import {
+  materializeAirwallexBeneficiaryFields,
+  validateAirwallexBeneficiaryFields,
+} from "../src/services/airwallexBeneficiarySchemaService";
 import {
     loadSavedRecipients,
     toggleRecipientFavorite,
@@ -235,6 +241,7 @@ export default function SendScreen() {
   const [surname, setSurname] = useState("");
   const [bankCode, setBankCode] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
+  const [airwallexFields, setAirwallexFields] = useState<Record<string, string>>({});
   const [mobileNumber, setMobileNumber] = useState("");
 
   const refreshSavedRecipients = useCallback(() => {
@@ -314,7 +321,45 @@ export default function SendScreen() {
     [selectedCountry]
   );
 
-  const availablePayoutMethods = selectedCorridor?.payoutMethods ?? [];
+  const airwallexSchema = useAirwallexBeneficiarySchema({
+    country: selectedCorridor?.country,
+    currency: selectedCorridor?.currency,
+    enabled: selectedPayoutMethod === "BANK",
+  });
+
+  const fixedAirwallexFields = useMemo(() => {
+    const fullName = [firstName.trim(), middleName.trim(), surname.trim()].filter(Boolean).join(" ");
+    return {
+      "beneficiary.type": "BANK_ACCOUNT",
+      "beneficiary.entity_type": "PERSONAL",
+      "beneficiary.first_name": firstName.trim(),
+      "beneficiary.last_name": surname.trim(),
+      "beneficiary.address.country_code": airwallexSchema.schema?.bankCountryCode ?? "",
+      "beneficiary.bank_details.account_name": fullName,
+      "beneficiary.bank_details.account_currency": selectedCorridor?.currency ?? "",
+      "beneficiary.bank_details.bank_country_code": airwallexSchema.schema?.bankCountryCode ?? "",
+      "beneficiary.bank_details.bank_name": selectedProvider,
+    };
+  }, [airwallexSchema.schema?.bankCountryCode, firstName, middleName, selectedCorridor?.currency, selectedProvider, surname]);
+
+  useEffect(() => {
+    if (!airwallexSchema.schema || Object.keys(airwallexFields).length > 0) return;
+    const nextValues: Record<string, string> = {};
+    const accountField = airwallexSchema.schema.fields.find((field) =>
+      field.path.endsWith(".account_number") || field.path.endsWith(".iban")
+    );
+    const routingField = airwallexSchema.schema.fields.find((field) =>
+      field.path.endsWith(".account_routing_value1") || field.path.endsWith(".swift_code")
+    );
+    if (accountField && accountNumber.trim()) nextValues[accountField.path] = accountNumber.trim();
+    if (routingField && bankCode.trim()) nextValues[routingField.path] = bankCode.trim();
+    if (Object.keys(nextValues).length > 0) setAirwallexFields(nextValues);
+  }, [accountNumber, airwallexFields, airwallexSchema.schema, bankCode]);
+
+  const availablePayoutMethods = useMemo(
+    () => selectedCorridor?.payoutMethods ?? [],
+    [selectedCorridor],
+  );
   const canonicalRouteResult = useCanonicalRouteQuotes({
     amount: safeAmount,
     destinationCurrency: selectedCorridor?.currency,
@@ -342,12 +387,14 @@ export default function SendScreen() {
       setSelectedProvider(recipient.bankName || "");
       setBankCode(recipient.bankCode || "");
       setAccountNumber(recipient.accountNumber || "");
+      setAirwallexFields(recipient.airwallexBeneficiaryFields || {});
       setMobileNumber("");
     } else {
       setSelectedProvider(recipient.mobileWalletProvider || "");
       setMobileNumber(recipient.mobileNumber || "");
       setBankCode("");
       setAccountNumber("");
+      setAirwallexFields({});
     }
 
     setFirstName(recipient.firstName || "");
@@ -393,6 +440,7 @@ export default function SendScreen() {
     setSelectedProvider(firstProvider);
     setBankCode("");
     setAccountNumber("");
+    setAirwallexFields({});
     setMobileNumber("");
   };
 
@@ -404,6 +452,7 @@ export default function SendScreen() {
     setSelectedProvider(payoutConfig?.providers[0] ?? "");
     setBankCode("");
     setAccountNumber("");
+    setAirwallexFields({});
     setMobileNumber("");
   };
 
@@ -435,18 +484,15 @@ export default function SendScreen() {
       return;
     }
 
-    if (selectedPayoutMethod === "BANK" && !bankCode.trim()) {
+    const airwallexValidationError = selectedPayoutMethod === "BANK"
+      ? validateAirwallexBeneficiaryFields(airwallexSchema.schema, airwallexFields, fixedAirwallexFields)
+      : null;
+    if (selectedPayoutMethod === "BANK" && (airwallexSchema.loading || airwallexSchema.error || airwallexValidationError)) {
       Alert.alert(
-        "Bank routing required",
-        "Please enter the recipient bank, branch, or sort code."
-      );
-      return;
-    }
-
-    if (selectedPayoutMethod === "BANK" && !accountNumber.trim()) {
-      Alert.alert(
-        "Account number required",
-        "Please enter recipient bank account number."
+        "Recipient requirements incomplete",
+        airwallexSchema.loading
+          ? "Wait for Airwallex recipient requirements to load."
+          : airwallexSchema.error ?? airwallexValidationError ?? "Complete the Airwallex recipient requirements."
       );
       return;
     }
@@ -463,6 +509,15 @@ export default function SendScreen() {
       .filter(Boolean)
       .join(" ");
 
+    const materializedFields = airwallexSchema.schema
+      ? materializeAirwallexBeneficiaryFields(airwallexSchema.schema, airwallexFields, fixedAirwallexFields)
+      : {};
+    const providerAccountReference = materializedFields["beneficiary.bank_details.account_number"]
+      ?? materializedFields["beneficiary.bank_details.iban"]
+      ?? accountNumber.trim();
+    const providerRoutingReference = materializedFields["beneficiary.bank_details.account_routing_value1"]
+      ?? materializedFields["beneficiary.bank_details.swift_code"]
+      ?? bankCode.trim();
     const recipient: Recipient = {
       name: recipientFullName,
       firstName: firstName.trim(),
@@ -472,9 +527,12 @@ export default function SendScreen() {
       currency: selectedCorridor.currency,
       payoutMethod: selectedPayoutMethod,
       bankName: selectedPayoutMethod === "BANK" ? selectedProvider : undefined,
-      bankCode: selectedPayoutMethod === "BANK" ? bankCode.trim() : undefined,
+      bankCode: selectedPayoutMethod === "BANK" ? providerRoutingReference : undefined,
       accountNumber:
-        selectedPayoutMethod === "BANK" ? accountNumber.trim() : undefined,
+        selectedPayoutMethod === "BANK" ? providerAccountReference : undefined,
+      airwallexTransferMethod: selectedPayoutMethod === "BANK" ? airwallexSchema.schema?.transferMethod : undefined,
+      airwallexBeneficiaryFields: selectedPayoutMethod === "BANK" ? materializedFields : undefined,
+      airwallexSchemaFetchedAt: selectedPayoutMethod === "BANK" ? airwallexSchema.schema?.fetchedAt : undefined,
       mobileWalletProvider:
         selectedPayoutMethod === "MOBILE_WALLET" ? selectedProvider : undefined,
       mobileNumber:
@@ -640,6 +698,9 @@ export default function SendScreen() {
                     onPress={() => {
                       clearSelectedRecipient();
                       setSelectedProvider(provider);
+                      setBankCode("");
+                      setAccountNumber("");
+                      setAirwallexFields({});
                     }}
                   />
                 ))}
@@ -688,26 +749,18 @@ export default function SendScreen() {
               />
 
               {selectedPayoutMethod === "BANK" ? (
-                <>
-                  <InputField
-                    value={bankCode}
-                    onChangeText={(value) => {
-                      clearSelectedRecipient();
-                      setBankCode(value);
-                    }}
-                    placeholder="Bank / branch / sort code *"
-                  />
-
-                  <InputField
-                    value={accountNumber}
-                    onChangeText={(value) => {
-                      clearSelectedRecipient();
-                      setAccountNumber(value);
-                    }}
-                    keyboardType="number-pad"
-                    placeholder="Recipient bank account number *"
-                  />
-                </>
+                <AirwallexBeneficiaryFields
+                  schema={airwallexSchema.schema}
+                  loading={airwallexSchema.loading}
+                  error={airwallexSchema.error}
+                  values={airwallexFields}
+                  fixedValues={fixedAirwallexFields}
+                  onChange={(path, value) => {
+                    clearSelectedRecipient();
+                    setAirwallexFields((current) => ({ ...current, [path]: value }));
+                  }}
+                  onRetry={airwallexSchema.reload}
+                />
               ) : (
                 <InputField
                   value={mobileNumber}

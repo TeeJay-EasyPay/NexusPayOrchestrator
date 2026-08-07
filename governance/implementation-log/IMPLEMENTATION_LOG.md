@@ -1498,3 +1498,52 @@ OTA:
 - Android update: `019fd9d6-9bff-7f21-a586-4973620fb90e`
 - iOS update: `019fd9d6-9bff-70a3-84d1-09e90a5c4285`
 - Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/5065d8c8-12eb-4dfb-9c28-b0949096ad2c`
+
+## 2026-08-07 - Airwallex Dynamic Recipient Requirements
+
+Prompt / Objective:
+Replace country-agnostic recipient bank fields with current requirements returned by Airwallex and expose them consistently in Corporate and Consumer payment flows.
+
+Files Changed:
+- `app/send.tsx`
+- `app/consumer/send.tsx`
+- `src/components/payments/AirwallexBeneficiaryFields.tsx`
+- `src/hooks/useAirwallexBeneficiarySchema.ts`
+- `src/services/airwallexBeneficiarySchemaService.ts`
+- `src/services/recipientService.ts`
+- `src/types/recipient.ts`
+- `src/types/transfer.ts`
+- `supabase/functions/nexuspay-submit-payout/index.ts`
+- `supabase/migrations/20260807000200_airwallex_dynamic_beneficiary_fields.sql`
+- `governance/implementation-log/IMPLEMENTATION_LOG.md`
+
+Summary:
+- Added an authenticated server-side operation for Airwallex's Beneficiary Form Schema API.
+- The server attempts `LOCAL` and then `SWIFT` where required, without exposing Airwallex credentials to the app.
+- Corporate and Consumer recipient forms now render provider-defined fields, required markers, option sets, formatting rules and `SANDBOX` provenance.
+- Payment continuation is blocked when the schema is unavailable or required provider fields are incomplete.
+- The selected Airwallex transfer method and materialized provider fields are carried into beneficiary validation, beneficiary creation and transfer submission.
+- Repeat-recipient records retain the provider fields under existing recipient RLS.
+- Recipient-save errors no longer log bank-detail payloads; user-facing payout references remain masked.
+
+Deployed Provider Evidence:
+- Malaysia / MYR: Airwallex returned a `LOCAL` schema with 13 fields, including SWIFT/BIC, account number and address requirements.
+- Saudi Arabia / SAR: Airwallex returned a `SWIFT` schema with 11 fields, including IBAN and address requirements.
+- Provenance: `SANDBOX`; source: Airwallex Beneficiary Form Schema API.
+
+Validation:
+- TypeScript: PASS.
+- Targeted ESLint: PASS with no errors.
+- Full Expo lint: PASS with zero errors; existing repository warnings remain.
+- Android Expo export: PASS.
+- Canonical route validation: PASS.
+- Pixel 9 Corporate form rendering: PASS.
+- Supabase migration: applied and matched locally/remotely.
+- Authenticated recipient-column query with existing RLS: PASS.
+- Local Deno check: NOT RUN because Deno is not installed; Supabase function deployment validation passed.
+
+Commit:
+- Pending.
+
+OTA:
+- Pending.

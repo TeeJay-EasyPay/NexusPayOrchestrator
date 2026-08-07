@@ -116,6 +116,9 @@ function recipientFromTransferRow(row: any, userId: string): SavedRecipient {
       payoutMethod === "BANK"
         ? toCleanString(snapshot.accountNumber) || undefined
         : undefined,
+    airwallexTransferMethod: snapshot.airwallexTransferMethod,
+    airwallexBeneficiaryFields: snapshot.airwallexBeneficiaryFields,
+    airwallexSchemaFetchedAt: snapshot.airwallexSchemaFetchedAt,
     mobileWalletProvider:
       payoutMethod === "MOBILE_WALLET"
         ? toCleanString(snapshot.mobileWalletProvider) || payoutProvider || undefined
@@ -203,6 +206,9 @@ export async function saveRecipientFromTransfer(transfer: Transfer) {
     bank_name: r.bankName ?? null,
     bank_code: r.bankCode ?? null,
     account_number: r.accountNumber ?? null,
+    beneficiary_details: r.airwallexBeneficiaryFields ?? {},
+    beneficiary_transfer_method: r.airwallexTransferMethod ?? null,
+    beneficiary_schema_fetched_at: r.airwallexSchemaFetchedAt ?? null,
     mobile_wallet_provider: r.mobileWalletProvider ?? null,
     mobile_number: r.mobileNumber ?? null,
     is_favorite: false,
@@ -220,7 +226,6 @@ export async function saveRecipientFromTransfer(transfer: Transfer) {
       details: error.details,
       hint: error.hint,
       code: error.code,
-      payload,
     });
     return;
   }
@@ -285,6 +290,9 @@ export async function loadSavedRecipients(): Promise<SavedRecipient[]> {
     bankName: row.bank_name,
     bankCode: row.bank_code,
     accountNumber: row.account_number,
+    airwallexTransferMethod: row.beneficiary_transfer_method,
+    airwallexBeneficiaryFields: row.beneficiary_details ?? {},
+    airwallexSchemaFetchedAt: row.beneficiary_schema_fetched_at,
     mobileWalletProvider: row.mobile_wallet_provider,
     mobileNumber: row.mobile_number,
     isFavorite: row.is_favorite ?? false,

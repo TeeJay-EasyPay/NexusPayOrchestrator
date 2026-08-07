@@ -1,4 +1,4 @@
-import { Currency, PayoutMethod } from "./transfer";
+import { AirwallexTransferMethod, Currency, PayoutMethod } from "./transfer";
 
 export interface SavedRecipient {
   id: string;
@@ -12,6 +12,9 @@ export interface SavedRecipient {
   bankName?: string;
   bankCode?: string;
   accountNumber?: string;
+  airwallexTransferMethod?: AirwallexTransferMethod;
+  airwallexBeneficiaryFields?: Record<string, string>;
+  airwallexSchemaFetchedAt?: string;
   mobileWalletProvider?: string;
   mobileNumber?: string;
   isFavorite: boolean;
