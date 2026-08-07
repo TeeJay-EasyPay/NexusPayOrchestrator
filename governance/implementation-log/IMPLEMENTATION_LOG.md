@@ -1361,3 +1361,27 @@ OTA:
 
 Known Warnings:
 - Expo publish continued to show the existing `@noble/hashes/crypto.js` export warning. It did not block OTA.
+
+## 2026-08-07 - Yapily Modelo Sandbox Institution Verification
+
+Prompt / Objective:
+Verify that the newly connected Modelo sandbox institution is visible to the NexusPay Yapily application and can accept a genuine sandbox payment-authorisation request.
+
+Files Changed:
+- `supabase/functions/nexuspay-open-banking-payment-flow/index.ts`
+- `governance/implementation-log/IMPLEMENTATION_LOG.md`
+
+Summary:
+- Confirmed `modelo-sandbox` is returned by Yapily's authenticated, application-scoped Institutions API.
+- Corrected the Yapily payment-authorisation payload so the secure callback requests a one-time token without also supplying a mutually exclusive redirect URL.
+- Deployed `nexuspay-open-banking-payment-flow` to Supabase project `gsekiwpqzushrmglncns`.
+- Submitted a guarded GBP 1 sandbox authorisation request; Yapily issued a payment-request reference and consent reference.
+- The persisted flow is correctly `AWAITING_AUTHORIZATION`. No sandbox payment was created because customer authorisation was not performed during this connectivity check.
+
+Validation:
+- Institution discovery: PASS (`Modelo Sandbox`, application connected).
+- Institution verification: PASS.
+- Payment authorisation creation: PASS.
+- Provider-issued authorisation state: `AWAITING_AUTHORIZATION`.
+- No secrets, authorisation URL, or callback token were logged in this record.
+- No migration or OTA update was required.

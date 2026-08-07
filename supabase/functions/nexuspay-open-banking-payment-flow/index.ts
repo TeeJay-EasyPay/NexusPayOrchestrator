@@ -211,7 +211,7 @@ async function startFlow(userId: string, body: Record<string, unknown>) {
       applicationUserId: `nexuspay-${userId}`,
       institutionId: institution.id,
       callback,
-      redirect: { oneTimeToken: true },
+      oneTimeToken: true,
       paymentRequest: request,
     }),
   });
