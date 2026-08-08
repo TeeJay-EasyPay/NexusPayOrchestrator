@@ -37,6 +37,13 @@ No quote, deposit address, recipient amount or completion is fabricated.
 - Unauthenticated function access: HTTP 401.
 - Direct authenticated client write: HTTP 403.
 
+## Preview Release
+
+- Implementation commit: `35a0216b29eedc8380a973d71d5dc3317e1be46b`.
+- OTA update group: `caf36ad5-5c98-4fdc-b1a0-4866eb1f4bb4`.
+- Android update: `019fe0b2-3ea4-7d9d-bd50-fc7d7aae9782`.
+- iOS update: `019fe0b2-3ea4-7967-b00b-669619ca6429`.
+
 ## Security Controls
 
 - No private key, API secret or bearer token is stored in application tables or output.

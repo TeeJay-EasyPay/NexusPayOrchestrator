@@ -1668,6 +1668,14 @@ Evidence:
 - TypeScript: PASS.
 - ESLint: zero errors; pre-existing warnings remain.
 
+Release:
+- Implementation commit: `35a0216b29eedc8380a973d71d5dc3317e1be46b`.
+- OTA branch: `preview`.
+- Update group: `caf36ad5-5c98-4fdc-b1a0-4866eb1f4bb4`.
+- Android update: `019fe0b2-3ea4-7d9d-bd50-fc7d7aae9782`.
+- iOS update: `019fe0b2-3ea4-7967-b00b-669619ca6429`.
+- Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/caf36ad5-5c98-4fdc-b1a0-4866eb1f4bb4`.
+
 Reports:
 - `governance/reports/PLATFORM_VALUE_PROVENANCE_INTEGRITY_AUDIT_2026-08-08.md`
 - `governance/reports/CRYPTO_FIAT_ORCHESTRATION_PHASE2_IMPLEMENTATION_REPORT.md`
