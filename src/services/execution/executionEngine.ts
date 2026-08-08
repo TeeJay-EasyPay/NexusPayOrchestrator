@@ -159,6 +159,20 @@ function buildOpenBankingSteps(flow?: OpenBankingPaymentFlow): ExecutionStep[] {
   }));
 }
 
+function assertOpenBankingFundingCompleted(transfer: Transfer) {
+  if (transfer.fundingMethod !== "OPEN_BANKING") return;
+  const flow = transfer.openBankingFlow;
+  if (!flow) {
+    throw new Error("Yapily funding evidence is missing. Airwallex payout was not started.");
+  }
+  if (flow.status === "PAYMENT_FAILED" || ["FAILED", "REJECTED"].includes(String(flow.providerPaymentStatus).toUpperCase())) {
+    throw new Error(flow.failureReason ?? "Yapily funding failed. Airwallex payout was not started.");
+  }
+  if (flow.status !== "PAYMENT_COMPLETED" || String(flow.providerPaymentStatus).toUpperCase() !== "COMPLETED") {
+    throw new Error("Yapily funding is awaiting bank confirmation. Airwallex payout was not started.");
+  }
+}
+
 function buildSteps(route: RouteQuote, openBankingFlow?: OpenBankingPaymentFlow): ExecutionStep[] {
   return [
     ...buildOpenBankingSteps(openBankingFlow),
@@ -564,6 +578,7 @@ export async function runTransferExecution({
         payoutMethod: transfer.recipient.payoutMethod,
         payoutProviderName: activeRoute.provider,
         providerId: activeRoute.routePlan?.payout.provider.providerId as PayoutProviderId | undefined,
+        quoteId: activeRoute.routePlan?.payout.provider.quoteReference?.value ?? undefined,
       };
       const payoutPartner = activeRoute.routePlan
         ? {
@@ -720,6 +735,7 @@ export async function runTransferExecution({
             payoutMethod: transfer.recipient.payoutMethod,
             payoutProviderName: activeRoute.provider,
             providerId: activeRoute.routePlan?.payout.provider.providerId as PayoutProviderId | undefined,
+            quoteId: activeRoute.routePlan?.payout.provider.quoteReference?.value ?? undefined,
           }),
           getPayoutTimeoutMs(activeRoute),
           "Airwallex payout evidence refresh"
@@ -784,6 +800,8 @@ export async function runTransferExecution({
       await requireRouteTransition(selectedRoute, "EXECUTING", "Execution started for the approved route plan version.");
       activeRoute = withRoutePlanStatus(activeRoute, "EXECUTING");
     }
+
+    assertOpenBankingFundingCompleted(transfer);
 
     await runRecoveryPrelude();
 

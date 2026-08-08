@@ -117,6 +117,16 @@ export async function resumeOpenBankingPaymentFlow(flowId: string) {
   return mapFlow(data.flow, data.steps ?? []);
 }
 
+export function isOpenBankingPaymentCompleted(flow: OpenBankingPaymentFlow) {
+  return flow.status === "PAYMENT_COMPLETED"
+    && String(flow.providerPaymentStatus).toUpperCase() === "COMPLETED";
+}
+
+function isOpenBankingPaymentFailed(flow: OpenBankingPaymentFlow) {
+  return flow.status === "PAYMENT_FAILED"
+    || ["FAILED", "REJECTED"].includes(String(flow.providerPaymentStatus).toUpperCase());
+}
+
 export async function authoriseOpenBankingPayment(input: StartOpenBankingPaymentFlowInput) {
   const initial = await startOpenBankingPaymentFlow(input);
   if (!initial.authorizationUrl) throw new Error("Yapily did not return an authorisation URL.");
@@ -124,15 +134,20 @@ export async function authoriseOpenBankingPayment(input: StartOpenBankingPayment
   const result = await WebBrowser.openAuthSessionAsync(initial.authorizationUrl, returnUrl);
   if (result.type !== "success") {
     const latest = await resumeOpenBankingPaymentFlow(initial.id);
-    if (!latest.providerPaymentId) throw new Error("Yapily bank authorisation was cancelled or not completed.");
+    if (!isOpenBankingPaymentCompleted(latest)) {
+      throw new Error(latest.failureReason ?? "Yapily bank authorisation was cancelled or not completed.");
+    }
     return latest;
   }
-  for (let attempt = 0; attempt < 8; attempt += 1) {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
     const latest = await resumeOpenBankingPaymentFlow(initial.id);
-    if (latest.providerPaymentId || latest.status.includes("FAILED")) return latest;
-    await new Promise((resolve) => setTimeout(resolve, 750));
+    if (isOpenBankingPaymentCompleted(latest)) return latest;
+    if (isOpenBankingPaymentFailed(latest)) {
+      throw new Error(latest.failureReason ?? `Yapily payment returned ${latest.providerPaymentStatus ?? "FAILED"}.`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1500));
   }
-  throw new Error("Yapily authorisation returned, but payment confirmation is not yet available.");
+  throw new Error("Yapily accepted the bank authorisation, but funding is still pending. No payout has been started.");
 }
 
 export async function loadOpenBankingPaymentFlow(transferId: string) {

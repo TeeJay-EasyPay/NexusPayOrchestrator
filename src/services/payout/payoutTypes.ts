@@ -51,6 +51,7 @@ export interface CreatePayoutRequest {
   recipient: Recipient;
   payoutMethod: PayoutMethod;
   payoutProviderName?: string;
+  quoteId?: string;
 }
 
 export interface PayoutResult {

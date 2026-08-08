@@ -2,6 +2,7 @@ import { fetchLiveFxRate } from "../lib/fxFeed";
 import { createTransferId } from "../lib/id";
 import { supabase } from "../lib/supabase";
 import { getAirwallexBeneficiarySchema } from "./airwallexBeneficiarySchemaService";
+import { getAirwallexFxQuote } from "./airwallexFxQuoteService";
 import { getXrplTestnetStatus } from "./xrplTestnetService";
 import type { CanonicalRoutePlan, RouteDataProvenance, RouteEvidence } from "../types/routePlan";
 import type { Currency, FundingMethod, PayoutMethod, RouteQuote } from "../types/transfer";
@@ -318,9 +319,8 @@ function planToRouteQuote(plan: CanonicalRoutePlan): RouteQuote {
 export async function generateCanonicalRouteQuotes(input: RouteGenerationInput): Promise<RouteQuote[]> {
   const sourceCurrency = input.sourceCurrency ?? "GBP";
   const generatedAt = new Date().toISOString();
-  const quoteExpiresAt = new Date(Date.now() + QUOTE_TTL_MS).toISOString();
-  const [fx, bridgeFx, routeEvidence, airwallexSchemaResult] = await Promise.all([
-    fetchLiveFxRate(sourceCurrency, input.destinationCurrency).catch(() => null),
+  const defaultQuoteExpiresAt = new Date(Date.now() + QUOTE_TTL_MS).toISOString();
+  const [bridgeFx, routeEvidence, airwallexSchemaResult, airwallexFxQuoteResult] = await Promise.all([
     fetchLiveFxRate(sourceCurrency, "USD").catch(() => null),
     loadRouteEvidence(),
     input.payoutMethod === "BANK"
@@ -337,6 +337,23 @@ export async function generateCanonicalRouteQuotes(input: RouteGenerationInput):
           }))
       : Promise.resolve({
           schema: null,
+          error: "Airwallex V1 supports bank payouts only.",
+        }),
+    input.payoutMethod === "BANK"
+      ? getAirwallexFxQuote({
+          sellCurrency: sourceCurrency,
+          buyCurrency: input.destinationCurrency,
+          sellAmount: input.amount,
+        })
+          .then((quote) => ({ quote, error: null }))
+          .catch((error: unknown) => ({
+            quote: null,
+            error: error instanceof Error
+              ? error.message
+              : "Airwallex returned no sandbox FX quote for this payment.",
+          }))
+      : Promise.resolve({
+          quote: null,
           error: "Airwallex V1 supports bank payouts only.",
         }),
   ]);
@@ -422,18 +439,32 @@ export async function generateCanonicalRouteQuotes(input: RouteGenerationInput):
         "Airwallex Beneficiary Form Schema API",
         airwallexSchemaResult.error ?? "Airwallex returned no supported beneficiary schema for this corridor.",
       );
-  const fxEvidence = fx
-    ? evidence<number | null>(fx.rate, "LIVE", fx.provider, fx.date, 95, fx.providerStatus)
-    : unavailable<number | null>(null, "live FX provider chain", "All live FX providers are unavailable; route approval is blocked.", generatedAt);
+  const airwallexFxQuote = airwallexFxQuoteResult.quote;
+  const quoteExpiresAt = airwallexFxQuote?.validToAt || defaultQuoteExpiresAt;
+  const fxEvidence = airwallexFxQuote
+    ? evidence<number | null>(
+        airwallexFxQuote.clientRate,
+        "SANDBOX",
+        airwallexFxQuote.source,
+        airwallexFxQuote.validFromAt,
+        95,
+        "Airwallex returned a guaranteed sandbox conversion rate for this Route Plan validity period.",
+      )
+    : unavailable<number | null>(
+        null,
+        "Airwallex Transactional FX Quote API",
+        airwallexFxQuoteResult.error ?? "Airwallex returned no sandbox FX quote; route approval is blocked.",
+        generatedAt,
+      );
   const performance = executionPerformance(routeEvidence.executions, generatedAt);
-  const recipientAmount = fxEvidence.value === null ? null : Number((input.amount * fxEvidence.value).toFixed(2));
+  const recipientAmount = airwallexFxQuote?.buyAmount ?? null;
   const mandatoryBankingEvidence = [
     fundingStatus.value === "AVAILABLE",
     payoutStatus.value === "AVAILABLE",
     beneficiaryCapability.value === true,
     transferCapability.value === true,
     corridorEvidence.value,
-    fx !== null,
+    airwallexFxQuote !== null,
     input.payoutMethod === "BANK",
     usesOpenBanking,
   ];
@@ -443,7 +474,7 @@ export async function generateCanonicalRouteQuotes(input: RouteGenerationInput):
     beneficiaryCapability.value !== true ? beneficiaryCapability.reason : null,
     transferCapability.value !== true ? transferCapability.reason : null,
     !corridorEvidence.value ? corridorEvidence.reason : null,
-    !fx ? "A live FX quote is required before this route can be approved." : null,
+    !airwallexFxQuote ? airwallexFxQuoteResult.error ?? "An Airwallex sandbox FX quote is required before this route can be approved." : null,
     input.payoutMethod !== "BANK" ? "Airwallex V1 supports bank payouts only." : null,
     !usesOpenBanking ? "Card funding is not connected to an evidence-backed collection provider." : null,
   ].filter((value): value is string => Boolean(value));
@@ -453,7 +484,7 @@ export async function generateCanonicalRouteQuotes(input: RouteGenerationInput):
     : Math.max(0, Math.min(100, Math.round(100 - performance.latency.value * 2)));
   const ranking = weightedScore([
     { value: availabilityScore, weight: 0.35 },
-    { value: fx ? 100 : 0, weight: 0.15 },
+    { value: airwallexFxQuote ? 100 : 0, weight: 0.15 },
     { value: performance.success.value, weight: 0.2 },
     { value: latencyScore, weight: 0.1 },
     { value: corridorEvidence.value && input.payoutMethod === "BANK" ? 100 : 0, weight: 0.2 },
@@ -492,7 +523,22 @@ export async function generateCanonicalRouteQuotes(input: RouteGenerationInput):
     },
     payout: {
       method: input.payoutMethod,
-      provider: { providerId: "AIRWALLEX_SANDBOX", providerName: "Airwallex Sandbox", environment: "sandbox", status: payoutStatus },
+      provider: {
+        providerId: "AIRWALLEX_SANDBOX",
+        providerName: "Airwallex Sandbox",
+        environment: "sandbox",
+        status: payoutStatus,
+        quoteReference: airwallexFxQuote
+          ? evidence(
+              airwallexFxQuote.quoteId,
+              "SANDBOX",
+              airwallexFxQuote.source,
+              airwallexFxQuote.validFromAt,
+              95,
+              "Provider quote reference bound to the approved Route Plan.",
+            )
+          : unavailable<string | null>(null, "Airwallex Transactional FX Quote API", "No provider quote reference is available.", generatedAt),
+      },
       corridorSupported: corridorEvidence,
         beneficiaryCapability,
         transferCapability,
@@ -505,13 +551,22 @@ export async function generateCanonicalRouteQuotes(input: RouteGenerationInput):
       destinationCurrency: input.destinationCurrency,
       sendAmount: input.amount,
       fxRate: fxEvidence,
-      fxSpreadBps: unavailable<number | null>(null, "Airwallex Sandbox", "Provider execution FX spread is not available before submission.", generatedAt),
+      fxSpreadBps: airwallexFxQuote?.midRate && airwallexFxQuote.midRate > 0
+        ? evidence<number | null>(
+            Math.abs((airwallexFxQuote.clientRate - airwallexFxQuote.midRate) / airwallexFxQuote.midRate) * 10000,
+            "DERIVED",
+            "Airwallex client_rate and mid_rate",
+            airwallexFxQuote.validFromAt,
+            90,
+            "Derived from the provider's sandbox client and midpoint rates.",
+          )
+        : unavailable<number | null>(null, "Airwallex Transactional FX Quote API", "Airwallex did not return a midpoint rate for spread calculation.", generatedAt),
       providerFees: unavailable<number | null>(null, "Airwallex Sandbox", "Provider fee quote unavailable.", generatedAt),
       networkFees: evidence<number | null>(0, "DERIVED", "canonical_route_engine_v1", generatedAt, 100, "Direct banking route has no XRPL network fee."),
       totalCost: unavailable<number | null>(null, "canonical_route_engine_v1", "Total cost cannot be stated until provider fee and spread are available.", generatedAt),
       estimatedRecipientAmount: recipientAmount === null
-        ? unavailable<number | null>(null, "live FX provider chain", "Recipient amount unavailable without a live FX quote.", generatedAt)
-        : evidence(recipientAmount, "ESTIMATED", fx?.provider ?? "live FX provider chain", generatedAt, 85, "Uses current FX before unavailable provider fees and spread."),
+        ? unavailable<number | null>(null, "Airwallex Transactional FX Quote API", "Recipient amount unavailable without an Airwallex quote.", generatedAt)
+        : evidence(recipientAmount, "SANDBOX", airwallexFxQuote?.source ?? "Airwallex Transactional FX Quote API", airwallexFxQuote?.validFromAt ?? generatedAt, 95, "Amount Airwallex quoted for the recipient currency before any separately assessed payout fee."),
     },
     intelligence: {
       etaMinutes: performance.latency,
@@ -529,7 +584,7 @@ export async function generateCanonicalRouteQuotes(input: RouteGenerationInput):
         certifiedCorridor
           ? "Recent completed sandbox payout evidence increases confidence but is not required for another sandbox attempt."
           : "This corridor has no recent completed payout evidence; Airwallex will validate the beneficiary and transfer during execution.",
-        "FX is sourced from the live FX failover service; fallback FX blocks approval.",
+        "Conversion pricing and recipient amount come from a time-limited Airwallex sandbox FX quote bound to this Route Plan.",
         "Unavailable provider fees, limits, liquidity and spread are disclosed and are not invented.",
       ],
     },
@@ -541,7 +596,6 @@ export async function generateCanonicalRouteQuotes(input: RouteGenerationInput):
       transferCapability.provenance,
       corridorEvidence.provenance,
       "DERIVED",
-      "ESTIMATED",
       "UNAVAILABLE",
     ])),
     generatedAt,

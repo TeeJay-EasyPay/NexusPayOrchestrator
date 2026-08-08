@@ -37,7 +37,7 @@ interface TransferContextType {
   ) => Transfer;
   setRecipient: (recipient: Recipient) => void;
   setRoutes: (routes: RouteQuote[]) => void;
-  selectRoute: (route: RouteQuote) => Promise<boolean>;
+  selectRoute: (route: RouteQuote, transferOverride?: Transfer) => Promise<boolean>;
   setFundingMethod: (method: FundingMethod, fundingReference?: string) => void;
   setFundingStatus: (status: FundingStatus) => void;
   setOpenBankingFlow: (flow: OpenBankingPaymentFlow, transferFallback?: Transfer) => void;
@@ -215,8 +215,8 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const selectRoute = async (route: RouteQuote) => {
-    const currentTransfer = transfer;
+  const selectRoute = async (route: RouteQuote, transferOverride?: Transfer) => {
+    const currentTransfer = transferOverride ?? transfer;
     if (!currentTransfer) return false;
     if (route.routePlan && (!route.routePlan.eligible || Date.now() >= Date.parse(route.routePlan.quoteExpiresAt))) {
       return false;
@@ -224,6 +224,8 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
 
     const boundRoute = bindRouteQuotesToTransfer([route], currentTransfer.id)[0];
     if (boundRoute.routePlan) {
+      const candidatePersisted = await persistRoutePlans([boundRoute]);
+      if (!candidatePersisted) return false;
       const persisted = await transitionRoutePlan(boundRoute, "APPROVED", "User approved this canonical route plan version.");
       if (!persisted) return false;
     }
@@ -332,6 +334,9 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
       return {
         ...targetTransfer,
         openBankingFlow: flow,
+        fundingStatus: flow.status === "PAYMENT_COMPLETED" ? "AUTHORISED" : targetTransfer.fundingStatus,
+        fundingAuthorisedAt: flow.status === "PAYMENT_COMPLETED" ? Date.now() : targetTransfer.fundingAuthorisedAt,
+        status: flow.status === "PAYMENT_COMPLETED" ? "FUNDING_AUTHORISED" : targetTransfer.status,
       };
     });
   };

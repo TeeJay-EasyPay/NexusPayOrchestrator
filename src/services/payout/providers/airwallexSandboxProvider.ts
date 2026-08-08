@@ -116,6 +116,7 @@ export const airwallexSandboxProvider: PayoutProvider = {
         destinationAmount: req.amount,
         recipient: req.recipient,
         payoutMethod: req.payoutMethod,
+        quoteId: req.quoteId,
         reference: `NexusPay ${req.transferId.slice(0, 8)}`,
       },
     });

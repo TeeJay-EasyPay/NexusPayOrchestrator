@@ -10,6 +10,7 @@ import {
     consumerColors,
 } from "../../src/components/consumer/ConsumerShell";
 import { AirwallexBeneficiaryFields } from "../../src/components/payments/AirwallexBeneficiaryFields";
+import { PreSendCostSummary } from "../../src/components/routes/PreSendCostSummary";
 import { AppText } from "../../src/components/ui/AppText";
 import { corridors } from "../../src/data/corridors";
 import { useAirwallexBeneficiarySchema } from "../../src/hooks/useAirwallexBeneficiarySchema";
@@ -52,7 +53,7 @@ export default function ConsumerSendScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { rlusdBalance } = useWallet();
-  const { transfer, createTransfer, startTransfer, setOpenBankingFlow } = useTransfer();
+  const { transfer, createTransfer, selectRoute, startTransfer, setOpenBankingFlow } = useTransfer();
   const { paymentMethods, loadingInstitutions, institutionError, refreshInstitutions } = usePaymentMethods();
   const { enabled: routeAIEnabled, settings: aiSettings } = useNexusAIScreenSetting("route_enabled");
 
@@ -391,8 +392,16 @@ export default function ConsumerSendScreen() {
       selectedRoute,
       fundingMethod,
       fundingReference,
-      fundingStatus: "AUTHORISED",
+      fundingStatus: "AUTHORISING",
     });
+
+    const approved = await selectRoute(selectedRoute, newTransfer);
+    if (!approved) {
+      setErrorMessage("The selected Route Plan could not be persisted and approved. Refresh routes before sending.");
+      setCurrentStep(3);
+      setSubmitting(false);
+      return;
+    }
 
     if (fundingMethod === "OPEN_BANKING") {
       try {
@@ -407,8 +416,8 @@ export default function ConsumerSendScreen() {
           institutionId: fundingInstitutionId,
           institutionName: fundingInstitutionName,
         });
-        if (!flow.providerPaymentId || flow.status.includes("FAILED")) {
-          throw new Error(flow.failureReason ?? "Yapily did not create the sandbox payment.");
+        if (flow.status !== "PAYMENT_COMPLETED" || String(flow.providerPaymentStatus).toUpperCase() !== "COMPLETED") {
+          throw new Error(flow.failureReason ?? "Yapily funding has not completed.");
         }
         setOpenBankingFlow(flow, newTransfer);
       } catch (error) {
@@ -801,9 +810,12 @@ export default function ConsumerSendScreen() {
         {currentStep !== 4 ? (
           <AppText color={consumerColors.muted}>Complete previous steps to unlock final send confirmation.</AppText>
         ) : (
-          <AppText color={consumerColors.muted}>
-            Transfer creation persists the record and opens tracking automatically.
-          </AppText>
+          <>
+            <AppText color={consumerColors.muted}>
+              Transfer creation persists the approved Route Plan and opens tracking automatically.
+            </AppText>
+            {selectedRoute?.routePlan ? <PreSendCostSummary plan={selectedRoute.routePlan} /> : null}
+          </>
         )}
         {errorMessage ? (
           <AppText variant="caption" style={{ color: "#B91C1C", fontWeight: "900" }}>

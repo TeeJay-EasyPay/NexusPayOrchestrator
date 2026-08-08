@@ -136,8 +136,15 @@ serve(async (req: Request) => {
       updated_at: now,
     }).eq('id', flowId);
     await saveStep(step(flow, 'payment_submitted', 'Yapily sandbox payment submitted with provider-issued reference', 'DONE', 5, { provider_payment_id: payment.id, provider_status: providerStatus, http_status: paymentResult.response.status }));
-    await saveStep(step(flow, 'payment_status_received', `Yapily returned payment status: ${providerStatus}`, providerStatus === 'COMPLETED' ? 'DONE' : providerStatus === 'FAILED' ? 'FAILED' : 'PENDING', 6, { provider_status: providerStatus }));
-    await db.from('transfers').update({ funding_method: 'OPEN_BANKING', funding_status: 'AUTHORISED', funding_reference: flow.funding_reference, funding_authorised_at: now, open_banking_status: flowStatus, updated_at: now }).eq('id', flow.transfer_id).eq('user_id', flow.user_id);
+    await saveStep(step(flow, 'payment_status_received', `Yapily returned payment status: ${providerStatus}`, providerStatus === 'COMPLETED' ? 'DONE' : ['FAILED', 'REJECTED'].includes(providerStatus) ? 'FAILED' : 'PENDING', 6, { provider_status: providerStatus }));
+    await db.from('transfers').update({
+      funding_method: 'OPEN_BANKING',
+      funding_status: providerStatus === 'COMPLETED' ? 'AUTHORISED' : flowStatus === 'PAYMENT_FAILED' ? 'FAILED' : 'AUTHORISING',
+      funding_reference: flow.funding_reference,
+      funding_authorised_at: providerStatus === 'COMPLETED' ? now : null,
+      open_banking_status: flowStatus,
+      updated_at: now,
+    }).eq('id', flow.transfer_id).eq('user_id', flow.user_id);
     await db.from('partner_capabilities').update({ enabled: true, readiness_status: 'Validated', provenance: 'SANDBOX', last_validated_at: now, notes: 'Authenticated Yapily sandbox payment creation completed with provider-issued evidence.', updated_at: now }).eq('provider_id', 'yapily').eq('capability_code', 'PAYMENT_INITIATION').eq('environment', 'sandbox');
     return appRedirect(flowId, flowStatus === 'PAYMENT_FAILED' ? 'failed' : 'payment_submitted');
   } catch (error) {

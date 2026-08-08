@@ -281,8 +281,16 @@ async function resumeFlow(userId: string, body: Record<string, unknown>) {
     const providerStatus = String(payment?.status ?? payment?.statusDetails?.status ?? 'UNKNOWN').toUpperCase();
     const terminal = ['COMPLETED', 'FAILED', 'REJECTED'].includes(providerStatus);
     const status = providerStatus === 'COMPLETED' ? 'PAYMENT_COMPLETED' : ['FAILED', 'REJECTED'].includes(providerStatus) ? 'PAYMENT_FAILED' : 'PAYMENT_PENDING';
-    await client.from('open_banking_payment_flows').update({ status, provider_payment_status: providerStatus, provider_status_updated_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', flowId);
+    const statusUpdatedAt = new Date().toISOString();
+    await client.from('open_banking_payment_flows').update({ status, provider_payment_status: providerStatus, provider_status_updated_at: statusUpdatedAt, updated_at: statusUpdatedAt }).eq('id', flowId);
+    await saveStep(step(current.flow, 'payment_status_received', `Yapily returned payment status: ${providerStatus}`, terminal ? (providerStatus === 'COMPLETED' ? 'DONE' : 'FAILED') : 'PENDING', 6, { provider_status: providerStatus, http_status: statusResult.response.status }));
     await saveStep(step(current.flow, 'payment_status_retrieved', `Yapily payment status retrieved: ${providerStatus}`, terminal ? (providerStatus === 'COMPLETED' ? 'DONE' : 'FAILED') : 'PENDING', 7, { provider_status: providerStatus, http_status: statusResult.response.status }));
+    await client.from('transfers').update({
+      funding_status: providerStatus === 'COMPLETED' ? 'AUTHORISED' : status === 'PAYMENT_FAILED' ? 'FAILED' : 'AUTHORISING',
+      funding_authorised_at: providerStatus === 'COMPLETED' ? statusUpdatedAt : null,
+      open_banking_status: status,
+      updated_at: statusUpdatedAt,
+    }).eq('id', current.flow.transfer_id).eq('user_id', userId);
   }
   return json(await readFlow(flowId, userId));
 }

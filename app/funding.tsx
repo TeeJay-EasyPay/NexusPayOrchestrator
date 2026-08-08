@@ -6,6 +6,7 @@ import { AppButton } from "../src/components/ui/AppButton";
 import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
 import { Screen } from "../src/components/ui/Screen";
+import { PreSendCostSummary } from "../src/components/routes/PreSendCostSummary";
 import { SavedPaymentMethod } from "../src/data/mockPaymentMethods";
 import { authoriseOpenBankingPayment } from "../src/services/openBankingPaymentFlowService";
 import { usePaymentMethods } from "../src/state/PaymentMethodsContext";
@@ -174,8 +175,8 @@ export default function FundingScreen() {
           institutionId: selectedMethod.institutionId,
           institutionName: selectedMethod.institutionName,
         });
-        if (!flow.providerPaymentId || flow.status.includes("FAILED")) {
-          throw new Error(flow.failureReason ?? "Yapily did not create the sandbox payment.");
+        if (flow.status !== "PAYMENT_COMPLETED" || String(flow.providerPaymentStatus).toUpperCase() !== "COMPLETED") {
+          throw new Error(flow.failureReason ?? "Yapily funding has not completed.");
         }
         setOpenBankingFlow(flow);
       } catch (error) {
@@ -297,6 +298,10 @@ export default function FundingScreen() {
             </AppCard>
           ) : null}
 
+          {transfer.selectedRoute.routePlan ? (
+            <PreSendCostSummary plan={transfer.selectedRoute.routePlan} />
+          ) : null}
+
           <AppCard>
             <View style={{ gap: 10 }}>
               <AppText variant="subheading" color={colors.textDarkPrimary}>
@@ -304,7 +309,7 @@ export default function FundingScreen() {
               </AppText>
 
               <AppText variant="caption" color={colors.textDarkSecondary}>
-                {"Pay by Bank opens Yapily's sandbox institution authorisation and continues only after Yapily creates a payment. Card funding is unavailable until a tokenisation provider is configured."}
+                {"Pay by Bank opens Yapily's sandbox institution authorisation and continues only after Yapily confirms the payment completed. Card funding is unavailable until a tokenisation provider is configured."}
               </AppText>
 
               <AppButton

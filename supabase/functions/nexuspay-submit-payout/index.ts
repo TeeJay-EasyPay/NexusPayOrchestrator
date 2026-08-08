@@ -325,6 +325,48 @@ async function handleAirwallexBeneficiarySchema(body: Record<string, unknown>) {
     : new Error('Airwallex returned no supported beneficiary schema for this corridor.');
 }
 
+async function handleAirwallexFxQuote(body: Record<string, unknown>) {
+  const sellCurrency = safeString(body.sellCurrency).toUpperCase();
+  const buyCurrency = safeString(body.buyCurrency).toUpperCase();
+  const sellAmount = Number(body.sellAmount);
+  if (!sellCurrency || !buyCurrency || !Number.isFinite(sellAmount) || sellAmount <= 0) {
+    throw new Error('Valid sell currency, buy currency and sell amount are required for an Airwallex FX quote.');
+  }
+
+  const quote = await airwallexRequest('/api/v1/fx/quotes/create', {
+    method: 'POST',
+    operation: 'fx_quote_create',
+    correlationId: crypto.randomUUID(),
+    body: JSON.stringify({
+      sell_currency: sellCurrency,
+      buy_currency: buyCurrency,
+      sell_amount: sellAmount,
+      validity: 'MIN_15',
+    }),
+  });
+
+  const quoteId = safeString(quote.quote_id);
+  const buyAmount = Number(quote.buy_amount);
+  const clientRate = Number(quote.client_rate);
+  if (!quoteId || !Number.isFinite(buyAmount) || !Number.isFinite(clientRate)) {
+    throw new Error('Airwallex returned an incomplete sandbox FX quote.');
+  }
+
+  return {
+    quoteId,
+    sellCurrency: safeString(quote.sell_currency, sellCurrency),
+    buyCurrency: safeString(quote.buy_currency, buyCurrency),
+    sellAmount: Number(quote.sell_amount ?? sellAmount),
+    buyAmount,
+    clientRate,
+    midRate: Number.isFinite(Number(quote.mid_rate)) ? Number(quote.mid_rate) : null,
+    validFromAt: safeString(quote.valid_from_at, new Date().toISOString()),
+    validToAt: safeString(quote.valid_to_at),
+    source: 'Airwallex Transactional FX Quote API',
+    provenance: 'SANDBOX',
+  };
+}
+
 async function getAirwallexToken(baseUrl: string) {
   if (airwallexTokenCache && airwallexTokenCache.expiresAtMs - Date.now() > 60_000) {
     return airwallexTokenCache.token;
@@ -815,6 +857,7 @@ async function handleAirwallexCreate(body: Record<string, unknown>) {
     reason: 'business_expenses',
     reference: safeString(body.reference, `NexusPay ${transferId.slice(0, 8)}`).slice(0, 35),
     request_id: providerRequestId,
+    ...(safeString(body.quoteId) ? { quote_id: safeString(body.quoteId) } : {}),
   };
 
   await airwallexRequest('/api/v1/transfers/validate', {
@@ -1025,6 +1068,9 @@ serve(async (req: Request) => {
     if (providerId === 'airwallex') {
       if (safeString(body.operation) === 'beneficiary_schema') {
         return json(await handleAirwallexBeneficiarySchema(body));
+      }
+      if (safeString(body.operation) === 'fx_quote') {
+        return json(await handleAirwallexFxQuote(body));
       }
       if (safeString(body.operation) === 'retrieve') {
         return json(await handleAirwallexRetrieve(body));
