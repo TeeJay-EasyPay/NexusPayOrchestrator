@@ -63,8 +63,8 @@ export default function ConsumerSendScreen() {
   const [manualSortCode, setManualSortCode] = useState(asString(params.bankCode));
   const [manualAccountNumber, setManualAccountNumber] = useState(asString(params.accountNumber));
   const [airwallexFields, setAirwallexFields] = useState<Record<string, string>>({});
-  const [fundingMethod, setFundingMethod] = useState<FundingMethod>((asString(params.fundingMethod) as FundingMethod) || "CARD");
-  const [fundingReference, setFundingReference] = useState(asString(params.fundingReference) || "Visa **** 4242");
+  const [fundingMethod, setFundingMethod] = useState<FundingMethod>((asString(params.fundingMethod) as FundingMethod) || "OPEN_BANKING");
+  const [fundingReference, setFundingReference] = useState(asString(params.fundingReference));
   const [fundingInstitutionId, setFundingInstitutionId] = useState("");
   const [fundingInstitutionName, setFundingInstitutionName] = useState("");
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
@@ -275,8 +275,8 @@ export default function ConsumerSendScreen() {
     setManualSortCode("");
     setManualAccountNumber("");
     setAirwallexFields({});
-    setFundingMethod("CARD");
-    setFundingReference("Visa **** 4242");
+    setFundingMethod("OPEN_BANKING");
+    setFundingReference("");
     setSelectedRouteId(null);
     setCurrentStep(1);
     setRouteAiSummary(null);
@@ -622,7 +622,7 @@ export default function ConsumerSendScreen() {
         ) : (
           <>
             <AppText color={consumerColors.muted}>
-              Select a card or Yapily sandbox bank source before execution.
+              Select a payment-capable institution returned by Yapily Sandbox before execution.
             </AppText>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
               {paymentMethods.map((source) => {

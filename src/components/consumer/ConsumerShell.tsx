@@ -212,6 +212,9 @@ export function ConsumerShell({
                   <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/send" as never); }} style={styles.dropdownItem}>
                     <AppText style={styles.dropdownTitle}>Send</AppText>
                   </Pressable>
+                  <Pressable onPress={() => { setMenuOpen(false); router.push("/crypto-orchestration" as never); }} style={styles.dropdownItem}>
+                    <AppText style={styles.dropdownTitle}>Crypto & Fiat Orchestration</AppText>
+                  </Pressable>
                   {!isCorporatePersona ? (
                     <>
                       <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/fx" as never); }} style={styles.dropdownItem}>

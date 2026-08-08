@@ -28,6 +28,10 @@ import {
     TransferIntelligenceContext,
 } from "./contextTypes";
 
+function dashboardOperationalEvidenceAvailable() {
+  return false;
+}
+
 /**
  * Build Dashboard Executive Context
  *
@@ -41,6 +45,10 @@ import {
 export async function buildDashboardExecutiveContext(
   sensitivity: NexusAISensitivity
 ): Promise<DashboardExecutiveContext> {
+  if (!dashboardOperationalEvidenceAvailable()) {
+    throw new Error("Dashboard AI is unavailable until evidence-backed capacity and liquidity telemetry is configured.");
+  }
+
   const now = new Date().toISOString();
 
   // Get live feeds (FX, Treasury, Market Hours)
@@ -166,6 +174,9 @@ export async function buildRouteIntelligenceContext(
   sensitivity: NexusAISensitivity
 ): Promise<RouteIntelligenceContext> {
   const canonicalPlan = route.routePlan;
+  if (!canonicalPlan) {
+    throw new Error("Route AI requires a persisted canonical route plan with field-level provenance.");
+  }
   const treasurySignal = canonicalPlan
     ? null
     : await getTreasurySignal(
@@ -278,6 +289,9 @@ export async function buildTransferIntelligenceContext(
   const selectedRoute = transfer.selectedRoute ?? transfer.routes?.[0];
   const activeRoute = executionSnapshot?.activeRoute ?? selectedRoute;
   const canonicalPlan = selectedRoute?.routePlan;
+  if (!canonicalPlan) {
+    throw new Error("Transfer AI requires a persisted canonical route plan with provider evidence.");
+  }
   const now = new Date().toISOString();
 
   const treasurySignal = canonicalPlan

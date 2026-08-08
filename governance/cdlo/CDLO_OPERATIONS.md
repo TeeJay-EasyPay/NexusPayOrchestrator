@@ -156,6 +156,15 @@ NexusPay is **not** positioned as:
 
 Secure a destination-rail sandbox partner to complete the first end-to-end MVP orchestration demonstration.
 
+## 2026-08-08 Provenance and Crypto/Fiat Control Update
+
+- Active mock provider initialization and mock payout failover were removed.
+- Missing FX, balance, card, liquidity and corridor evidence now renders unavailable/no-data rather than a synthetic value.
+- Provider-neutral crypto/fiat evidence tables and an authenticated capability service were deployed.
+- XRPL is available only as `TESTNET` using platform test wallets.
+- Regulated fiat-to-crypto and crypto-to-fiat journeys are blocked as `UNAVAILABLE` pending provider onboarding.
+- No production or real-money crypto capability is claimed.
+
 ---
 
 ## 2026-08-06 Route Intelligence Evidence Update

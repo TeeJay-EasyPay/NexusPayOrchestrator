@@ -1647,3 +1647,28 @@ Release:
 - Android update: `019fdd41-66c1-7815-9fff-954456104097`
 - iOS update: `019fdd41-66c1-7afe-beef-9e865a5e7450`
 - Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/ab4b010d-bcd2-4b8c-ae1c-32d2d28b37e8`
+
+## 2026-08-08 - Value Provenance Integrity and Crypto/Fiat Phase 2
+
+Objective:
+Audit active displayed/payment values, remove operationally misleading synthetic fallbacks, and deploy the provider-neutral non-custodial crypto/fiat orchestration foundation.
+
+Completed:
+- Removed active mock provider initialization, mock payout failover, static card funding and timer-based card success.
+- Removed synthetic FX fallback, GBP balance, Home corridor recommendations and OCC simulated telemetry from active claims.
+- Added crypto capability, intent, quote, deposit instruction and event tables with RLS and idempotency.
+- Deployed authenticated `nexuspay-crypto-fiat-orchestration`.
+- Added crypto-and-fiat capability visibility across corporate, business/private and Platform Administration shells.
+- Verified XRPL Testnet availability and guarded regulated journeys as `UNAVAILABLE`.
+
+Evidence:
+- Migration applied: `20260808000100_crypto_fiat_orchestration_foundation.sql`.
+- Function deployed to Supabase project `gsekiwpqzushrmglncns`.
+- Fiat-to-crypto quote guard: HTTP 409 `PROVIDER_CAPABILITY_UNAVAILABLE`.
+- TypeScript: PASS.
+- ESLint: zero errors; pre-existing warnings remain.
+
+Reports:
+- `governance/reports/PLATFORM_VALUE_PROVENANCE_INTEGRITY_AUDIT_2026-08-08.md`
+- `governance/reports/CRYPTO_FIAT_ORCHESTRATION_PHASE2_IMPLEMENTATION_REPORT.md`
+- `governance/reports/FOUNDER_BRIEFING_CRYPTO_FIAT_PHASE2_2026-08-08.md`

@@ -13,7 +13,7 @@ NexusPay is intended to let a sender choose how value is funded while allowing t
 - NexusPay queries the Testnet ledger for wallet state, reserves and fees, and uses `ripple_path_find` for an executable XRP-to-RLUSD path for the requested amount.
 - A genuine `1 RLUSD` Testnet path payment validated with `tesSUCCESS`; the durable request was replayed without creating a second transaction.
 - The canonical route engine exposes XRPL only when the current path, trustlines, spendable XRP and fee evidence can support the requested Testnet amount.
-- Card funding remains a simulated test rail and must not be described as a live card-acquiring integration.
+- Card funding is disabled because no evidence-backed card tokenisation/acquiring provider is configured.
 
 ## Terminology
 

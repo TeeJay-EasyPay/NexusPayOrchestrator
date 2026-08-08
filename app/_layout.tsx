@@ -9,7 +9,6 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { beginStartupEvidenceLaunch } from "../src/services/startupEvidence";
 import { logStartupInfo } from "../src/services/startupLogger";
 import { StartupCoordinator } from "../src/startup/StartupCoordinator";
-import { initMockProviders } from "../src/providers/mock";
 import { AccountProvider } from "../src/state/AccountContext";
 import { AuthProvider } from "../src/state/AuthContext";
 import { DeviceUnlockProvider } from "../src/state/DeviceUnlockContext";
@@ -32,12 +31,6 @@ export default function Layout() {
       stage: "app-bootstrap",
       status: "start",
     });
-
-    // Initialise mock provider registry.
-    // In mock mode (default) this is safe and instantaneous.
-    // When EXPO_PUBLIC_PROVIDER_MODE=sandbox|live, real providers
-    // are registered instead via their respective init functions.
-    initMockProviders();
 
     const timer = setTimeout(() => {
       setShowBrandSplash(false);

@@ -15,7 +15,7 @@ import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
 import { Screen } from "../src/components/ui/Screen";
 import { useNexusAIScreenSetting } from "../src/hooks/useNexusAISettings";
-import { buildCorridorHealth, CorridorHealth } from "../src/lib/corridorHealth";
+import { CorridorHealth } from "../src/lib/corridorHealth";
 import { fetchCorridorFxRates, fetchFxRate, FxRate } from "../src/lib/fxFeed";
 import { supabase } from "../src/lib/supabase";
 import {
@@ -148,29 +148,6 @@ function toFxSnapshot(rate: FxRate): FxSnapshot {
     delta,
     direction: delta > 0 ? "up" : delta < 0 ? "down" : "flat",
   };
-}
-
-function buildRecommendedCorridors(
-  corridors: CorridorHealth[],
-  usdRate: FxRate | null
-): RecommendedCorridor[] {
-  const dynamic = corridors.map((item) => ({
-    corridor: item.corridor,
-    score: item.overallScore,
-    liquidity: item.status === "Excellent" ? "Strong" : "Healthy",
-    settlement: item.to === "PHP" ? "< 2 minutes" : "< 4 minutes",
-    badge: item.status === "Excellent" ? "Preferred" : "Normal Ops",
-  }));
-
-  const usdSynthetic: RecommendedCorridor = {
-    corridor: "GBP → USD",
-    score: usdRate ? 90 : 86,
-    liquidity: "Strong",
-    settlement: "< 3 minutes",
-    badge: "Deep Liquidity",
-  };
-
-  return [...dynamic, usdSynthetic].sort((a, b) => b.score - a.score).slice(0, 3);
 }
 
 function BalanceAction({
@@ -448,20 +425,8 @@ export default function HomeScreen() {
         fetchFxRate("GBP", "USD").catch(() => null),
       ]);
 
-      const safeUsdRate: FxRate =
-        usdRate ??
-        ({
-          from: "GBP",
-          to: "USD",
-          rate: 1.34,
-          date: new Date().toISOString().slice(0, 10),
-          source: "MOCK_FALLBACK",
-          provider: "Mock Fallback",
-          providerStatus: "Protected fallback pricing",
-        } as FxRate);
-
-      setCorridorHealth(buildCorridorHealth(corridorRates));
-      setFxSnapshots([...corridorRates, safeUsdRate].map(toFxSnapshot));
+      setCorridorHealth([]);
+      setFxSnapshots([...corridorRates, ...(usdRate ? [usdRate] : [])].map(toFxSnapshot));
       setLastRefresh(
         new Date().toLocaleTimeString([], {
           hour: "2-digit",
@@ -499,24 +464,7 @@ export default function HomeScreen() {
     [recentTransactions, activeTransfer]
   );
 
-  const recommendedCorridors = useMemo(() => {
-    const usdRate = fxSnapshots.find((item) => item.to === "USD");
-
-    return buildRecommendedCorridors(
-      corridorHealth,
-      usdRate
-        ? {
-            from: "GBP",
-            to: "USD",
-            rate: usdRate.rate,
-            date: new Date().toISOString().slice(0, 10),
-            source: "LIVE",
-            provider: "Frankfurter",
-            providerStatus: "Live",
-          }
-        : null
-    );
-  }, [corridorHealth, fxSnapshots]);
+  const recommendedCorridors = useMemo<RecommendedCorridor[]>(() => [], []);
 
   const networkHealthStatus = getPlatformHealthDomain(platformHealth, "network");
   const liquidityHealthStatus = getPlatformHealthDomain(platformHealth, "liquidity");
@@ -552,7 +500,7 @@ export default function HomeScreen() {
           networkHealth: networkHealthStatus
             ? `${networkHealthStatus.status} (${networkHealthStatus.provenance})`
             : "NO_DATA",
-          fxStatus: fxSnapshots.length > 0 ? "Live" : "Fallback",
+          fxStatus: fxSnapshots.length > 0 ? "Live" : "UNAVAILABLE",
           marketStatus: marketHealthStatus
             ? `${marketHealthStatus.status} (${marketHealthStatus.provenance})`
             : "NO_DATA",
@@ -827,6 +775,10 @@ export default function HomeScreen() {
                 {loading ? (
                   <AppText variant="caption" color={colors.textDarkSecondary}>
                     Building corridor recommendations...
+                  </AppText>
+                ) : recommendedCorridors.length === 0 ? (
+                  <AppText variant="caption" color={colors.textDarkSecondary}>
+                    Unavailable until provider capability, cost, liquidity and execution evidence can be compared.
                   </AppText>
                 ) : (
                   recommendedCorridors.map((item, index) => (

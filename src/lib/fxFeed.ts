@@ -7,15 +7,14 @@ export type FxProviderName =
   | "FloatRates"
   | "Open Exchange Rates"
   | "Fixer"
-  | "CurrencyLayer"
-  | "Mock Fallback";
+  | "CurrencyLayer";
 
 export type FxRate = {
   from: string;
   to: string;
   rate: number;
   date: string;
-  source: "LIVE" | "MOCK_FALLBACK";
+  source: "LIVE";
   provider: FxProviderName;
   providerStatus: string;
 };
@@ -23,117 +22,6 @@ export type FxRate = {
 const OPEN_EXCHANGE_RATES_APP_ID = "";
 const FIXER_API_KEY = "";
 const CURRENCYLAYER_API_KEY = "";
-
-const MOCK_RATES: Record<string, FxRate> = {
-  "GBP-PHP": {
-    from: "GBP",
-    to: "PHP",
-    rate: 72.4,
-    date: new Date().toISOString().slice(0, 10),
-    source: "MOCK_FALLBACK",
-    provider: "Mock Fallback",
-    providerStatus: "All live FX feeds unavailable",
-  },
-  "GBP-MYR": {
-    from: "GBP",
-    to: "MYR",
-    rate: 5.92,
-    date: new Date().toISOString().slice(0, 10),
-    source: "MOCK_FALLBACK",
-    provider: "Mock Fallback",
-    providerStatus: "All live FX feeds unavailable",
-  },
-  "GBP-AED": {
-    from: "GBP",
-    to: "AED",
-    rate: 4.65,
-    date: new Date().toISOString().slice(0, 10),
-    source: "MOCK_FALLBACK",
-    provider: "Mock Fallback",
-    providerStatus: "All live FX feeds unavailable",
-  },
-  "GBP-SAR": {
-    from: "GBP",
-    to: "SAR",
-    rate: 4.77,
-    date: new Date().toISOString().slice(0, 10),
-    source: "MOCK_FALLBACK",
-    provider: "Mock Fallback",
-    providerStatus: "All live FX feeds unavailable",
-  },
-  "GBP-QAR": {
-    from: "GBP",
-    to: "QAR",
-    rate: 4.61,
-    date: new Date().toISOString().slice(0, 10),
-    source: "MOCK_FALLBACK",
-    provider: "Mock Fallback",
-    providerStatus: "All live FX feeds unavailable",
-  },
-  "GBP-KWD": {
-    from: "GBP",
-    to: "KWD",
-    rate: 0.38,
-    date: new Date().toISOString().slice(0, 10),
-    source: "MOCK_FALLBACK",
-    provider: "Mock Fallback",
-    providerStatus: "All live FX feeds unavailable",
-  },
-  "GBP-BHD": {
-    from: "GBP",
-    to: "BHD",
-    rate: 0.47,
-    date: new Date().toISOString().slice(0, 10),
-    source: "MOCK_FALLBACK",
-    provider: "Mock Fallback",
-    providerStatus: "All live FX feeds unavailable",
-  },
-  "GBP-OMR": {
-    from: "GBP",
-    to: "OMR",
-    rate: 0.49,
-    date: new Date().toISOString().slice(0, 10),
-    source: "MOCK_FALLBACK",
-    provider: "Mock Fallback",
-    providerStatus: "All live FX feeds unavailable",
-  },
-  "GBP-SGD": {
-    from: "GBP",
-    to: "SGD",
-    rate: 1.72,
-    date: new Date().toISOString().slice(0, 10),
-    source: "MOCK_FALLBACK",
-    provider: "Mock Fallback",
-    providerStatus: "All live FX feeds unavailable",
-  },
-  "GBP-THB": {
-    from: "GBP",
-    to: "THB",
-    rate: 45.21,
-    date: new Date().toISOString().slice(0, 10),
-    source: "MOCK_FALLBACK",
-    provider: "Mock Fallback",
-    providerStatus: "All live FX feeds unavailable",
-  },
-  "GBP-IDR": {
-    from: "GBP",
-    to: "IDR",
-    rate: 20840,
-    date: new Date().toISOString().slice(0, 10),
-    source: "MOCK_FALLBACK",
-    provider: "Mock Fallback",
-    providerStatus: "All live FX feeds unavailable",
-  },
-  "GBP-VND": {
-    from: "GBP",
-    to: "VND",
-    rate: 31980,
-    date: new Date().toISOString().slice(0, 10),
-    source: "MOCK_FALLBACK",
-    provider: "Mock Fallback",
-    providerStatus: "All live FX feeds unavailable",
-  },
-};
 
 async function fetchFromFrankfurter(from: string, to: string): Promise<FxRate> {
   const response = await fetch(
@@ -403,36 +291,7 @@ export async function fetchLiveFxRate(from: string, to: string): Promise<FxRate>
 }
 
 export async function fetchFxRate(from: string, to: string): Promise<FxRate> {
-  const key = `${from}-${to}`;
-
-  try {
-    return await fetchLiveFxRate(from, to);
-  } catch {
-    // Legacy non-routing screens retain an explicitly labelled mock fallback.
-  }
-
-  logStartupWarn({
-    event: "fx-all-providers-failed",
-    stage: "fx-provider-init",
-    status: "fallback",
-    details: {
-      from,
-      to,
-      fallbackKey: key,
-    },
-  });
-
-  return (
-    MOCK_RATES[key] ?? {
-      from,
-      to,
-      rate: 1,
-      date: new Date().toISOString().slice(0, 10),
-      source: "MOCK_FALLBACK",
-      provider: "Mock Fallback",
-      providerStatus: "No configured fallback pair found; using neutral synthetic rate",
-    }
-  );
+  return fetchLiveFxRate(from, to);
 }
 
 export async function fetchCorridorFxRates(): Promise<FxRate[]> {
@@ -451,5 +310,8 @@ export async function fetchCorridorFxRates(): Promise<FxRate[]> {
     ["GBP", "VND"],
   ];
 
-  return Promise.all(corridors.map(([from, to]) => fetchFxRate(from, to)));
+  const results = await Promise.allSettled(
+    corridors.map(([from, to]) => fetchFxRate(from, to))
+  );
+  return results.flatMap((result) => result.status === "fulfilled" ? [result.value] : []);
 }

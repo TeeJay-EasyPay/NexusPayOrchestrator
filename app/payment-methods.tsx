@@ -220,7 +220,7 @@ export default function PaymentMethodsScreen() {
               </AppText>
 
               <AppText variant="caption" color={colors.textDarkSecondary}>
-                {"Card setup remains simulated. Available Pay by Bank institutions are loaded from Yapily's sandbox API."}
+                {"Card funding is unavailable until a tokenisation provider is configured. Pay by Bank institutions are loaded from Yapily's sandbox API."}
               </AppText>
 
               <View style={{ flexDirection: "row", gap: 8 }}>

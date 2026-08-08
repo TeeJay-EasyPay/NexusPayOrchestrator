@@ -1,10 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useContext, useMemo, useState } from "react";
 
-import {
-    mockPaymentMethods,
-    SavedPaymentMethod,
-} from "../data/mockPaymentMethods";
+import { SavedPaymentMethod } from "../data/mockPaymentMethods";
 import { listYapilyPaymentInstitutions } from "../services/openBankingPaymentFlowService";
 import { supabase } from "../lib/supabase";
 import { getStoredAccountScope } from "./AccountContext";
@@ -22,11 +19,7 @@ type PaymentMethodsContextType = {
 const PaymentMethodsContext = createContext<PaymentMethodsContextType | undefined>(undefined);
 
 export function PaymentMethodsProvider({ children }: { children: React.ReactNode }) {
-  const fallbackPrimary =
-    mockPaymentMethods.find((method) => method.isPrimary)?.id ?? mockPaymentMethods[0]?.id ?? "";
-  const [primaryMethodId, setPrimaryMethodId] = useState(
-    fallbackPrimary
-  );
+  const [primaryMethodId, setPrimaryMethodId] = useState("");
   const [institutions, setInstitutions] = useState<SavedPaymentMethod[]>([]);
   const [loadingInstitutions, setLoadingInstitutions] = useState(true);
   const [institutionError, setInstitutionError] = useState<string>();
@@ -55,6 +48,7 @@ export function PaymentMethodsProvider({ children }: { children: React.ReactNode
         institutionName: institution.fullName,
         provenance: "SANDBOX",
       })));
+      setPrimaryMethodId((current) => current || `yapily:${rows[0].id}`);
     } catch (error) {
       setInstitutions([]);
       setInstitutionError(error instanceof Error ? error.message : "Yapily institutions are unavailable.");
@@ -80,7 +74,7 @@ export function PaymentMethodsProvider({ children }: { children: React.ReactNode
         return;
       }
 
-      const exists = [...mockPaymentMethods, ...institutions].some((method) => method.id === persisted);
+      const exists = institutions.some((method) => method.id === persisted);
 
       if (exists) {
         setPrimaryMethodId(persisted);
@@ -101,14 +95,14 @@ export function PaymentMethodsProvider({ children }: { children: React.ReactNode
       } = await supabase.auth.getUser();
       const scope = await getStoredAccountScope();
       const key = `nexuspay-primary-payment-method:${user?.id ?? "anonymous"}:${scope}`;
-      await AsyncStorage.setItem(key, primaryMethodId || fallbackPrimary);
+      if (primaryMethodId) await AsyncStorage.setItem(key, primaryMethodId);
     }
 
     void persistPrimaryMethod();
-  }, [primaryMethodId, fallbackPrimary]);
+  }, [primaryMethodId]);
 
   const value = useMemo(() => {
-    const paymentMethods = [...mockPaymentMethods, ...institutions].map((method) => ({
+    const paymentMethods = institutions.map((method) => ({
       ...method,
       isPrimary: method.id === primaryMethodId,
     }));

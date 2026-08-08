@@ -1,5 +1,4 @@
-import { mockPayoutProvider } from "./mockPayoutProvider";
-import { CreatePayoutRequest } from "./payoutTypes";
+import { CreatePayoutRequest, PayoutProviderError } from "./payoutTypes";
 import { selectBestPayoutPartner } from "./payoutRoutingEngine";
 import { airwallexSandboxProvider } from "./providers/airwallexSandboxProvider";
 import { niumSandboxProvider, hasNiumSandboxCredentials } from "./providers/niumSandboxProvider";
@@ -21,24 +20,23 @@ export async function createPayout(request: CreatePayoutRequest) {
   console.log("Payout partner selection:", selection);
 
   let result;
-  let usingRealProvider = false;
 
   if (selection.selectedProviderId === "AIRWALLEX_SANDBOX") {
     result = await airwallexSandboxProvider.createPayout(request);
-    usingRealProvider = true;
   } else if (
     selection.selectedProviderId === "NIUM_SANDBOX" &&
     hasNiumSandboxCredentials()
   ) {
-    try {
-      result = await niumSandboxProvider.createPayout(request);
-      usingRealProvider = true;
-    } catch (error) {
-      console.warn("Nium sandbox failed, falling back to mock:", error);
-      result = await mockPayoutProvider.createPayout(request);
-    }
+    result = await niumSandboxProvider.createPayout(request);
   } else {
-    result = await mockPayoutProvider.createPayout(request);
+    throw new PayoutProviderError(
+      "The approved route does not have an evidence-backed payout provider.",
+      selection.selectedProviderId,
+      selection.selectedProviderName,
+      false,
+      "PROVIDER_UNAVAILABLE",
+      "create_payout",
+    );
   }
 
   return {
@@ -46,10 +44,8 @@ export async function createPayout(request: CreatePayoutRequest) {
     providerId: selection.selectedProviderId,
     providerName: selection.selectedProviderName,
     routingReason: selection.reason,
-    fallbackUsed: !usingRealProvider,
-    providerMessage: usingRealProvider
-      ? result.providerMessage
-      : `Selected ${selection.selectedProviderName} through the partner capability resolver. Executed through mock sandbox fallback until credentials are configured.`,
+    fallbackUsed: false,
+    providerMessage: result.providerMessage,
   };
 }
 
@@ -58,13 +54,16 @@ export async function getPayoutStatus(reference: string) {
     return airwallexSandboxProvider.getPayoutStatus(reference);
   }
 
-  if (hasNiumSandboxCredentials()) {
-    try {
-      return await niumSandboxProvider.getPayoutStatus(reference);
-    } catch {
-      return mockPayoutProvider.getPayoutStatus(reference);
-    }
+  if (reference.startsWith("nium:") && hasNiumSandboxCredentials()) {
+    return niumSandboxProvider.getPayoutStatus(reference);
   }
 
-  return mockPayoutProvider.getPayoutStatus(reference);
+  throw new PayoutProviderError(
+    "No evidence-backed provider owns this payout reference.",
+    "MOCK_PAYOUT_SANDBOX",
+    "Unavailable provider",
+    false,
+    "PROVIDER_REFERENCE_UNAVAILABLE",
+    "get_payout_status",
+  );
 }

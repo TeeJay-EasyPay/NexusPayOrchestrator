@@ -19,7 +19,8 @@ export type PlatformRouteKey =
   | "environments"
   | "audit"
   | "implementation_log"
-  | "settings";
+  | "settings"
+  | "crypto_orchestration";
 
 type MenuItem = {
   key: PlatformRouteKey;
@@ -33,6 +34,7 @@ const MENU_ITEMS: MenuItem[] = [
   { key: "partners", label: "Partner Ecosystem", route: "/platform-partners", icon: "share-2" },
   { key: "corridors", label: "Corridor Management", route: "/platform-corridors", icon: "map" },
   { key: "providers", label: "Provider Configuration", route: "/platform-providers", icon: "server" },
+  { key: "crypto_orchestration", label: "Crypto & Fiat Orchestration", route: "/crypto-orchestration", icon: "repeat" },
   { key: "health", label: "Platform Health", route: "/platform-health", icon: "activity" },
   { key: "environments", label: "Environment Management", route: "/platform-environments", icon: "layers" },
   { key: "audit", label: "System Audit", route: "/platform-audit", icon: "archive" },

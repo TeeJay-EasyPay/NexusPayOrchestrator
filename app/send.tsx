@@ -314,7 +314,7 @@ export default function SendScreen() {
 
   const numericAmount = Number(amount);
   const safeAmount = !Number.isNaN(numericAmount) && numericAmount > 0 ? numericAmount : 0;
-  const balanceAfterTransfer = Math.max((gbpBalance ?? 0) - safeAmount, 0);
+  const balanceAfterTransfer = gbpBalance == null ? null : Math.max(gbpBalance - safeAmount, 0);
 
   const selectedCorridor = useMemo(
     () => corridors.find((corridor) => corridor.country === selectedCountry),
@@ -464,7 +464,7 @@ export default function SendScreen() {
       return;
     }
 
-    if (numericAmount > gbpBalance) {
+    if (gbpBalance != null && numericAmount > gbpBalance) {
       Alert.alert("Insufficient balance", "You do not have enough GBP funds.");
       return;
     }
@@ -618,11 +618,11 @@ export default function SendScreen() {
               <View style={{ flexDirection: "row", gap: 8 }}>
                 <InfoPill
                   label="Available"
-                  value={`£${formatCurrency(gbpBalance ?? 0)}`}
+                  value={gbpBalance == null ? "Unavailable" : `£${formatCurrency(gbpBalance)}`}
                 />
                 <InfoPill
                   label="After transfer"
-                  value={`£${formatCurrency(balanceAfterTransfer)}`}
+                  value={balanceAfterTransfer == null ? "Unavailable" : `£${formatCurrency(balanceAfterTransfer)}`}
                   accent={safeAmount > 0}
                 />
               </View>

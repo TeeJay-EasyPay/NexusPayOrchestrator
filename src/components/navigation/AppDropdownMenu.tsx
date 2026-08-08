@@ -31,6 +31,12 @@ const MENU_ITEMS = [
     match: "/routes",
   },
   {
+    label: "Crypto & Fiat Orchestration",
+    description: "Evidence-backed value conversion and wallet routes",
+    route: "/crypto-orchestration",
+    match: "/crypto-orchestration",
+  },
+  {
     label: "Operations Command Centre V2",
     description: "Mission Control — redesigned operational intelligence platform",
     route: "/operations-v2",

@@ -14,7 +14,7 @@ export type CorridorHealth = {
   routeConfidence: number;
   overallScore: number;
   status: "Excellent" | "Healthy" | "Watch" | "Restricted";
-  source: "LIVE" | "MOCK_FALLBACK";
+  source: "LIVE";
   provider: string;
   providerStatus: string;
   activeRail: string;
@@ -23,8 +23,6 @@ export type CorridorHealth = {
 };
 
 function getProviderConfidence(provider: string, source: FxRate["source"]) {
-  if (source === "MOCK_FALLBACK") return 45;
-
   switch (provider) {
     case "Frankfurter":
       return 96;
@@ -48,7 +46,6 @@ function getProviderConfidence(provider: string, source: FxRate["source"]) {
 function getVolatilityRisk(to: string, provider: string, source: FxRate["source"]) {
   let baseRisk = to === "PHP" ? 18 : 24;
 
-  if (source === "MOCK_FALLBACK") baseRisk += 22;
   if (provider !== "Frankfurter") baseRisk += 4;
 
   return Math.min(baseRisk, 75);
@@ -81,10 +78,6 @@ function calculateRouteConfidence(
   source: FxRate["source"]
 ) {
   const confidence = Math.round(overallScore * 0.65 + providerConfidence * 0.35);
-
-  if (source === "MOCK_FALLBACK") {
-    return Math.min(confidence, 58);
-  }
 
   return confidence;
 }
@@ -149,10 +142,7 @@ export function buildCorridorHealth(fxRates: FxRate[]): CorridorHealth[] {
       providerStatus: rate.providerStatus,
       activeRail: getActiveRail(rate.to),
       fallbackRail: getFallbackRail(rate.to),
-      intelligenceSummary:
-        rate.source === "LIVE"
-          ? `Live FX via ${rate.provider}. Route confidence calculated from provider resilience, liquidity and volatility.`
-          : "Mock fallback active. Route confidence reduced until live FX feeds recover.",
+      intelligenceSummary: `Live FX via ${rate.provider}; non-FX corridor inputs are configured estimates and are not operational evidence.`,
     };
   });
 }

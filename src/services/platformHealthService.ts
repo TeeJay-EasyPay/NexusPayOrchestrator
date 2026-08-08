@@ -8,10 +8,7 @@ import {
   loadRecentRouteOperationalEvents,
   type RouteOperationalEventRow,
 } from "./routeOperationalEventService";
-import {
-  loadRecentTreasurySnapshots,
-  type TreasuryLiquiditySnapshotRow,
-} from "./treasuryIntelligenceService";
+import type { TreasuryLiquiditySnapshotRow } from "./treasuryIntelligenceService";
 import {
   loadPartnerConnectionTests,
   type PartnerConnectionTestRecord,
@@ -283,8 +280,7 @@ export function buildPlatformHealthSnapshot(input: BuildPlatformHealthInput): Pl
 }
 
 export async function loadPlatformHealthSnapshot(options: LoadPlatformHealthOptions): Promise<PlatformHealthSnapshot> {
-  const [snapshots, events, recoverableSessions, recentSessions, feeds, partnerConnectionTests] = await Promise.all([
-    loadRecentTreasurySnapshots(60),
+  const [events, recoverableSessions, recentSessions, feeds, partnerConnectionTests] = await Promise.all([
     loadRecentRouteOperationalEvents(60),
     loadRecoverableExecutionSessions(),
     loadRecentExecutionSessions(60),
@@ -298,8 +294,8 @@ export async function loadPlatformHealthSnapshot(options: LoadPlatformHealthOpti
   });
 
   return buildPlatformHealthSnapshot({
-    events,
-    snapshots,
+    events: events.filter((event) => event.status !== "SIMULATED"),
+    snapshots: [],
     sessions: Array.from(sessionMap.values()),
     feeds,
     aiEnabled: options.aiEnabled,

@@ -747,7 +747,7 @@ export default function TrackScreen() {
                   Fiat payout reference: NPX-{transfer.id.slice(-6)}
                 </AppText>
                 <AppText variant="caption" color={colors.textDarkSecondary}>
-                  Fee £{(activeRoute.fee ?? 0).toFixed(2)} • Recipient receives {formatCurrency(activeRoute.receiveAmount, recipientCurrency)}
+                  Fee {activeRoute.routePlan?.economics.providerFees.value == null ? "Unavailable" : `£${activeRoute.routePlan.economics.providerFees.value.toFixed(2)}`} • Recipient receives {formatCurrency(activeRoute.receiveAmount, recipientCurrency)}
                 </AppText>
               </View>
 
@@ -762,7 +762,7 @@ export default function TrackScreen() {
                       <View style={{ flexDirection: "row", gap: 8 }}>
                         <DetailMetric label="RLUSD settled" value={`${xrplProof?.rlusdAmount ?? "0"} RLUSD`} />
                         <DetailMetric label="GBP/RLUSD reference" value={(xrplProof?.settlementRate ?? 0).toFixed(4)} />
-                        <DetailMetric label="Network fee" value={`${xrplProof?.networkFeeXrp ?? "0"} XRP`} />
+                        <DetailMetric label="Network fee" value={xrplProof?.networkFeeXrp == null ? "Unavailable" : `${xrplProof.networkFeeXrp} XRP`} />
                       </View>
 
                       {xrplProof.txHash ? (

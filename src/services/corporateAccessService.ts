@@ -24,7 +24,8 @@ export type CorporateRouteKey =
   | "received_transfers"
   | "settings"
   | "operations_command_centre"
-  | "platform_health";
+  | "platform_health"
+  | "crypto_orchestration";
 
 type Permission =
   | "configure_governance"
@@ -69,6 +70,7 @@ const ROLE_ROUTES: Record<CorporateRole, CorporateRouteKey[]> = {
     "track_transfer",
     "account_profile",
     "received_transfers",
+    "crypto_orchestration",
     "operations_command_centre",
     "platform_health",
   ],
@@ -86,13 +88,14 @@ const ROLE_ROUTES: Record<CorporateRole, CorporateRouteKey[]> = {
     "payment_analytics",
     "audit_logs",
     "settings",
+    "crypto_orchestration",
   ],
-  ceo: ["dashboard", "approval_queue", "batch_operations", "reports", "audit_logs", "approval_rules", "notifications"],
-  cfo: ["dashboard", "approval_queue", "batch_operations", "reports", "payment_analytics", "notifications"],
-  cto: ["dashboard", "operations_command_centre", "platform_health", "reports", "notifications"],
-  finance_manager: ["dashboard", "send_payments", "batch_payments", "approval_queue", "recipients", "notifications"],
-  finance_director: ["dashboard", "approval_queue", "batch_operations", "reports", "notifications"],
-  auditor: ["dashboard", "audit_logs", "reports", "approval_rules", "notifications"],
+  ceo: ["dashboard", "approval_queue", "batch_operations", "reports", "audit_logs", "approval_rules", "notifications", "crypto_orchestration"],
+  cfo: ["dashboard", "approval_queue", "batch_operations", "reports", "payment_analytics", "notifications", "crypto_orchestration"],
+  cto: ["dashboard", "operations_command_centre", "platform_health", "crypto_orchestration", "reports", "notifications"],
+  finance_manager: ["dashboard", "send_payments", "batch_payments", "approval_queue", "recipients", "notifications", "crypto_orchestration"],
+  finance_director: ["dashboard", "approval_queue", "batch_operations", "reports", "notifications", "crypto_orchestration"],
+  auditor: ["dashboard", "audit_logs", "reports", "approval_rules", "notifications", "crypto_orchestration"],
 };
 
 export function isCorporatePersona(persona: PersonaOption | null | undefined): boolean {

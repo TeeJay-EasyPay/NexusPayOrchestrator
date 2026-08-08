@@ -182,8 +182,8 @@ export function useOperationsCommandCentre(): OperationsCommandCentreState {
       });
       setDebugStage(`OPS_DEBUG: telemetry loaded (snap=${snapshotData.length} ev=${eventData.length} sess=${sessionData.length} tx=${transferData.length})`);
 
-      setSnapshots(snapshotData);
-      setEvents(eventData);
+      setSnapshots([]);
+      setEvents(eventData.filter((event) => event.status !== "SIMULATED"));
       setSessions((current) => sessionData.reduce(upsertSession, current));
       setTransfers(transferData);
       setFeeds(feedData ?? null);

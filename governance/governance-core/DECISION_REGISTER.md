@@ -958,6 +958,33 @@ Implemented and Testnet validated
 
 ## Register Maintenance Guidance
 
+## Decision ID
+D-015
+
+## Title
+Evidence-Only Operational Values and Provider-Neutral Crypto/Fiat Boundary
+
+## Date
+2026-08-08
+
+## Decision Owner
+Chief Technology Officer
+
+## Decision
+Active payment and health paths must not substitute mock or simulated values when evidence is absent. Crypto/fiat conversion must use a regulated provider adapter that supplies executable quotes, deposit instructions, compliance outcomes and status evidence. Until then the capability is `UNAVAILABLE`.
+
+## Rationale
+Badges alone do not make fabricated execution safe. Blocking unsupported execution protects customer transparency, auditability and investor credibility while preserving an extensible provider-neutral architecture.
+
+## Status
+Implemented; regulated provider onboarding pending
+
+## Reference Documents
+- `../reports/PLATFORM_VALUE_PROVENANCE_INTEGRITY_AUDIT_2026-08-08.md`
+- `../reports/CRYPTO_FIAT_ORCHESTRATION_PHASE2_IMPLEMENTATION_REPORT.md`
+
+---
+
 1. Add new decisions in ascending ID order.
 2. Never overwrite historical decisions; append updates through status and follow-up actions.
 3. Link every decision to authoritative governance and supporting evidence artifacts.

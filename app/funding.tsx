@@ -185,7 +185,10 @@ export default function FundingScreen() {
         return;
       }
     } else {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      console.warn("Funding blocked: no evidence-backed card provider is configured.");
+      setFundingStatus("FAILED");
+      setBusy(false);
+      return;
     }
 
     setFundingStatus("AUTHORISED");
@@ -232,7 +235,7 @@ export default function FundingScreen() {
             </AppText>
 
             <AppText variant="body" color={colors.textSecondary}>
-              Select a card or Yapily sandbox bank source to authorise this transfer before payout execution.
+              Select a payment-capable institution returned by Yapily Sandbox.
             </AppText>
           </View>
 
@@ -301,7 +304,7 @@ export default function FundingScreen() {
               </AppText>
 
               <AppText variant="caption" color={colors.textDarkSecondary}>
-                {"Card authorisation remains simulated. Pay by Bank opens Yapily's sandbox institution authorisation and continues only after Yapily creates a payment."}
+                {"Pay by Bank opens Yapily's sandbox institution authorisation and continues only after Yapily creates a payment. Card funding is unavailable until a tokenisation provider is configured."}
               </AppText>
 
               <AppButton

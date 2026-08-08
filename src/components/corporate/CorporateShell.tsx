@@ -30,6 +30,7 @@ const MENU_ITEMS: MenuItem[] = [
   { key: "dashboard", label: "Dashboard", route: "/corporate-dashboard", icon: "grid" },
   { key: "send_payments", label: "Send Payments", route: "/consumer/send", corporateUserRoute: "/send", icon: "send" },
   { key: "route_intelligence", label: "Route Intelligence", route: "/routes", icon: "navigation" },
+  { key: "crypto_orchestration", label: "Crypto & Fiat Orchestration", route: "/crypto-orchestration", icon: "repeat" },
   { key: "operations_command_centre", label: "Operations Command Centre", route: "/operations-v2", icon: "activity" },
   { key: "platform_health", label: "Platform Health", route: "/operations-v2", icon: "cpu" },
   { key: "live_intelligence_feeds", label: "Live Intelligence Feeds", route: "/live-intelligence-feeds", icon: "radio" },

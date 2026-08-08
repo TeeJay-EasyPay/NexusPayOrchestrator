@@ -88,7 +88,7 @@ async function getLiveFXFeeds(): Promise<FXFeedItem[]> {
   }
 }
 
-async function getLiveTreasuryFeeds(): Promise<TreasuryFeedItem[]> {
+export async function getLiveTreasuryFeeds(): Promise<TreasuryFeedItem[]> {
   const now = new Date().toISOString();
 
   return [
@@ -329,14 +329,11 @@ function getMarketHoursFeeds(): MarketHoursFeedItem[] {
 }
 
 export async function getLiveIntelligenceFeeds(): Promise<LiveIntelligenceFeeds> {
-  const [fx, treasury] = await Promise.all([
-    getLiveFXFeeds(),
-    getLiveTreasuryFeeds(),
-  ]);
+  const fx = await getLiveFXFeeds();
 
   return {
     fx,
-    treasury,
+    treasury: [],
     marketHours: getMarketHoursFeeds(),
     refreshedAt: new Date().toISOString(),
   };
