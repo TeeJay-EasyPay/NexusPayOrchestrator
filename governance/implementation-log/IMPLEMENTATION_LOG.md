@@ -1721,3 +1721,34 @@ Release:
 - Android update: `019fe130-a365-7388-92a0-fdb22b870607`.
 - iOS update: `019fe130-a365-76b2-9a61-06fd3854d10d`.
 - Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/3c8ac166-b543-405d-9ddf-bf985f9cf91d`.
+
+## 2026-08-08 - Cross-Corridor Recipient Requirements Consistency
+
+Objective:
+Review every country, currency and bank suggestion displayed by Send and provide uniform, provider-backed recipient guidance across Corporate and consumer payment screens.
+
+Completed:
+- Queried the authenticated Airwallex Sandbox form-schema API for all 12 displayed destination corridors.
+- Confirmed 10 supported schemas and preserved explicit unavailability for Indonesia and Vietnam.
+- Added schema-derived IBAN country/length guidance, BIC country placement, account-number ranges, postal-code variants, address constraints, locality guidance and email format guidance.
+- Displayed both Airwallex descriptions and NexusPay's deterministic explanation of provider regex constraints.
+- Preserved searchable Airwallex selectors, including 16 Malaysian states and 78 Thai provinces.
+- Kept city/locality fields as free text because every audited Airwallex city definition is free text; the prompt now explicitly supports towns, villages and recognised localities.
+- Reclassified the short bank lists as common-bank suggestions and added an editable recipient-bank field on both payment screens so unlisted banks are not excluded.
+- Documented the complete coverage review in `governance/reports/AIRWALLEX_RECIPIENT_REQUIREMENTS_COVERAGE_2026-08-08.md`.
+
+Validation:
+- Authenticated 12-corridor schema audit: PASS.
+- TypeScript: PASS.
+- ESLint quiet: PASS.
+- Android Expo export: PASS.
+- Pixel 9 UAE IBAN and editable-bank rendering: PASS.
+- Pixel 9 Thailand format guidance and searchable province selector: PASS.
+
+Release:
+- Implementation commit: `f0aa0a6ea5df2587af37a4bc798aa98dd19590e3`.
+- OTA branch: `preview`.
+- Update group: `641b903f-3dcd-41de-b120-7a8a65310bce`.
+- Android update: `019fe14d-1236-7eba-8479-8dfa40fb11d0`.
+- iOS update: `019fe14d-1236-7515-9544-fcc23d4e7aed`.
+- Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/641b903f-3dcd-41de-b120-7a8a65310bce`.
