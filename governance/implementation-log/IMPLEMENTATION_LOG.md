@@ -1680,3 +1680,14 @@ Reports:
 - `governance/reports/PLATFORM_VALUE_PROVENANCE_INTEGRITY_AUDIT_2026-08-08.md`
 - `governance/reports/CRYPTO_FIAT_ORCHESTRATION_PHASE2_IMPLEMENTATION_REPORT.md`
 - `governance/reports/FOUNDER_BRIEFING_CRYPTO_FIAT_PHASE2_2026-08-08.md`
+
+Final preview release:
+- Corrected the Home funding prompt so it no longer implies that card funding is executable.
+- Copy correction commit: `bbf205c07e44c9c55aee5b8fb2847256d85612e9`.
+- Final OTA branch: `preview`.
+- Final update group: `85e55a63-eec7-48e4-ba25-e9034f3e664b`.
+- Final Android update: `019fe0bb-0ce3-71bf-ad55-60573e263db1`.
+- Final iOS update: `019fe0bb-0ce3-7914-8f8c-a18d085a628b`.
+- Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/85e55a63-eec7-48e4-ba25-e9034f3e664b`.
+- Corporate emulator menu check: PASS.
+- Final TypeScript, ESLint quiet and whitespace checks: PASS.
