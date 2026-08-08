@@ -104,11 +104,13 @@ export function airwallexFieldFormatHint(field: AirwallexBeneficiaryField) {
 }
 
 export function airwallexFieldPlaceholder(field: AirwallexBeneficiaryField) {
-  const hint = airwallexFieldFormatHint(field);
-  if (field.path.toLowerCase().endsWith("date_of_birth")) return "YYYY-MM-DD";
-  if (field.path.toLowerCase().endsWith("iban")) return "IBAN without spaces";
-  if (field.path.toLowerCase().endsWith("swift_code")) return "8 or 11-character BIC/SWIFT";
-  return field.placeholder || hint || field.label;
+  const path = field.path.toLowerCase();
+  if (path.endsWith("date_of_birth")) return "YYYY-MM-DD";
+  if (path.endsWith("iban")) return "IBAN without spaces";
+  if (path.endsWith("swift_code")) return "8 or 11-character BIC/SWIFT";
+  const exactCount = exactCharacterCount(field.pattern);
+  if (exactCount && path.includes("postcode")) return `${exactCount}-digit postcode`;
+  return field.placeholder || field.label;
 }
 
 export function materializeAirwallexBeneficiaryFields(
