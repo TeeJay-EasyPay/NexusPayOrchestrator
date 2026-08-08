@@ -28,7 +28,20 @@ export function PaymentMethodsProvider({ children }: { children: React.ReactNode
     setLoadingInstitutions(true);
     setInstitutionError(undefined);
     try {
-      const rows = await listYapilyPaymentInstitutions();
+      let rows: Awaited<ReturnType<typeof listYapilyPaymentInstitutions>> = [];
+      let lastError: unknown;
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          rows = await listYapilyPaymentInstitutions();
+          lastError = undefined;
+          break;
+        } catch (error) {
+          lastError = error;
+          if (attempt === 0) await supabase.auth.refreshSession();
+          if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 600 * (attempt + 1)));
+        }
+      }
+      if (lastError) throw lastError;
       if (rows.length === 0) {
         setInstitutions([]);
         setInstitutionError("No payment-capable sandbox institution is registered to the NexusPay Yapily application.");

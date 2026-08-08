@@ -103,7 +103,16 @@ export async function listYapilyPaymentInstitutions(): Promise<YapilyInstitution
   const { data, error } = await supabase.functions.invoke("nexuspay-open-banking-payment-flow", {
     body: { action: "institutions" },
   });
-  if (error) throw new Error(error.message);
+  if (error) {
+    let providerMessage = error.message;
+    try {
+      const payload = await (error as { context?: Response }).context?.clone().json();
+      providerMessage = payload?.error ?? providerMessage;
+    } catch {
+      // Keep the transport error when the Edge Function returned no JSON body.
+    }
+    throw new Error(providerMessage);
+  }
   if (!Array.isArray(data?.institutions)) return [];
   return data.institutions as YapilyInstitution[];
 }
