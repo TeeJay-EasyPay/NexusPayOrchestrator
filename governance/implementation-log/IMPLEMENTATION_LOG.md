@@ -1691,3 +1691,33 @@ Final preview release:
 - Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/85e55a63-eec7-48e4-ba25-e9034f3e664b`.
 - Corporate emulator menu check: PASS.
 - Final TypeScript, ESLint quiet and whitespace checks: PASS.
+
+## 2026-08-08 - Airwallex Beneficiary Input Guidance
+
+Objective:
+Make provider-required recipient fields understandable and usable without replacing Airwallex's authoritative sandbox schema with local assumptions.
+
+Completed:
+- Added explicit date-of-birth guidance (`YYYY-MM-DD`) and actionable validation errors.
+- Added format prompts for IBAN, BIC/SWIFT, postcode and provider length constraints.
+- Replaced provider option chips/plain text with a searchable selector for every Airwallex-supplied option set.
+- Kept city and street address as provider-validated free text so rural localities are not excluded by an incomplete local list.
+- Clarified the active Airwallex transfer method, bank country and currency in the form heading.
+- Marked non-required provider fields as optional.
+
+Evidence:
+- Authenticated Airwallex Malaysia sandbox schema retrieval: PASS.
+- Schema confirmed `YYYY-MM-DD`, Malaysian BIC, five-digit postcode, 16 state options and free-text city requirements.
+- Pixel 9 emulator rendering of MY/MYR Airwallex fields: PASS.
+- Targeted valid/invalid date validation: PASS.
+- TypeScript: PASS.
+- ESLint quiet: PASS.
+- Android Expo export: PASS.
+
+Release:
+- Implementation commits: `34542a3fe0ac5c8f72abda685d58c52cc7cb496f`, `3a40c078c676fc5c27cd152f750b0429d8f97cca`.
+- OTA branch: `preview`.
+- Final update group: `3c8ac166-b543-405d-9ddf-bf985f9cf91d`.
+- Android update: `019fe130-a365-7388-92a0-fdb22b870607`.
+- iOS update: `019fe130-a365-76b2-9a61-06fd3854d10d`.
+- Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/3c8ac166-b543-405d-9ddf-bf985f9cf91d`.
