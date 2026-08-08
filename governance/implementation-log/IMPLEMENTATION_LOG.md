@@ -1826,3 +1826,27 @@ Release:
 - Android update: `019fe1ff-6a19-756b-bd5e-24af653f64e3`.
 - iOS update: `019fe1ff-6a19-7139-97e7-b06fde8abab4`.
 - Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/25bd50a1-8cbe-44bf-8486-5051d4076585`.
+
+## 2026-08-08 - Yapily Institution Discovery Retry
+
+Trigger:
+- Founder screenshot showed the previous mobile bundle reporting that Yapily institutions were unavailable on the Corporate funding screen.
+
+Diagnosis:
+- Authenticated deployed discovery test returned `Modelo Sandbox` from the Yapily API with payment-initiation capability.
+- Preview channel mapping and the prior OTA were valid.
+- Screenshot copy confirmed the phone had not activated the latest JavaScript bundle.
+
+Completed:
+- Added three-attempt Yapily institution discovery with Supabase session refresh after the first failure.
+- Preserved and displayed the provider's returned error instead of replacing every failure with a generic transport message.
+- Retained the no-fallback rule: no local or simulated institution is substituted when Yapily is unavailable.
+
+Validation and release:
+- TypeScript, ESLint quiet and Android Expo export: PASS.
+- Commit: `d08fd2a081f02112853127f61a3f5d1d66e063a6`.
+- OTA branch: `preview`.
+- Update group: `a5870a04-b865-4431-899e-bd2fa9e32729`.
+- Android update: `019fe216-b275-7547-965e-4d869c7a9449`.
+- iOS update: `019fe216-b275-76ff-a6ae-1ed7d1d4df47`.
+- Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/a5870a04-b865-4431-899e-bd2fa9e32729`.
