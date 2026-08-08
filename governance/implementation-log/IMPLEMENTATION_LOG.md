@@ -1782,3 +1782,47 @@ Release:
 - Android update: `019fe19e-d022-7405-9ab2-7fccfd7df443`.
 - iOS update: `019fe19e-d022-74ba-bdac-dc56f55825bc`.
 - Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/9ce26a6e-8db5-4d95-8102-1c9c948e0af2`.
+
+## 2026-08-08 - Yapily Sequencing, Route Approval and Airwallex Quote Remediation
+
+Objective:
+Prevent destination payout before confirmed bank funding, guarantee that every Send journey executes an explicitly approved canonical Route Plan, and replace estimated pre-send conversion values with an Airwallex-backed sandbox quote.
+
+Completed:
+- Changed Yapily authorisation completion from "provider payment ID exists" to the provider's terminal `COMPLETED` payment status.
+- Added deployed Yapily status reconciliation that updates both payment-status evidence steps and the transfer funding state.
+- Added an execution-engine guard that blocks XRPL/Airwallex activity while Yapily funding is pending, failed or missing.
+- Corrected the shared consumer/business/corporate-role Send path so its candidate Route Plan is persisted and transitioned to `APPROVED` before funding starts.
+- Added authenticated Airwallex Transactional FX quote retrieval through the existing payout Edge Function boundary.
+- Bound the Airwallex quote reference and provider expiry to the approved Route Plan and passed the same quote into Airwallex transfer validation/submission.
+- Replaced Frankfurter recipient estimates on Airwallex routes with the provider's sandbox client rate and quoted buy amount.
+- Added a compact pre-send cost quotation to both Send journeys. It explicitly leaves payout provider fee and total additional cost `UNAVAILABLE` because Airwallex does not return those values in the pre-transfer FX quote.
+
+Backend deployment:
+- `nexuspay-submit-payout`: deployed.
+- `nexuspay-open-banking-payment-flow`: deployed.
+- `nexuspay-yapily-callback`: deployed without gateway JWT verification; the existing one-use hashed callback token remains the callback security boundary.
+
+Evidence:
+- Authenticated deployed Airwallex GBP/MYR quote: PASS.
+- Test quote: GBP 100 sell amount, MYR 543.85 buy amount, client rate 5.438511, midpoint 5.52568, 15-minute provider expiry, `SANDBOX` provenance.
+- Quote and provider references were redacted to suffix-only output during validation.
+- Canonical route validation: PASS; direct route eligible with Airwallex `SANDBOX` FX provenance and persisted approval transitions.
+- XRPL candidate remained unavailable because Testnet returned no executable XRP-to-RLUSD order-book path; no route evidence was fabricated.
+
+Validation:
+- TypeScript: PASS.
+- ESLint quiet: PASS.
+- Canonical route intelligence validation: PASS.
+- Android Expo export: PASS.
+- Pixel 9 emulator startup/rendering: PASS.
+- Full emulator consent execution: NOT COMPLETED because the existing persona sign-in session remained in its loading state. No success claim is made for that manual stage.
+- Deno CLI check: NOT RUN because Deno is not installed locally; all three Edge Functions packaged and deployed successfully through Supabase CLI.
+
+Release:
+- Implementation commit: `bf5d63e30f8c77eedf453d4f88043e9ebcdd46c4`.
+- OTA branch: `preview`.
+- Update group: `25bd50a1-8cbe-44bf-8486-5051d4076585`.
+- Android update: `019fe1ff-6a19-756b-bd5e-24af653f64e3`.
+- iOS update: `019fe1ff-6a19-7139-97e7-b06fde8abab4`.
+- Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/25bd50a1-8cbe-44bf-8486-5051d4076585`.
