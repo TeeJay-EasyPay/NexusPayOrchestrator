@@ -659,7 +659,7 @@ export default function HomeScreen() {
               <AppText variant="caption" color={colors.textDarkSecondary}>
                 {fundingReady
                   ? "Funding sources are ready for transfer orchestration."
-                  : "Connect a bank account or card to begin sending money."}
+                  : "Connect a Yapily sandbox bank account to begin sending money."}
               </AppText>
 
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
