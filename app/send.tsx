@@ -685,9 +685,25 @@ export default function SendScreen() {
             <View style={{ gap: 12 }}>
               <AppText variant="subheading" color={colors.textDarkPrimary}>
                 {selectedPayoutMethod === "BANK"
-                  ? "Payout bank"
+                  ? "Recipient bank"
                   : "Wallet provider"}
               </AppText>
+
+              {selectedPayoutMethod === "BANK" ? (
+                <>
+                  <AppText variant="caption" color={colors.textDarkSecondary}>
+                    Choose a common bank or enter another bank. Airwallex validates the account using the provider-required IBAN, BIC or account details below.
+                  </AppText>
+                  <InputField
+                    value={selectedProvider}
+                    onChangeText={(value) => {
+                      clearSelectedRecipient();
+                      setSelectedProvider(value);
+                    }}
+                    placeholder="Enter recipient bank name *"
+                  />
+                </>
+              ) : null}
 
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                 {availableProviders.map((provider) => (

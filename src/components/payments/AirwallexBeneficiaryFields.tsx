@@ -210,6 +210,8 @@ export function AirwallexBeneficiaryFields({
         }
 
         const formatHint = airwallexFieldFormatHint(field);
+        const supportingText = [field.description, formatHint]
+          .filter((item, index, items): item is string => Boolean(item) && items.indexOf(item) === index);
 
         return (
           <View key={field.path} style={{ gap: 6 }}>
@@ -235,9 +237,9 @@ export function AirwallexBeneficiaryFields({
                 backgroundColor: colors.cardSoft,
               }}
             />
-            {field.description || formatHint ? (
-              <AppText variant="caption" color={colors.textDarkMuted}>{field.description ?? formatHint}</AppText>
-            ) : null}
+            {supportingText.map((item) => (
+              <AppText key={item} variant="caption" color={colors.textDarkMuted}>{item}</AppText>
+            ))}
           </View>
         );
       })}

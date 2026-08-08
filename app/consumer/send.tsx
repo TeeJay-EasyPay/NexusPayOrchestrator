@@ -515,7 +515,20 @@ export default function ConsumerSendScreen() {
             </Pressable>
 
             <AppText variant="caption" color={consumerColors.muted}>
-              Step 2: Select bank for {manualCountry} ({manualCurrency})
+              Step 2: Select a common bank or enter another bank for {manualCountry} ({manualCurrency})
+            </AppText>
+            <TextInput
+              value={selectedBank}
+              onChangeText={(value) => {
+                setSelectedBank(value);
+                setErrorMessage(null);
+              }}
+              placeholder="Enter recipient bank name"
+              placeholderTextColor={consumerColors.muted}
+              style={inputStyle()}
+            />
+            <AppText variant="caption" color={consumerColors.muted}>
+              Airwallex validates the destination using the provider-required IBAN, BIC or account details below.
             </AppText>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
               {bankProviders.map((provider) => {

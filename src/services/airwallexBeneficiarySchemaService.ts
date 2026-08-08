@@ -85,14 +85,66 @@ function exactCharacterCount(pattern?: string) {
   return match ? Number(match[1] ?? match[2]) : null;
 }
 
+function patternRange(pattern?: string) {
+  if (!pattern) return null;
+  const match = pattern.match(/\{(\d+),(\d+)\}/);
+  return match ? { minimum: Number(match[1]), maximum: Number(match[2]) } : null;
+}
+
+function ibanPatternDetails(pattern?: string) {
+  if (!pattern) return null;
+  const match = pattern.match(/^\^([A-Z]{2})\[0-9\]\{(\d+)\}\[a-zA-Z0-9\]\{(\d+)\}\$$/);
+  if (!match) return null;
+  const checkDigits = Number(match[2]);
+  const accountCharacters = Number(match[3]);
+  return {
+    countryCode: match[1],
+    checkDigits,
+    accountCharacters,
+    totalCharacters: 2 + checkDigits + accountCharacters,
+  };
+}
+
 export function airwallexFieldFormatHint(field: AirwallexBeneficiaryField) {
   const path = field.path.toLowerCase();
   if (path.endsWith("date_of_birth")) return "Use YYYY-MM-DD, for example 1990-05-24.";
-  if (path.endsWith("iban")) return "Enter the complete IBAN without spaces.";
-  if (path.endsWith("swift_code")) return "Enter the bank BIC/SWIFT code using 8 or 11 uppercase characters.";
 
-  const exactCount = exactCharacterCount(field.pattern);
-  if (exactCount && path.includes("postcode")) return `Enter exactly ${exactCount} digits.`;
+  if (path.endsWith("iban")) {
+    const details = ibanPatternDetails(field.pattern);
+    if (details) {
+      return `Use a ${details.totalCharacters}-character ${details.countryCode} IBAN without spaces: ${details.countryCode}, ${details.checkDigits} check digits, then ${details.accountCharacters} letters or digits.`;
+    }
+    return "Enter the complete IBAN without spaces.";
+  }
+
+  if (path.endsWith("swift_code")) {
+    const countryCode = field.pattern?.match(/\[A-Z\]\{4\}([A-Z]{2})/)?.[1];
+    return countryCode
+      ? `Use an 8 or 11-character uppercase BIC/SWIFT code with ${countryCode} in positions 5-6.`
+      : "Enter the bank BIC/SWIFT code using 8 or 11 uppercase characters.";
+  }
+
+  if (path.includes("email")) return "Use a complete email address, for example name@example.com.";
+  if (path.endsWith("city")) return "Enter the city, town, village or nearest recognised locality, up to 50 characters.";
+
+  if (path.includes("postcode") || path.includes("postal_code")) {
+    if (field.pattern?.includes("{5}([\\-]\\d{4})?")) return "Use 5 digits or the extended format 12345-6789.";
+    if (field.pattern?.includes("{3}\\d?")) return "Use 3 or 4 digits.";
+    const exactCount = exactCharacterCount(field.pattern);
+    if (exactCount) return `Enter exactly ${exactCount} digits.`;
+  }
+
+  const range = patternRange(field.pattern);
+  if (range) {
+    const digitsOnly = Boolean(field.pattern?.match(/\[0-9\]|\\d/)) && !field.pattern?.match(/A-Za-z|a-zA-Z|\\s\\S/);
+    const lettersOrDigits = Boolean(field.pattern?.match(/0-9A-Za-z|a-zA-Z0-9/));
+    const unit = digitsOnly ? "digits" : lettersOrDigits ? "letters or digits" : "characters";
+    if (path.includes("street_address")) {
+      return `Use ${range.minimum} to ${range.maximum} characters and include a street or locality name; numbers alone are not accepted.`;
+    }
+    return `Use ${range.minimum} to ${range.maximum} ${unit}.`;
+  }
+
   if (field.minLength && field.maxLength && field.minLength === field.maxLength) {
     return `Enter exactly ${field.minLength} characters.`;
   }
@@ -106,10 +158,20 @@ export function airwallexFieldFormatHint(field: AirwallexBeneficiaryField) {
 export function airwallexFieldPlaceholder(field: AirwallexBeneficiaryField) {
   const path = field.path.toLowerCase();
   if (path.endsWith("date_of_birth")) return "YYYY-MM-DD";
-  if (path.endsWith("iban")) return "IBAN without spaces";
+  if (path.endsWith("iban")) {
+    const details = ibanPatternDetails(field.pattern);
+    return details ? `${details.countryCode} IBAN - ${details.totalCharacters} characters` : "IBAN without spaces";
+  }
   if (path.endsWith("swift_code")) return "8 or 11-character BIC/SWIFT";
-  const exactCount = exactCharacterCount(field.pattern);
-  if (exactCount && path.includes("postcode")) return `${exactCount}-digit postcode`;
+  if (path.endsWith("city")) return "City, town, village or locality";
+  if (path.includes("postcode") || path.includes("postal_code")) {
+    if (field.pattern?.includes("{5}([\\-]\\d{4})?")) return "12345 or 12345-6789";
+    if (field.pattern?.includes("{3}\\d?")) return "3 or 4-digit postal code";
+    const exactCount = exactCharacterCount(field.pattern);
+    if (exactCount) return `${exactCount}-digit postcode`;
+  }
+  const range = patternRange(field.pattern);
+  if (range && path.includes("account_number")) return `${range.minimum}-${range.maximum} character account number`;
   return field.placeholder || field.label;
 }
 
