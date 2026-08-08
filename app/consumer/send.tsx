@@ -17,6 +17,7 @@ import { useCanonicalRouteQuotes } from "../../src/hooks/useCanonicalRouteQuotes
 import { useNexusAIScreenSetting } from "../../src/hooks/useNexusAISettings";
 import { explainRoute } from "../../src/services/nexusAIService";
 import {
+  generateAirwallexSandboxRecipient,
   materializeAirwallexBeneficiaryFields,
   validateAirwallexBeneficiaryFields,
 } from "../../src/services/airwallexBeneficiarySchemaService";
@@ -216,6 +217,18 @@ export default function ConsumerSendScreen() {
   const recipientReady = Boolean(recipient);
   const fundingReady = fundingReference.trim().length > 0;
   const routeReady = Boolean(selectedRoute?.routePlan?.eligible);
+
+  function handleGenerateSandboxRecipient() {
+    if (!airwallexSchema.schema) return;
+    const generated = generateAirwallexSandboxRecipient(airwallexSchema.schema, bankProviders);
+    setFirstName(generated.firstName);
+    setLastName(generated.lastName);
+    setSelectedBank(generated.bankName);
+    setManualSortCode("");
+    setManualAccountNumber("");
+    setAirwallexFields(generated.values);
+    setErrorMessage(null);
+  }
 
   function continueToFunding() {
     if (sendAmount <= 0) {
@@ -606,6 +619,7 @@ export default function ConsumerSendScreen() {
                 setErrorMessage(null);
               }}
               onRetry={airwallexSchema.reload}
+              onGenerateSandboxRecipient={handleGenerateSandboxRecipient}
             />
             <AppText variant="caption" style={{ color: recipientBankValid ? consumerColors.success : consumerColors.muted }}>
               {recipientBankValid ? "Airwallex recipient details complete" : "Complete the provider-required fields"}

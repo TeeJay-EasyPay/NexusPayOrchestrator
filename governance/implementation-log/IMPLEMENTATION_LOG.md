@@ -1752,3 +1752,25 @@ Release:
 - Android update: `019fe14d-1236-7eba-8479-8dfa40fb11d0`.
 - iOS update: `019fe14d-1236-7515-9544-fcc23d4e7aed`.
 - Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/641b903f-3dcd-41de-b120-7a8a65310bce`.
+
+## 2026-08-08 - Sandbox Recipient Generator
+
+Objective:
+Remove manual test-data entry from Airwallex sandbox payment journeys without presenting generated details as real beneficiary accounts.
+
+Completed:
+- Added `Generate sandbox recipient` to Corporate and private Send screens whenever an Airwallex Sandbox schema is available.
+- Generates a fictitious recipient name, corresponding suggested bank and every provider-required editable field from the active schema.
+- Selects genuine Airwallex option values where the provider returns option lists.
+- Generates structurally valid BIC/account details, country-length IBANs with valid MOD-97 checksums, dates, postcodes, addresses and email values.
+- Keeps generated values editable and visibly labels them as format-valid sandbox test data.
+- Preserves Airwallex as the final beneficiary and payout validator; generated details are not represented as real or guaranteed bank accounts.
+- The generator is unavailable when no Airwallex schema exists and does not appear for live-provider provenance.
+
+Validation:
+- TypeScript: PASS.
+- ESLint quiet: PASS.
+- Android Expo export: PASS.
+- UAE and Saudi IBAN schema/checksum tests: PASS.
+- Malaysia and Thailand BIC/account/postcode schema tests: PASS.
+- Pixel 9 Corporate Send rendering and one-tap population: PASS.

@@ -33,6 +33,35 @@ export type AirwallexBeneficiarySchema = {
   fetchedAt: string;
 };
 
+export type AirwallexSandboxRecipient = {
+  firstName: string;
+  lastName: string;
+  bankName: string;
+  values: Record<string, string>;
+};
+
+const SANDBOX_NAMES = [
+  ["Amina", "Rahman"],
+  ["Daniel", "Santos"],
+  ["Leila", "Hassan"],
+  ["Marcus", "Lim"],
+  ["Nadia", "Ibrahim"],
+  ["Priya", "Nair"],
+] as const;
+
+const SANDBOX_BANKS: Record<string, { name: string; swift: string }> = {
+  PH: { name: "BDO", swift: "BNORPHMMXXX" },
+  MY: { name: "Maybank", swift: "MBBEMYKLXXX" },
+  AE: { name: "Emirates NBD", swift: "EBILAEADXXX" },
+  SA: { name: "Al Rajhi Bank", swift: "RJHISARIXXX" },
+  QA: { name: "QNB", swift: "QNBAQAQAXXX" },
+  KW: { name: "NBK", swift: "NBOKKWKWXXX" },
+  BH: { name: "NBB", swift: "NBOBBHBMXXX" },
+  OM: { name: "Bank Muscat", swift: "BMUSOMRXXXX" },
+  SG: { name: "DBS", swift: "DBSSSGSGXXX" },
+  TH: { name: "Bangkok Bank", swift: "BKKBTHBKXXX" },
+};
+
 type SchemaResponse = AirwallexBeneficiarySchema & { error?: string };
 
 async function edgeErrorMessage(error: unknown) {
@@ -104,6 +133,102 @@ function ibanPatternDetails(pattern?: string) {
     totalCharacters: 2 + checkDigits + accountCharacters,
   };
 }
+
+function randomItem<T>(items: readonly T[]) {
+  return items[Math.floor(Math.random() * items.length)];
+}
+
+function randomDigits(length: number) {
+  return Array.from({ length }, () => Math.floor(Math.random() * 10)).join("");
+}
+
+function randomLettersAndDigits(length: number) {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  return Array.from({ length }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join("");
+}
+
+function mod97(value: string) {
+  let remainder = 0;
+  for (const character of value) {
+    remainder = (remainder * 10 + Number(character)) % 97;
+  }
+  return remainder;
+}
+
+function generateIban(pattern?: string) {
+  const details = ibanPatternDetails(pattern);
+  if (!details) return "";
+  const bban = randomLettersAndDigits(details.accountCharacters);
+  const countryDigits = details.countryCode
+    .split("")
+    .map((character) => character.charCodeAt(0) - 55)
+    .join("");
+  const bbanDigits = bban
+    .split("")
+    .map((character) => /[A-Z]/.test(character) ? character.charCodeAt(0) - 55 : character)
+    .join("");
+  const checkDigits = String(98 - mod97(`${bbanDigits}${countryDigits}00`)).padStart(2, "0");
+  return `${details.countryCode}${checkDigits}${bban}`;
+}
+
+function sandboxFieldValue(field: AirwallexBeneficiaryField, countryCode: string) {
+  if (field.options.length > 0) return randomItem(field.options).value;
+  if (field.defaultValue) return field.defaultValue;
+
+  const path = field.path.toLowerCase();
+  if (path.endsWith("date_of_birth")) return `${1975 + Math.floor(Math.random() * 25)}-0${1 + Math.floor(Math.random() * 8)}-${String(10 + Math.floor(Math.random() * 18)).padStart(2, "0")}`;
+  if (path.endsWith("iban")) return generateIban(field.pattern);
+  if (path.endsWith("swift_code")) return SANDBOX_BANKS[countryCode]?.swift ?? `NXPY${countryCode}XX`;
+  if (path.includes("email")) return `sandbox.recipient.${randomDigits(4)}@example.com`;
+  if (path.endsWith("city")) return "Central District";
+  if (path.includes("street_address")) return `${10 + Math.floor(Math.random() * 80)} Sandbox Avenue`;
+  if (path.includes("postcode") || path.includes("postal_code")) {
+    if (field.pattern?.includes("{5}([\\-]\\d{4})?")) return `${randomDigits(5)}-${randomDigits(4)}`;
+    if (field.pattern?.includes("{3}\\d?")) return randomDigits(4);
+    return randomDigits(exactCharacterCount(field.pattern) ?? field.minLength ?? 5);
+  }
+  if (path.includes("phone") || path.includes("mobile")) return `+1${randomDigits(10)}`;
+
+  const range = patternRange(field.pattern);
+  const exactLength = exactCharacterCount(field.pattern);
+  const minimum = exactLength ?? field.minLength ?? range?.minimum ?? 8;
+  const maximum = exactLength ?? field.maxLength ?? range?.maximum ?? Math.max(minimum, 12);
+  const length = Math.min(Math.max(minimum, 10), maximum);
+  const digitsOnly = Boolean(field.pattern?.match(/\[0-9\]|\\d/)) && !field.pattern?.match(/A-Za-z|a-zA-Z|\\s\\S/);
+  if (path.includes("account_number") || path.includes("routing_value")) {
+    return digitsOnly ? randomDigits(length) : randomLettersAndDigits(length);
+  }
+  return randomLettersAndDigits(length);
+}
+
+export function generateAirwallexSandboxRecipient(
+  schema: AirwallexBeneficiarySchema,
+  suggestedBanks: readonly string[] = [],
+): AirwallexSandboxRecipient {
+  const [firstName, lastName] = randomItem(SANDBOX_NAMES);
+  const configuredBank = SANDBOX_BANKS[schema.bankCountryCode];
+  const bankName = configuredBank?.name ?? suggestedBanks[0] ?? "NexusPay Sandbox Bank";
+  const values = Object.fromEntries(
+    schema.fields
+      .filter((field) => field.enabled && !FIXED_GENERATOR_PATHS.has(field.path))
+      .map((field) => [field.path, sandboxFieldValue(field, schema.bankCountryCode)] as const)
+      .filter(([, value]) => value.length > 0),
+  );
+
+  return { firstName, lastName, bankName, values };
+}
+
+const FIXED_GENERATOR_PATHS = new Set([
+  "beneficiary.type",
+  "beneficiary.entity_type",
+  "beneficiary.first_name",
+  "beneficiary.last_name",
+  "beneficiary.bank_details.account_name",
+  "beneficiary.bank_details.account_currency",
+  "beneficiary.bank_details.bank_country_code",
+  "beneficiary.bank_details.bank_name",
+  "beneficiary.address.country_code",
+]);
 
 export function airwallexFieldFormatHint(field: AirwallexBeneficiaryField) {
   const path = field.path.toLowerCase();

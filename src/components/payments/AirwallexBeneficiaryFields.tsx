@@ -164,6 +164,7 @@ export function AirwallexBeneficiaryFields({
   fixedValues,
   onChange,
   onRetry,
+  onGenerateSandboxRecipient,
 }: {
   schema: AirwallexBeneficiarySchema | null;
   loading: boolean;
@@ -172,6 +173,7 @@ export function AirwallexBeneficiaryFields({
   fixedValues: Record<string, string>;
   onChange: (path: string, value: string) => void;
   onRetry: () => void;
+  onGenerateSandboxRecipient?: () => void;
 }) {
   const visibleFields = schema?.fields.filter((field) => field.enabled && !FIXED_PATHS.has(field.path)) ?? [];
 
@@ -192,6 +194,37 @@ export function AirwallexBeneficiaryFields({
       </View>
 
       {loading ? <AppText variant="caption" color={colors.textDarkSecondary}>Checking Airwallex sandbox requirements...</AppText> : null}
+
+      {schema?.provenance === "SANDBOX" && onGenerateSandboxRecipient ? (
+        <View style={{ gap: 5 }}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Generate sandbox test recipient"
+            onPress={onGenerateSandboxRecipient}
+            style={({ pressed }) => ({
+              minHeight: 44,
+              borderWidth: 1,
+              borderColor: colors.gold,
+              borderRadius: 8,
+              paddingHorizontal: 14,
+              paddingVertical: 10,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              backgroundColor: pressed ? colors.goldSoft : colors.card,
+            })}
+          >
+            <Feather name="shuffle" size={17} color={colors.gold} />
+            <AppText variant="caption" color={colors.gold} style={{ fontWeight: "900" }}>
+              Generate sandbox recipient
+            </AppText>
+          </Pressable>
+          <AppText variant="caption" color={colors.textDarkMuted}>
+            Creates fictitious, format-valid test data. Airwallex remains the final sandbox validator.
+          </AppText>
+        </View>
+      ) : null}
 
       {error ? (
         <View style={{ gap: 8 }}>

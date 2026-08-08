@@ -17,6 +17,7 @@ import { useCanonicalRouteQuotes } from "../src/hooks/useCanonicalRouteQuotes";
 import { useAirwallexBeneficiarySchema } from "../src/hooks/useAirwallexBeneficiarySchema";
 import { writeAuditLog } from "../src/services/auditLog";
 import {
+  generateAirwallexSandboxRecipient,
   materializeAirwallexBeneficiaryFields,
   validateAirwallexBeneficiaryFields,
 } from "../src/services/airwallexBeneficiarySchemaService";
@@ -377,6 +378,19 @@ export default function SendScreen() {
   );
 
   const availableProviders = selectedPayoutConfig?.providers ?? [];
+
+  const handleGenerateSandboxRecipient = () => {
+    if (!airwallexSchema.schema) return;
+    const generated = generateAirwallexSandboxRecipient(airwallexSchema.schema, availableProviders);
+    clearSelectedRecipient();
+    setFirstName(generated.firstName);
+    setMiddleName("");
+    setSurname(generated.lastName);
+    setSelectedProvider(generated.bankName);
+    setBankCode("");
+    setAccountNumber("");
+    setAirwallexFields(generated.values);
+  };
 
   const handleSelectSavedRecipient = (recipient: SavedRecipient) => {
     setSelectedRecipientId(recipient.id);
@@ -776,6 +790,7 @@ export default function SendScreen() {
                     setAirwallexFields((current) => ({ ...current, [path]: value }));
                   }}
                   onRetry={airwallexSchema.reload}
+                  onGenerateSandboxRecipient={handleGenerateSandboxRecipient}
                 />
               ) : (
                 <InputField
