@@ -1774,3 +1774,11 @@ Validation:
 - UAE and Saudi IBAN schema/checksum tests: PASS.
 - Malaysia and Thailand BIC/account/postcode schema tests: PASS.
 - Pixel 9 Corporate Send rendering and one-tap population: PASS.
+
+Release:
+- Implementation commit: `099075e8f356964b1ec2f4ad3394f899e0273e39`.
+- OTA branch: `preview`.
+- Update group: `9ce26a6e-8db5-4d95-8102-1c9c948e0af2`.
+- Android update: `019fe19e-d022-7405-9ab2-7fccfd7df443`.
+- iOS update: `019fe19e-d022-74ba-bdac-dc56f55825bc`.
+- Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/9ce26a6e-8db5-4d95-8102-1c9c948e0af2`.
