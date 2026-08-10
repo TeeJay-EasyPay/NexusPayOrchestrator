@@ -1015,3 +1015,30 @@ Implemented; payout certification pending Nium customer and wallet provisioning
 2. Never overwrite historical decisions; append updates through status and follow-up actions.
 3. Link every decision to authoritative governance and supporting evidence artifacts.
 4. Update this register as part of governance closure for every future governance workstream.
+
+---
+
+## Decision ID
+D-017
+
+## Title
+Provider-Neutral Recipient Data And Automatic Payout Route Selection
+
+## Date
+2026-08-10
+
+## Decision Owner
+Chief Technology Officer
+
+## Decision
+Senders select a payout outcome and enter recipient details once; they do not select a payout provider. The canonical route engine generates and ranks all evidence-backed provider candidates. Recipient data is stored as a canonical profile and materialised into provider-specific payloads. Failover is permitted only to an eligible, unexpired, permitted route with complete provider recipient data.
+
+## Rationale
+Provider selection is an orchestration responsibility. A provider-neutral recipient contract permits comparable routing and controlled failover while retaining each provider's validation rules and avoiding duplicated customer input.
+
+## Status
+Implemented. Airwallex is executable in sandbox; Nium payout and cross-provider failover certification remain pending sandbox customer and wallet provisioning.
+
+## Reference Documents
+- `../reports/PROVIDER_NEUTRAL_ROUTE_SELECTION_REMEDIATION.md`
+- `../reports/FOUNDER_BRIEFING_PROVIDER_NEUTRAL_ROUTING.md`

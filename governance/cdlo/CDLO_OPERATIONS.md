@@ -185,3 +185,11 @@ Secure a destination-rail sandbox partner to complete the first end-to-end MVP o
 - Dynamic recipient requirements and sandbox FX quote: integrated.
 - Beneficiary and payout certification: pending Nium sandbox customer and funded wallet provisioning.
 - Webhook readiness: not configured; no unsigned event will be treated as provider evidence.
+
+## 2026-08-10 Provider-Neutral Routing Update
+
+- Removed customer-facing payout-provider selection from Send.
+- Added one canonical recipient profile backed by Airwallex and Nium field evidence.
+- Canonical routing now creates Airwallex, Nium and XRPL candidates automatically.
+- Failover requires eligible, current and recipient-complete replacement evidence.
+- Nium remains visible but unavailable pending sandbox customer and wallet provisioning.

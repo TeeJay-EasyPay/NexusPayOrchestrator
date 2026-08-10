@@ -6,7 +6,7 @@ import { getAirwallexFxQuote } from "./airwallexFxQuoteService";
 import { getNiumBeneficiarySchema, getNiumFxQuote } from "./niumBeneficiarySchemaService";
 import { getXrplTestnetStatus } from "./xrplTestnetService";
 import type { CanonicalRoutePlan, RouteDataProvenance, RouteEvidence } from "../types/routePlan";
-import type { Currency, FundingMethod, PayoutMethod, PayoutProviderSelection, RouteQuote } from "../types/transfer";
+import type { Currency, FundingMethod, PayoutMethod, RouteQuote } from "../types/transfer";
 
 const EVIDENCE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const QUOTE_TTL_MS = 15 * 60 * 1000;
@@ -19,7 +19,6 @@ type RouteGenerationInput = {
   payoutMethod: PayoutMethod;
   fundingMethod?: FundingMethod;
   actualRlusdBalance?: number | null;
-  payoutProviderId?: PayoutProviderSelection;
 };
 
 type ConnectionTest = {
@@ -700,20 +699,24 @@ export async function generateCanonicalRouteQuotes(input: RouteGenerationInput):
     sourceProvenance: xrplEligible ? ["TESTNET", "LIVE", "DERIVED", "UNAVAILABLE"] : ["TESTNET", "DERIVED", "UNAVAILABLE"],
   };
 
-  if (input.payoutProviderId === "NIUM_SANDBOX") {
+  {
     const [schemaResult, quoteResult] = await Promise.all([
-      getNiumBeneficiarySchema({ country: input.destinationCountry, currency: input.destinationCurrency })
+      input.payoutMethod === "BANK" ? getNiumBeneficiarySchema({ country: input.destinationCountry, currency: input.destinationCurrency })
         .then((schema) => ({ schema, error: null }))
-        .catch((error: unknown) => ({ schema: null, error: error instanceof Error ? error.message : "Nium corridor requirements are unavailable." })),
-      getNiumFxQuote({ sourceCurrency, destinationCurrency: input.destinationCurrency, sourceAmount: input.amount })
+        .catch((error: unknown) => ({ schema: null, error: error instanceof Error ? error.message : "Nium corridor requirements are unavailable." }))
+        : Promise.resolve({ schema: null, error: "Nium bank payout routes require BANK payout method." }),
+      input.payoutMethod === "BANK" ? getNiumFxQuote({ sourceCurrency, destinationCurrency: input.destinationCurrency, sourceAmount: input.amount })
         .then((quote) => ({ quote, error: null }))
-        .catch((error: unknown) => ({ quote: null, error: error instanceof Error ? error.message : "Nium FX quote is unavailable." })),
+        .catch((error: unknown) => ({ quote: null, error: error instanceof Error ? error.message : "Nium FX quote is unavailable." }))
+        : Promise.resolve({ quote: null, error: "Nium bank payout routes require BANK payout method." }),
     ]);
     const niumTest = routeEvidence.tests.get("nium");
     const niumStatus = providerAvailability("Nium", niumTest);
     const payoutConfigured = schemaResult.schema?.payoutConfigured === true;
     const niumReasons = [
-      ...bankingPlan.eligibilityReasons.filter((reason) => !reason.toLowerCase().includes("airwallex")),
+      fundingStatus.value !== "AVAILABLE" ? fundingStatus.reason : null,
+      input.payoutMethod !== "BANK" ? "Nium sandbox integration currently supports bank payouts only." : null,
+      !usesOpenBanking ? "Card funding is not connected to an evidence-backed collection provider." : null,
       niumStatus.value !== "AVAILABLE" ? niumStatus.reason : null,
       !schemaResult.schema ? schemaResult.error : null,
       !quoteResult.quote ? quoteResult.error : null,
@@ -722,13 +725,20 @@ export async function generateCanonicalRouteQuotes(input: RouteGenerationInput):
     const eligible = niumReasons.length === 0;
     const quote = quoteResult.quote;
     const schema = schemaResult.schema;
+    const niumRanking = weightedScore([
+      { value: fundingStatus.value === "AVAILABLE" ? 100 : 0, weight: 0.25 },
+      { value: niumStatus.value === "AVAILABLE" ? 100 : 0, weight: 0.2 },
+      { value: schema ? 100 : 0, weight: 0.2 },
+      { value: quote ? 100 : 0, weight: 0.15 },
+      { value: payoutConfigured ? 100 : 0, weight: 0.2 },
+    ]);
     const niumPlan: CanonicalRoutePlan = {
       ...bankingPlan,
       id: createTransferId(),
       eligible,
       eligibilityReasons: niumReasons,
       rank: eligible ? 1 : null,
-      score: eligible ? evidence(85, "DERIVED", "canonical_route_engine_v1", generatedAt, 80, "Nium score reflects current funding, corridor, quote and payout-configuration evidence.") : unavailable<number | null>(null, "canonical_route_engine_v1", "Nium route is not executable with the current evidence.", generatedAt),
+      score: eligible ? evidence(niumRanking.score, "DERIVED", "canonical_route_engine_v1", generatedAt, 80, "Nium readiness score is calculated from current funding, connection, corridor, quote and payout-configuration evidence; it is not a complete cost score.") : unavailable<number | null>(null, "canonical_route_engine_v1", "Nium route is not executable with the current evidence.", generatedAt),
       payout: {
         ...bankingPlan.payout,
         provider: {
@@ -766,10 +776,16 @@ export async function generateCanonicalRouteQuotes(input: RouteGenerationInput):
       sourceProvenance: ["SANDBOX", "DERIVED", "UNAVAILABLE"],
       quoteExpiresAt: quote?.expiryDate || defaultQuoteExpiresAt,
     };
-    return [niumPlan].map(planToRouteQuote);
+    const plans = [bankingPlan, xrplPlan, niumPlan].sort((left, right) => {
+      if (left.eligible !== right.eligible) return left.eligible ? -1 : 1;
+      return (right.score.value ?? -1) - (left.score.value ?? -1);
+    });
+    let nextRank = 0;
+    return plans.map((plan) => ({
+      ...plan,
+      rank: plan.eligible ? ++nextRank : null,
+    })).map(planToRouteQuote);
   }
-
-  return [bankingPlan, xrplPlan].map(planToRouteQuote);
 }
 
 export function bindRouteQuotesToTransfer(routes: RouteQuote[], transferId: string) {

@@ -123,15 +123,37 @@ function mapExecutionStateToTransferStatus(state: ExecutionState): TransferStatu
 }
 
 function findFailoverRoute(transfer: Transfer, selectedRoute: RouteQuote) {
+  const selectedPayoutProvider = selectedRoute.routePlan?.payout.provider.providerId;
+  const hasRecipientData = (route: RouteQuote) => {
+    const providerId = route.routePlan?.payout.provider.providerId;
+    if (providerId === "AIRWALLEX_SANDBOX") {
+      return Object.keys(transfer.recipient.airwallexBeneficiaryFields ?? {}).length > 0;
+    }
+    if (providerId === "NIUM_SANDBOX") {
+      return Object.keys(transfer.recipient.niumBeneficiaryFields ?? {}).length > 0;
+    }
+    return true;
+  };
+
+  const isExecutableFailover = (route: RouteQuote) =>
+    route.id !== selectedRoute.id
+    && route.orchestrationSafetyStatus !== "BLOCK"
+    && route.routePlan?.eligible !== false
+    && (!route.routePlan || Date.now() < Date.parse(route.routePlan.quoteExpiresAt))
+    && hasRecipientData(route);
+
   if (selectedRoute.failoverRouteId) {
     const explicitRoute = transfer.routes.find((route) => route.id === selectedRoute.failoverRouteId);
-    if (explicitRoute) return explicitRoute;
+    if (explicitRoute && isExecutableFailover(explicitRoute)) return explicitRoute;
   }
 
   return [...transfer.routes]
-    .filter((route) => route.id !== selectedRoute.id)
-    .filter((route) => route.orchestrationSafetyStatus !== "BLOCK")
-    .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))[0];
+    .filter(isExecutableFailover)
+    .sort((a, b) => {
+      const aDifferentProvider = a.routePlan?.payout.provider.providerId !== selectedPayoutProvider ? 1 : 0;
+      const bDifferentProvider = b.routePlan?.payout.provider.providerId !== selectedPayoutProvider ? 1 : 0;
+      return bDifferentProvider - aDifferentProvider || (b.score ?? 0) - (a.score ?? 0);
+    })[0];
 }
 
 function buildOpenBankingSteps(flow?: OpenBankingPaymentFlow): ExecutionStep[] {

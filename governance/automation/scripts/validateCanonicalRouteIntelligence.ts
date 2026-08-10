@@ -51,14 +51,19 @@ async function main() {
   };
   const first = await routeModule.generateCanonicalRouteQuotes(input);
   const second = await routeModule.generateCanonicalRouteQuotes(input);
-  assert(first.length === 2, "Canonical engine must return direct and XRPL evidence candidates.");
+  assert(first.length >= 3, "Canonical engine must return Airwallex, Nium and XRPL evidence candidates.");
   assert(first.every((route) => route.routePlan?.schemaVersion === "1.0"), "Every route requires Route Plan V1.");
   assert(first.every((route, index) => route.id !== second[index]?.id), "Repeat payments must recalculate new route-plan IDs.");
   assert(first.every((route) => route.routePlan?.economics.fxRate.provenance !== "FALLBACK"), "Canonical routes must never consume compile-time FX fallback rates.");
 
-  const direct = first.find((route) => !route.routePlan?.bridge.required);
+  const direct = first.find((route) => route.routePlan?.payout.provider.providerId === "AIRWALLEX_SANDBOX" && !route.routePlan.bridge.required);
+  const nium = first.find((route) => route.routePlan?.payout.provider.providerId === "NIUM_SANDBOX");
   const xrpl = first.find((route) => route.routePlan?.bridge.required);
   assert(direct?.routePlan?.settlementMethod.value === "DIRECT_BANKING", "Direct settlement plan missing.");
+  assert(nium?.routePlan, "Nium evidence candidate missing.");
+  if (!nium.routePlan.eligible) {
+    assert(nium.routePlan.score.value === null, "Unavailable Nium route must not carry a fabricated score.");
+  }
   assert(xrpl?.routePlan?.settlementMethod.value === "XRPL_BRIDGE", "XRPL settlement plan missing.");
   assert(xrpl.routePlan?.eligible === false, "XRPL/RLUSD must remain blocked without executable path evidence.");
   assert(xrpl.routePlan?.score.value === null, "Blocked XRPL route must not carry a fabricated score.");
@@ -98,6 +103,12 @@ async function main() {
       eligible: xrpl.routePlan?.eligible,
       score: xrpl.routePlan?.score.value,
       reasons: xrpl.routePlan?.eligibilityReasons,
+    },
+    niumRoute: {
+      eligible: nium.routePlan?.eligible,
+      score: nium.routePlan?.score.value,
+      payoutProvenance: nium.routePlan?.payout.provider.status.provenance,
+      reasons: nium.routePlan?.eligibilityReasons,
     },
     repeatRouteRecalculated: true,
     persistence: {

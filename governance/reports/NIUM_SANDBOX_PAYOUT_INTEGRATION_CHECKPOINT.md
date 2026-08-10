@@ -1,5 +1,7 @@
 # Nium Sandbox Payout Integration Checkpoint
 
+> Superseded interaction note, 2026-08-10: the manual Airwallex/Nium selector described in this checkpoint has been removed. NexusPay now creates and ranks both provider candidates automatically and collects one provider-neutral recipient profile. See `PROVIDER_NEUTRAL_ROUTE_SELECTION_REMEDIATION.md`. The original certification evidence below is retained unchanged.
+
 ## Executive Result
 
 **PARTIAL PASS - authenticated Nium sandbox discovery is integrated, but payout execution is awaiting a Nium customer and wallet.**

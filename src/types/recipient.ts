@@ -16,6 +16,7 @@ export interface SavedRecipient {
   airwallexBeneficiaryFields?: Record<string, string>;
   airwallexSchemaFetchedAt?: string;
   payoutProviderId?: PayoutProviderSelection;
+  recipientDetails?: Record<string, string>;
   niumPayoutMethod?: "LOCAL";
   niumBeneficiaryFields?: Record<string, string>;
   niumSchemaFetchedAt?: string;

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { generateCanonicalRouteQuotes } from "../services/routeIntelligenceService";
-import type { Currency, FundingMethod, PayoutMethod, PayoutProviderSelection, RouteQuote } from "../types/transfer";
+import type { Currency, FundingMethod, PayoutMethod, RouteQuote } from "../types/transfer";
 
 type Input = {
   amount: number;
@@ -10,7 +10,6 @@ type Input = {
   payoutMethod: PayoutMethod;
   fundingMethod?: FundingMethod;
   actualRlusdBalance?: number | null;
-  payoutProviderId?: PayoutProviderSelection;
   enabled?: boolean;
 };
 
@@ -41,7 +40,6 @@ export function useCanonicalRouteQuotes(input: Input) {
         payoutMethod: input.payoutMethod,
         fundingMethod: input.fundingMethod,
         actualRlusdBalance: input.actualRlusdBalance,
-        payoutProviderId: input.payoutProviderId,
       })
         .then((nextRoutes) => {
           if (active) setRoutes(nextRoutes);
@@ -68,7 +66,6 @@ export function useCanonicalRouteQuotes(input: Input) {
     input.enabled,
     input.fundingMethod,
     input.payoutMethod,
-    input.payoutProviderId,
   ]);
 
   return { routes, loading, error };

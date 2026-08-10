@@ -1875,6 +1875,33 @@ Checkpoint:
 - `PARTIAL PASS` pending Nium sandbox customer, funded wallet and secure webhook certification.
 - Reports: `../reports/NIUM_SANDBOX_PAYOUT_INTEGRATION_CHECKPOINT.md` and `../reports/FOUNDER_BRIEFING_NIUM_SANDBOX_INTEGRATION.md`.
 
+## 2026-08-10 - Provider-Neutral Payout Route Selection
+
+Trigger:
+- Founder directed NexusPay to choose and fail over between payout providers instead of asking the recipient or sender to select Airwallex or Nium.
+
+Completed:
+- Removed the payout-provider selector from Send.
+- Added one provider-neutral recipient requirements service and form.
+- Added one universal sandbox-recipient generator.
+- Persisted canonical recipient details plus Airwallex and Nium materialisations.
+- Updated the canonical engine to generate and rank both payout-provider candidates automatically.
+- Replaced Nium's fixed score with evidence-weighted readiness and removed scores from unavailable routes.
+- Restricted failover to eligible, unexpired, permitted and recipient-complete routes.
+- Applied additive migration `20260810000300_provider_neutral_recipient_profiles.sql`.
+
+Validation:
+- TypeScript: PASS.
+- Provider-neutral recipient contract: PASS.
+- Canonical route generation/persistence: PASS.
+- Android Expo export: PASS.
+- Migration parity: PASS.
+- Nium remains correctly unavailable pending sandbox customer and wallet provisioning.
+
+Governance:
+- Decision `D-017`.
+- Reports: `../reports/PROVIDER_NEUTRAL_ROUTE_SELECTION_REMEDIATION.md` and `../reports/FOUNDER_BRIEFING_PROVIDER_NEUTRAL_ROUTING.md`.
+
 Release:
 - Implementation commit: `b51e4c3779d55d54d71548bf148a3b036d711c93`.
 - OTA branch: `preview`.
