@@ -1903,6 +1903,14 @@ Governance:
 - Reports: `../reports/PROVIDER_NEUTRAL_ROUTE_SELECTION_REMEDIATION.md` and `../reports/FOUNDER_BRIEFING_PROVIDER_NEUTRAL_ROUTING.md`.
 
 Release:
+- Implementation commit: `42a420327651e9cb13380c0c4bd34788dea603ac`.
+- OTA branch: `preview`.
+- Update group: `a7e90131-27a8-4e08-9b68-4ca27f83a478`.
+- Android update: `019febf9-e82e-740c-be88-eaa0642e58f5`.
+- iOS update: `019febf9-e82e-726f-a72e-d3a5cd1256c4`.
+- Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/a7e90131-27a8-4e08-9b68-4ca27f83a478`.
+
+Release:
 - Implementation commit: `b51e4c3779d55d54d71548bf148a3b036d711c93`.
 - OTA branch: `preview`.
 - Update group: `0eda5223-e7fd-456e-b269-86d5b09228cb`.

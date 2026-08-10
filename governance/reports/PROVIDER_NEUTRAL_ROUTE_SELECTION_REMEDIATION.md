@@ -98,3 +98,11 @@ The route validator persisted three candidate plans and three transition events.
 2. Re-run beneficiary, payout, idempotency, reconciliation and signed-webhook certification.
 3. Certify a genuine Airwallex-to-Nium failover using a new sandbox orchestration session.
 4. Add further payout providers through the same recipient and Route Plan contracts; do not add new customer-facing provider selectors.
+
+## Release
+
+- Implementation commit: `42a420327651e9cb13380c0c4bd34788dea603ac`
+- Preview OTA update group: `a7e90131-27a8-4e08-9b68-4ca27f83a478`
+- Android update: `019febf9-e82e-740c-be88-eaa0642e58f5`
+- iOS update: `019febf9-e82e-726f-a72e-d3a5cd1256c4`
+- Expo dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/a7e90131-27a8-4e08-9b68-4ca27f83a478`
