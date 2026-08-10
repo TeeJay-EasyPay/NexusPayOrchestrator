@@ -5,6 +5,7 @@ import { Alert, Pressable, ScrollView, TextInput, View } from "react-native";
 import { NexusAIToggleCard } from "../src/components/intelligence/NexusAIToggleCard";
 import { DataProvenanceBadge } from "../src/components/operations-v2/DataProvenanceBadge";
 import { AirwallexBeneficiaryFields } from "../src/components/payments/AirwallexBeneficiaryFields";
+import { NiumBeneficiaryFields } from "../src/components/payments/NiumBeneficiaryFields";
 import { SavedRecipientsCard } from "../src/components/recipients/SavedRecipientsCard";
 import { AppButton } from "../src/components/ui/AppButton";
 import { AppCard } from "../src/components/ui/AppCard";
@@ -15,12 +16,14 @@ import { corridors } from "../src/data/corridors";
 import { useNexusAIScreenSetting } from "../src/hooks/useNexusAISettings";
 import { useCanonicalRouteQuotes } from "../src/hooks/useCanonicalRouteQuotes";
 import { useAirwallexBeneficiarySchema } from "../src/hooks/useAirwallexBeneficiarySchema";
+import { useNiumBeneficiarySchema } from "../src/hooks/useNiumBeneficiarySchema";
 import { writeAuditLog } from "../src/services/auditLog";
 import {
   generateAirwallexSandboxRecipient,
   materializeAirwallexBeneficiaryFields,
   validateAirwallexBeneficiaryFields,
 } from "../src/services/airwallexBeneficiarySchemaService";
+import { materializeNiumBeneficiaryFields, validateNiumBeneficiaryFields } from "../src/services/niumBeneficiarySchemaService";
 import {
     loadSavedRecipients,
     toggleRecipientFavorite,
@@ -29,7 +32,7 @@ import { useTransfer } from "../src/state/TransferContext";
 import { useWallet } from "../src/state/WalletContext";
 import { colors } from "../src/theme";
 import { SavedRecipient } from "../src/types/recipient";
-import { PayoutMethod, Recipient, RouteQuote } from "../src/types/transfer";
+import { PayoutMethod, PayoutProviderSelection, Recipient, RouteQuote } from "../src/types/transfer";
 
 function formatCurrency(value: number) {
   return value.toLocaleString(undefined, {
@@ -236,6 +239,7 @@ export default function SendScreen() {
   const [selectedCountry, setSelectedCountry] = useState("Philippines");
   const [selectedPayoutMethod, setSelectedPayoutMethod] = useState<PayoutMethod>("BANK");
   const [selectedProvider, setSelectedProvider] = useState("BDO");
+  const [payoutProviderId, setPayoutProviderId] = useState<PayoutProviderSelection>("AIRWALLEX_SANDBOX");
 
   const [firstName, setFirstName] = useState("");
   const [middleName, setMiddleName] = useState("");
@@ -243,6 +247,7 @@ export default function SendScreen() {
   const [bankCode, setBankCode] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [airwallexFields, setAirwallexFields] = useState<Record<string, string>>({});
+  const [niumFields, setNiumFields] = useState<Record<string, string>>({});
   const [mobileNumber, setMobileNumber] = useState("");
 
   const refreshSavedRecipients = useCallback(() => {
@@ -325,7 +330,12 @@ export default function SendScreen() {
   const airwallexSchema = useAirwallexBeneficiarySchema({
     country: selectedCorridor?.country,
     currency: selectedCorridor?.currency,
-    enabled: selectedPayoutMethod === "BANK",
+    enabled: selectedPayoutMethod === "BANK" && payoutProviderId === "AIRWALLEX_SANDBOX",
+  });
+  const niumSchema = useNiumBeneficiarySchema({
+    country: selectedCorridor?.country,
+    currency: selectedCorridor?.currency,
+    enabled: selectedPayoutMethod === "BANK" && payoutProviderId === "NIUM_SANDBOX",
   });
 
   const fixedAirwallexFields = useMemo(() => {
@@ -368,6 +378,7 @@ export default function SendScreen() {
     payoutMethod: selectedPayoutMethod,
     fundingMethod: "OPEN_BANKING",
     actualRlusdBalance: rlusdBalance,
+    payoutProviderId,
   });
   const previewRoute = canonicalRouteResult.routes.find((route) => route.routePlan?.eligible)
     ?? canonicalRouteResult.routes[0];
@@ -402,6 +413,8 @@ export default function SendScreen() {
       setBankCode(recipient.bankCode || "");
       setAccountNumber(recipient.accountNumber || "");
       setAirwallexFields(recipient.airwallexBeneficiaryFields || {});
+      setPayoutProviderId(recipient.payoutProviderId || "AIRWALLEX_SANDBOX");
+      setNiumFields(recipient.niumBeneficiaryFields || {});
       setMobileNumber("");
     } else {
       setSelectedProvider(recipient.mobileWalletProvider || "");
@@ -409,6 +422,7 @@ export default function SendScreen() {
       setBankCode("");
       setAccountNumber("");
       setAirwallexFields({});
+      setNiumFields({});
     }
 
     setFirstName(recipient.firstName || "");
@@ -455,6 +469,7 @@ export default function SendScreen() {
     setBankCode("");
     setAccountNumber("");
     setAirwallexFields({});
+    setNiumFields({});
     setMobileNumber("");
   };
 
@@ -467,6 +482,7 @@ export default function SendScreen() {
     setBankCode("");
     setAccountNumber("");
     setAirwallexFields({});
+    setNiumFields({});
     setMobileNumber("");
   };
 
@@ -498,16 +514,23 @@ export default function SendScreen() {
       return;
     }
 
-    const airwallexValidationError = selectedPayoutMethod === "BANK"
+    const airwallexValidationError = selectedPayoutMethod === "BANK" && payoutProviderId === "AIRWALLEX_SANDBOX"
       ? validateAirwallexBeneficiaryFields(airwallexSchema.schema, airwallexFields, fixedAirwallexFields)
       : null;
-    if (selectedPayoutMethod === "BANK" && (airwallexSchema.loading || airwallexSchema.error || airwallexValidationError)) {
+    if (selectedPayoutMethod === "BANK" && payoutProviderId === "AIRWALLEX_SANDBOX" && (airwallexSchema.loading || airwallexSchema.error || airwallexValidationError)) {
       Alert.alert(
         "Recipient requirements incomplete",
         airwallexSchema.loading
           ? "Wait for Airwallex recipient requirements to load."
           : airwallexSchema.error ?? airwallexValidationError ?? "Complete the Airwallex recipient requirements."
       );
+      return;
+    }
+    const niumValidationError = selectedPayoutMethod === "BANK" && payoutProviderId === "NIUM_SANDBOX"
+      ? validateNiumBeneficiaryFields(niumSchema.schema, niumFields)
+      : null;
+    if (selectedPayoutMethod === "BANK" && payoutProviderId === "NIUM_SANDBOX" && (niumSchema.loading || niumSchema.error || niumValidationError)) {
+      Alert.alert("Recipient requirements incomplete", niumSchema.loading ? "Wait for Nium recipient requirements to load." : niumSchema.error ?? niumValidationError ?? "Complete the Nium recipient requirements.");
       return;
     }
 
@@ -526,6 +549,9 @@ export default function SendScreen() {
     const materializedFields = airwallexSchema.schema
       ? materializeAirwallexBeneficiaryFields(airwallexSchema.schema, airwallexFields, fixedAirwallexFields)
       : {};
+    const materializedNiumFields = niumSchema.schema
+      ? materializeNiumBeneficiaryFields(niumSchema.schema, niumFields)
+      : {};
     const providerAccountReference = materializedFields["beneficiary.bank_details.account_number"]
       ?? materializedFields["beneficiary.bank_details.iban"]
       ?? accountNumber.trim();
@@ -540,13 +566,17 @@ export default function SendScreen() {
       country: selectedCorridor.country,
       currency: selectedCorridor.currency,
       payoutMethod: selectedPayoutMethod,
+      payoutProviderId: selectedPayoutMethod === "BANK" ? payoutProviderId : undefined,
       bankName: selectedPayoutMethod === "BANK" ? selectedProvider : undefined,
-      bankCode: selectedPayoutMethod === "BANK" ? providerRoutingReference : undefined,
+      bankCode: selectedPayoutMethod === "BANK" ? (payoutProviderId === "NIUM_SANDBOX" ? materializedNiumFields.routingCodeValue1 : providerRoutingReference) : undefined,
       accountNumber:
-        selectedPayoutMethod === "BANK" ? providerAccountReference : undefined,
-      airwallexTransferMethod: selectedPayoutMethod === "BANK" ? airwallexSchema.schema?.transferMethod : undefined,
-      airwallexBeneficiaryFields: selectedPayoutMethod === "BANK" ? materializedFields : undefined,
-      airwallexSchemaFetchedAt: selectedPayoutMethod === "BANK" ? airwallexSchema.schema?.fetchedAt : undefined,
+        selectedPayoutMethod === "BANK" ? (payoutProviderId === "NIUM_SANDBOX" ? materializedNiumFields.beneficiaryAccountNumber : providerAccountReference) : undefined,
+      airwallexTransferMethod: selectedPayoutMethod === "BANK" && payoutProviderId === "AIRWALLEX_SANDBOX" ? airwallexSchema.schema?.transferMethod : undefined,
+      airwallexBeneficiaryFields: selectedPayoutMethod === "BANK" && payoutProviderId === "AIRWALLEX_SANDBOX" ? materializedFields : undefined,
+      airwallexSchemaFetchedAt: selectedPayoutMethod === "BANK" && payoutProviderId === "AIRWALLEX_SANDBOX" ? airwallexSchema.schema?.fetchedAt : undefined,
+      niumPayoutMethod: selectedPayoutMethod === "BANK" && payoutProviderId === "NIUM_SANDBOX" ? "LOCAL" : undefined,
+      niumBeneficiaryFields: selectedPayoutMethod === "BANK" && payoutProviderId === "NIUM_SANDBOX" ? materializedNiumFields : undefined,
+      niumSchemaFetchedAt: selectedPayoutMethod === "BANK" && payoutProviderId === "NIUM_SANDBOX" ? niumSchema.schema?.fetchedAt : undefined,
       mobileWalletProvider:
         selectedPayoutMethod === "MOBILE_WALLET" ? selectedProvider : undefined,
       mobileNumber:
@@ -779,7 +809,15 @@ export default function SendScreen() {
               />
 
               {selectedPayoutMethod === "BANK" ? (
-                <AirwallexBeneficiaryFields
+                <>
+                  <View style={{ gap: 8 }}>
+                    <AppText variant="caption" color={colors.textDarkSecondary}>Payout provider</AppText>
+                    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                      <SelectorChip label="Airwallex Sandbox" selected={payoutProviderId === "AIRWALLEX_SANDBOX"} onPress={() => { setPayoutProviderId("AIRWALLEX_SANDBOX"); setNiumFields({}); }} />
+                      <SelectorChip label="Nium Sandbox" selected={payoutProviderId === "NIUM_SANDBOX"} onPress={() => { setPayoutProviderId("NIUM_SANDBOX"); setAirwallexFields({}); }} />
+                    </View>
+                  </View>
+                  {payoutProviderId === "AIRWALLEX_SANDBOX" ? <AirwallexBeneficiaryFields
                   schema={airwallexSchema.schema}
                   loading={airwallexSchema.loading}
                   error={airwallexSchema.error}
@@ -791,7 +829,8 @@ export default function SendScreen() {
                   }}
                   onRetry={airwallexSchema.reload}
                   onGenerateSandboxRecipient={handleGenerateSandboxRecipient}
-                />
+                  /> : <NiumBeneficiaryFields schema={niumSchema.schema} loading={niumSchema.loading} error={niumSchema.error} values={niumFields} onChange={(path, value) => { clearSelectedRecipient(); setNiumFields((current) => ({ ...current, [path]: value })); }} onRetry={niumSchema.reload} />}
+                </>
               ) : (
                 <InputField
                   value={mobileNumber}

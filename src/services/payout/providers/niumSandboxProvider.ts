@@ -1,28 +1,58 @@
+import { supabase } from "../../../lib/supabase";
 import {
   CreatePayoutRequest,
   PayoutProvider,
+  PayoutProviderError,
   PayoutResult,
   PayoutStatus,
+  ProviderJourneyStep,
 } from "../payoutTypes";
 
-const NIUM_BASE_URL = process.env.EXPO_PUBLIC_NIUM_BASE_URL;
-const NIUM_API_KEY = process.env.EXPO_PUBLIC_NIUM_API_KEY;
-const NIUM_CLIENT_ID = process.env.EXPO_PUBLIC_NIUM_CLIENT_ID;
+type EdgePayoutResponse = Omit<PayoutResult, "providerId"> & {
+  providerId: string;
+  providerJourney?: ProviderJourneyStep[];
+};
 
-export function hasNiumSandboxCredentials() {
-  return Boolean(NIUM_BASE_URL && NIUM_API_KEY);
-}
+type EdgePayoutError = {
+  error?: string;
+  code?: string;
+  operation?: string;
+  providerName?: string;
+  retryable?: boolean;
+  fieldSources?: string[];
+  action?: string;
+};
 
-function buildDestinationLabel(req: CreatePayoutRequest) {
-  if (req.payoutMethod === "BANK") {
-    return `${req.recipient.bankName || "Bank"} • ****${req.recipient.accountNumber?.slice(-4) || "0000"}`;
+async function toProviderError(error: unknown) {
+  let payload: EdgePayoutError | null = null;
+  const context = error && typeof error === "object" && "context" in error
+    ? (error as { context?: unknown }).context
+    : null;
+
+  if (context instanceof Response) {
+    payload = await context.clone().json().catch(() => null) as EdgePayoutError | null;
   }
 
-  return `${req.recipient.mobileWalletProvider || "Wallet"}`;
+  const fields = payload?.fieldSources?.length
+    ? ` Required fields: ${payload.fieldSources.join(", ")}.`
+    : "";
+  const action = payload?.action ? ` ${payload.action}` : "";
+
+  return new PayoutProviderError(
+    `${payload?.error ?? (error instanceof Error ? error.message : "Nium sandbox request failed.")}${fields}${action}`,
+    "NIUM_SANDBOX",
+    payload?.providerName ?? "Nium Sandbox",
+    payload?.retryable ?? false,
+    payload?.code,
+    payload?.operation,
+  );
 }
 
-function buildNiumReference() {
-  return `NIUM-SBX-${Date.now().toString().slice(-8)}`;
+function assertResult(data: EdgePayoutResponse | null): PayoutResult {
+  if (!data?.payoutReference || !data.status) {
+    throw new Error("Nium payout function did not return a valid payout result.");
+  }
+  return { ...data, providerId: "NIUM_SANDBOX", sandbox: true, fallbackUsed: false };
 }
 
 export const niumSandboxProvider: PayoutProvider = {
@@ -30,44 +60,36 @@ export const niumSandboxProvider: PayoutProvider = {
   name: "Nium Sandbox",
 
   async createPayout(req: CreatePayoutRequest): Promise<PayoutResult> {
-    if (!hasNiumSandboxCredentials()) {
-      throw new Error("Nium sandbox credentials are not configured");
-    }
+    const { data, error } = await supabase.functions.invoke<EdgePayoutResponse>("nexuspay-submit-payout", {
+      body: {
+        providerId: "nium",
+        environment: "sandbox",
+        transferId: req.transferId,
+        sourceAmount: req.amount,
+        sourceCurrency: "GBP",
+        destinationCurrency: req.currency,
+        country: req.country,
+        recipient: req.recipient,
+        payoutMethod: req.payoutMethod,
+        quoteId: req.quoteId,
+      },
+    });
 
-    // Credential-ready connector.
-    // Once Nium sandbox access is issued, this is where we map NexusPay's
-    // internal payout request into Nium's exact payout endpoint payload.
-    // Keeping the result shaped like PayoutResult means the UI and Track
-    // screen do not need to change when live sandbox calls are enabled.
-
-    const now = new Date().toISOString();
-
-    return {
-      providerId: "NIUM_SANDBOX",
-      providerName: "Nium Sandbox",
-      payoutReference: buildNiumReference(),
-      payoutRail: req.payoutMethod === "BANK" ? "BANK_ACCOUNT" : "MOBILE_WALLET",
-      status: "INITIATED",
-      amount: req.amount,
-      currency: req.currency,
-      country: req.country,
-      recipientName: req.recipient.name,
-      destinationLabel: buildDestinationLabel(req),
-      estimatedArrival: "Live sandbox ETA pending",
-      createdAt: now,
-      updatedAt: now,
-      sandbox: true,
-      providerMessage: `Nium sandbox credentials detected. Ready to submit via ${NIUM_BASE_URL}${NIUM_CLIENT_ID ? " for configured client" : ""}.`,
-      routingReason: "Selected by NexusPay payout routing engine",
-      fallbackUsed: false,
-    };
+    if (error) throw await toProviderError(error);
+    return assertResult(data ?? null);
   },
 
-  async getPayoutStatus(): Promise<PayoutStatus> {
-    if (!hasNiumSandboxCredentials()) {
-      throw new Error("Nium sandbox credentials are not configured");
-    }
+  async getPayoutStatus(reference: string): Promise<PayoutStatus> {
+    const { data, error } = await supabase.functions.invoke<{ status: PayoutStatus }>("nexuspay-submit-payout", {
+      body: {
+        providerId: "nium",
+        environment: "sandbox",
+        operation: "retrieve",
+        payoutReference: reference,
+      },
+    });
 
-    return "PAID_OUT";
+    if (error) throw await toProviderError(error);
+    return data?.status ?? "PROCESSING";
   },
 };

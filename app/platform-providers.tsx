@@ -77,6 +77,13 @@ export default function PlatformProvidersScreen() {
             onPress={() => handleTestConnection("airwallex")}
           />
           <QuickTestButton
+            label="Test Nium"
+            icon="globe"
+            loading={testingProvider === "nium"}
+            disabled={testingProvider !== null || certifyingAirwallex}
+            onPress={() => handleTestConnection("nium")}
+          />
+          <QuickTestButton
             label="Test Yapily"
             icon="shield"
             loading={testingProvider === "yapily"}
@@ -121,6 +128,7 @@ export default function PlatformProvidersScreen() {
         const latestTest = (snapshot?.connectionTests ?? []).find((item) => item.providerId === provider.id);
         const connectable = isConnectableProvider(provider.id);
         const liveVerified = latestTest?.status === "SUCCESS";
+        const verifiedClassification = provider.id === "ripple" ? "TESTNET" : "SANDBOX";
 
         return (
           <PlatformCard key={provider.id}>
@@ -132,7 +140,7 @@ export default function PlatformProvidersScreen() {
               <ConnectivityBadge liveVerified={liveVerified} connectable={connectable} />
             </View>
 
-            <Row label="Connectivity" value={liveVerified ? "Live test passed" : connectable ? "Test available" : "No live connection"} />
+            <Row label="Connectivity" value={liveVerified ? `${verifiedClassification} test passed` : connectable ? "Test available" : "No live connection"} />
             <Row label="Credential Status" value={connectable && provider.apiConfigured ? "Secure backend reference configured" : "No live credential configured"} />
             <Row label="Production" value={provider.productionEnabled ? "Live production enabled" : "Not enabled"} />
             <Row label="Endpoint" value={provider.sandboxUrl ?? (provider.id === "ripple" ? "XRPL public testnet JSON-RPC" : "Not recorded")} />
@@ -151,7 +159,7 @@ export default function PlatformProvidersScreen() {
                 {capabilities.map((capability) => (
                   <View key={capability.id} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                     <AppText variant="caption" color={colors.textDarkPrimary} style={{ flex: 1, fontWeight: "800" }}>{capability.capabilityName}</AppText>
-                    <DataProvenanceBadge classification={liveVerified && connectable ? "LIVE" : "NO_DATA"} />
+                    <DataProvenanceBadge classification={liveVerified && connectable ? verifiedClassification : "NO_DATA"} />
                     <AppText variant="caption" color={liveVerified ? "#0F8A5F" : colors.textDarkMuted} style={{ fontWeight: "900" }}>
                       {liveVerified && connectable ? "Verified" : capability.readinessStatus}
                     </AppText>
@@ -200,7 +208,7 @@ export default function PlatformProvidersScreen() {
 }
 
 function isConnectableProvider(providerId: string) {
-  return providerId === "airwallex" || providerId === "yapily" || providerId === "ripple";
+  return providerId === "airwallex" || providerId === "nium" || providerId === "yapily" || providerId === "ripple";
 }
 
 function sortConnectableFirst(a: PartnerProviderRecord, b: PartnerProviderRecord) {
@@ -218,7 +226,7 @@ function formatPartnerType(value?: string | null) {
 
 function ConnectivityBadge({ liveVerified, connectable }: { liveVerified: boolean; connectable: boolean }) {
   const color = liveVerified ? "#0F8A5F" : connectable ? "#087C89" : "#64748B";
-  const label = liveVerified ? "LIVE" : connectable ? "TESTABLE" : "NO DATA";
+  const label = liveVerified ? "VERIFIED" : connectable ? "TESTABLE" : "NO DATA";
   return (
     <View style={{ borderRadius: 999, backgroundColor: `${color}14`, borderColor: `${color}30`, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 6 }}>
       <AppText variant="caption" color={color} style={{ fontWeight: "900" }}>{label}</AppText>

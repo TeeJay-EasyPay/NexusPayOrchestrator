@@ -129,7 +129,7 @@ const fallbackProviders: PartnerProviderRecord[] = [
   provider("airwallex", "Airwallex", "Payment Network", "Testing", true, false, true, "Sandbox last-leg payout provider. Backend-only credentials; no production readiness claimed."),
   provider("thunes", "Thunes", "Payment Network", "Researching", false, false, false, "Global payout network candidate."),
   provider("tranglo", "Tranglo", "Payment Network", "Researching", false, false, false, "Candidate provider. No live NexusPay connectivity configured yet."),
-  provider("nium", "Nium", "Payment Network", "Researching", false, false, false, "Candidate provider. No live NexusPay connectivity configured yet."),
+  provider("nium", "Nium", "Payment Network", "Testing", true, false, true, "Authenticated sandbox corridor and FX discovery. Payout execution requires a configured Nium customer wallet."),
   provider("yapily", "Yapily", "Open Banking", "Sandbox Active", true, false, true, "Open banking connectivity candidate."),
   provider("truelayer", "TrueLayer", "Open Banking", "Researching", false, false, false, "Open banking alternative under review."),
   provider("ripple", "Ripple", "Settlement Network", "Testing", true, false, true, "XRPL testnet connectivity candidate."),

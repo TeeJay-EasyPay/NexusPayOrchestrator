@@ -3,9 +3,10 @@ import { createTransferId } from "../lib/id";
 import { supabase } from "../lib/supabase";
 import { getAirwallexBeneficiarySchema } from "./airwallexBeneficiarySchemaService";
 import { getAirwallexFxQuote } from "./airwallexFxQuoteService";
+import { getNiumBeneficiarySchema, getNiumFxQuote } from "./niumBeneficiarySchemaService";
 import { getXrplTestnetStatus } from "./xrplTestnetService";
 import type { CanonicalRoutePlan, RouteDataProvenance, RouteEvidence } from "../types/routePlan";
-import type { Currency, FundingMethod, PayoutMethod, RouteQuote } from "../types/transfer";
+import type { Currency, FundingMethod, PayoutMethod, PayoutProviderSelection, RouteQuote } from "../types/transfer";
 
 const EVIDENCE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const QUOTE_TTL_MS = 15 * 60 * 1000;
@@ -18,6 +19,7 @@ type RouteGenerationInput = {
   payoutMethod: PayoutMethod;
   fundingMethod?: FundingMethod;
   actualRlusdBalance?: number | null;
+  payoutProviderId?: PayoutProviderSelection;
 };
 
 type ConnectionTest = {
@@ -105,19 +107,19 @@ async function loadRouteEvidence() {
     supabase
       .from("partner_connection_tests")
       .select("provider_id,status,readiness,response_time_ms,tested_at,institution_count")
-      .in("provider_id", ["yapily", "airwallex", "ripple"])
+      .in("provider_id", ["yapily", "airwallex", "nium", "ripple"])
       .eq("environment", "sandbox")
       .order("tested_at", { ascending: false })
       .limit(30),
     supabase
       .from("partner_supported_corridors")
       .select("provider_id,source_country,destination_country,source_currency,destination_currency,environment,readiness_status,provenance,last_validated_at")
-      .in("provider_id", ["airwallex", "yapily"])
+      .in("provider_id", ["airwallex", "nium", "yapily"])
       .eq("environment", "sandbox"),
     supabase
       .from("partner_capabilities")
       .select("provider_id,capability_code,readiness_status,provenance,last_validated_at")
-      .in("provider_id", ["airwallex", "yapily"])
+      .in("provider_id", ["airwallex", "nium", "yapily"])
       .eq("environment", "sandbox"),
     supabase
       .from("execution_sessions")
@@ -308,11 +310,11 @@ function planToRouteQuote(plan: CanonicalRoutePlan): RouteQuote {
     providerQuoteExpired: Date.now() >= Date.parse(plan.quoteExpiresAt),
     routePlan: plan,
     settlementStages: plan.bridge.required
-      ? ["Yapily funding", "RLUSD bridge", "Airwallex payout"]
-      : ["Yapily funding", "Airwallex payout"],
+      ? ["Yapily funding", "RLUSD bridge", `${payoutProvider.providerName} payout`]
+      : ["Yapily funding", `${payoutProvider.providerName} payout`],
     steps: plan.bridge.required
-      ? ["Yapily funding", "RLUSD bridge", "Airwallex payout"]
-      : ["Yapily funding", "Airwallex payout"],
+      ? ["Yapily funding", "RLUSD bridge", `${payoutProvider.providerName} payout`]
+      : ["Yapily funding", `${payoutProvider.providerName} payout`],
   };
 }
 
@@ -697,6 +699,75 @@ export async function generateCanonicalRouteQuotes(input: RouteGenerationInput):
     },
     sourceProvenance: xrplEligible ? ["TESTNET", "LIVE", "DERIVED", "UNAVAILABLE"] : ["TESTNET", "DERIVED", "UNAVAILABLE"],
   };
+
+  if (input.payoutProviderId === "NIUM_SANDBOX") {
+    const [schemaResult, quoteResult] = await Promise.all([
+      getNiumBeneficiarySchema({ country: input.destinationCountry, currency: input.destinationCurrency })
+        .then((schema) => ({ schema, error: null }))
+        .catch((error: unknown) => ({ schema: null, error: error instanceof Error ? error.message : "Nium corridor requirements are unavailable." })),
+      getNiumFxQuote({ sourceCurrency, destinationCurrency: input.destinationCurrency, sourceAmount: input.amount })
+        .then((quote) => ({ quote, error: null }))
+        .catch((error: unknown) => ({ quote: null, error: error instanceof Error ? error.message : "Nium FX quote is unavailable." })),
+    ]);
+    const niumTest = routeEvidence.tests.get("nium");
+    const niumStatus = providerAvailability("Nium", niumTest);
+    const payoutConfigured = schemaResult.schema?.payoutConfigured === true;
+    const niumReasons = [
+      ...bankingPlan.eligibilityReasons.filter((reason) => !reason.toLowerCase().includes("airwallex")),
+      niumStatus.value !== "AVAILABLE" ? niumStatus.reason : null,
+      !schemaResult.schema ? schemaResult.error : null,
+      !quoteResult.quote ? quoteResult.error : null,
+      !payoutConfigured ? "Nium sandbox customer and wallet identifiers are not configured for payout execution." : null,
+    ].filter((value): value is string => Boolean(value));
+    const eligible = niumReasons.length === 0;
+    const quote = quoteResult.quote;
+    const schema = schemaResult.schema;
+    const niumPlan: CanonicalRoutePlan = {
+      ...bankingPlan,
+      id: createTransferId(),
+      eligible,
+      eligibilityReasons: niumReasons,
+      rank: eligible ? 1 : null,
+      score: eligible ? evidence(85, "DERIVED", "canonical_route_engine_v1", generatedAt, 80, "Nium score reflects current funding, corridor, quote and payout-configuration evidence.") : unavailable<number | null>(null, "canonical_route_engine_v1", "Nium route is not executable with the current evidence.", generatedAt),
+      payout: {
+        ...bankingPlan.payout,
+        provider: {
+          providerId: "NIUM_SANDBOX",
+          providerName: "Nium Sandbox",
+          environment: "sandbox",
+          status: payoutConfigured ? niumStatus : unavailable("UNAVAILABLE", "Nium server configuration", "Nium customer and wallet identifiers are missing.", generatedAt),
+          quoteReference: quote ? evidence(quote.quoteId, "SANDBOX", quote.source, generatedAt, 95) : unavailable<string | null>(null, "Nium Exchange Rate V2 API", quoteResult.error ?? "No quote reference is available.", generatedAt),
+        },
+        corridorSupported: schema ? evidence(true, "SANDBOX", schema.source, schema.fetchedAt, 90, "Nium returned current mandatory corridor fields.") : unavailable(false, "Nium Supported Corridors V3 API", schemaResult.error ?? "No corridor evidence is available.", generatedAt),
+        beneficiaryCapability: evidence(payoutConfigured, payoutConfigured ? "DERIVED" : "UNAVAILABLE", "Nium configuration and Supported Corridors V3 API", generatedAt, payoutConfigured ? 80 : 0),
+        transferCapability: evidence(payoutConfigured, payoutConfigured ? "DERIVED" : "UNAVAILABLE", "Nium configuration", generatedAt, payoutConfigured ? 80 : 0),
+        providerFee: unavailable<number | null>(null, "Nium Sandbox", "Nium did not return a payout fee in the current exchange-rate response.", generatedAt),
+        providerLimit: schema?.maximumAmount ? evidence(schema.maximumAmount, "SANDBOX", schema.source, schema.fetchedAt, 85) : unavailable<number | null>(null, "Nium Supported Corridors V3 API", "No maximum payout amount was returned.", generatedAt),
+      },
+      settlementMethod: evidence("DIRECT_BANKING", "DERIVED", "canonical_route_engine_v1", generatedAt, 100, "Yapily funding followed by a Nium bank payout."),
+      economics: {
+        ...bankingPlan.economics,
+        fxRate: quote ? evidence(quote.exchangeRate, "SANDBOX", quote.source, generatedAt, 95) : unavailable<number | null>(null, "Nium Exchange Rate V2 API", quoteResult.error ?? "No rate is available.", generatedAt),
+        fxSpreadBps: unavailable<number | null>(null, "Nium Exchange Rate V2 API", "No independent Nium midpoint was returned for spread calculation.", generatedAt),
+        providerFees: unavailable<number | null>(null, "Nium Sandbox", "Provider fee unavailable.", generatedAt),
+        totalCost: unavailable<number | null>(null, "canonical_route_engine_v1", "Total cost is unavailable until Nium returns a payout fee.", generatedAt),
+        estimatedRecipientAmount: quote ? evidence(quote.destinationAmount, "DERIVED", `${quote.source} rate multiplied by source amount`, generatedAt, 90) : unavailable<number | null>(null, "Nium Exchange Rate V2 API", quoteResult.error ?? "Recipient amount unavailable.", generatedAt),
+      },
+      intelligence: {
+        ...bankingPlan.intelligence,
+        confidence: evidence(eligible ? 80 : 0, "DERIVED", "canonical_route_engine_v1", generatedAt, 85),
+        risk: evidence(eligible ? 20 : 100, "DERIVED", "canonical_route_engine_v1", generatedAt, 80),
+        historicalSuccessRate: unavailable<number | null>(null, "Nium payout evidence", "No terminal Nium sandbox payouts are recorded yet.", generatedAt),
+        settlementLatencyMinutes: unavailable<number | null>(null, "Nium payout evidence", "No terminal Nium latency observations are recorded yet.", generatedAt),
+        complianceEligible: evidence(Boolean(schema && payoutConfigured), "DERIVED", "Nium corridor and configuration evidence", generatedAt, 80),
+        evidenceCoverage: eligible ? 70 : 0,
+        decisionFactors: niumReasons.length ? niumReasons : ["Nium returned current corridor requirements and an FX quote, and its payout wallet is configured."],
+      },
+      sourceProvenance: ["SANDBOX", "DERIVED", "UNAVAILABLE"],
+      quoteExpiresAt: quote?.expiryDate || defaultQuoteExpiresAt,
+    };
+    return [niumPlan].map(planToRouteQuote);
+  }
 
   return [bankingPlan, xrplPlan].map(planToRouteQuote);
 }

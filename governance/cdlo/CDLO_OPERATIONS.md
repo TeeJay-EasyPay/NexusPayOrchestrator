@@ -178,3 +178,10 @@ Secure a destination-rail sandbox partner to complete the first end-to-end MVP o
 ---
 
 > **Maintenance Rule:** Append new daily briefings to the end of this document. Do not overwrite previous entries. Update the partner register and communication history whenever new information is confirmed.
+
+## 2026-08-10 Nium Sandbox Update
+
+- Authenticated Nium sandbox API and supported-corridor discovery: confirmed.
+- Dynamic recipient requirements and sandbox FX quote: integrated.
+- Beneficiary and payout certification: pending Nium sandbox customer and funded wallet provisioning.
+- Webhook readiness: not configured; no unsigned event will be treated as provider evidence.

@@ -1,4 +1,4 @@
-import { AirwallexTransferMethod, Currency, PayoutMethod } from "./transfer";
+import { AirwallexTransferMethod, Currency, PayoutMethod, PayoutProviderSelection } from "./transfer";
 
 export interface SavedRecipient {
   id: string;
@@ -15,6 +15,10 @@ export interface SavedRecipient {
   airwallexTransferMethod?: AirwallexTransferMethod;
   airwallexBeneficiaryFields?: Record<string, string>;
   airwallexSchemaFetchedAt?: string;
+  payoutProviderId?: PayoutProviderSelection;
+  niumPayoutMethod?: "LOCAL";
+  niumBeneficiaryFields?: Record<string, string>;
+  niumSchemaFetchedAt?: string;
   mobileWalletProvider?: string;
   mobileNumber?: string;
   isFavorite: boolean;

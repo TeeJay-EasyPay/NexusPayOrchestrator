@@ -1,7 +1,7 @@
 import { CreatePayoutRequest, PayoutProviderError } from "./payoutTypes";
 import { selectBestPayoutPartner } from "./payoutRoutingEngine";
 import { airwallexSandboxProvider } from "./providers/airwallexSandboxProvider";
-import { niumSandboxProvider, hasNiumSandboxCredentials } from "./providers/niumSandboxProvider";
+import { niumSandboxProvider } from "./providers/niumSandboxProvider";
 
 export async function createPayout(request: CreatePayoutRequest) {
   const resolvedSelection = selectBestPayoutPartner(request);
@@ -23,10 +23,7 @@ export async function createPayout(request: CreatePayoutRequest) {
 
   if (selection.selectedProviderId === "AIRWALLEX_SANDBOX") {
     result = await airwallexSandboxProvider.createPayout(request);
-  } else if (
-    selection.selectedProviderId === "NIUM_SANDBOX" &&
-    hasNiumSandboxCredentials()
-  ) {
+  } else if (selection.selectedProviderId === "NIUM_SANDBOX") {
     result = await niumSandboxProvider.createPayout(request);
   } else {
     throw new PayoutProviderError(
@@ -54,7 +51,7 @@ export async function getPayoutStatus(reference: string) {
     return airwallexSandboxProvider.getPayoutStatus(reference);
   }
 
-  if (reference.startsWith("nium:") && hasNiumSandboxCredentials()) {
+  if (reference.startsWith("nium:")) {
     return niumSandboxProvider.getPayoutStatus(reference);
   }
 

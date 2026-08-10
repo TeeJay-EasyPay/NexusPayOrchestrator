@@ -7,6 +7,12 @@
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import {
+  NiumApiError,
+  fetchNiumCorridors,
+  niumConfig,
+  niumPayoutConfigured,
+} from '../_shared/nium.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -437,6 +443,70 @@ async function runAirwallexTest(providerId: string, environment: string, created
   }
 }
 
+async function runNiumTest(providerId: string, environment: string, createdBy: string | null) {
+  const started = Date.now();
+  try {
+    const result = await fetchNiumCorridors({ size: 1 });
+    const totalCorridors = Number(result.totalElements ?? 0);
+    const payoutConfigured = niumPayoutConfigured();
+    const config = niumConfig();
+    const serviceClient = buildServiceClient();
+    await serviceClient.from('partner_capabilities').update({
+      readiness_status: 'Validated',
+      provenance: 'SANDBOX',
+      last_validated_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }).eq('provider_id', providerId).eq('environment', environment)
+      .in('capability_code', ['API_AUTHENTICATION', 'SUPPORTED_CORRIDORS_READ']);
+    await serviceClient.from('partner_capabilities').update({
+      readiness_status: payoutConfigured ? 'Testing' : 'Not configured',
+      provenance: payoutConfigured ? 'DERIVED' : 'NO_DATA',
+      updated_at: new Date().toISOString(),
+    }).eq('provider_id', providerId).eq('environment', environment)
+      .in('capability_code', ['BENEFICIARY_CREATION', 'PAYOUT_CREATION', 'PAYOUT_STATUS']);
+    const test = await persistTest({
+      providerId,
+      environment,
+      testType: 'nium_read_only_corridor_connectivity',
+      status: 'SUCCESS',
+      readiness: payoutConfigured ? 'SANDBOX' : 'PARTIAL',
+      responseTimeMs: Date.now() - started,
+      httpStatus: 200,
+      capabilityCount: payoutConfigured ? 5 : 2,
+      responseSummary: payoutConfigured
+        ? `Nium authenticated and returned ${totalCorridors} sandbox corridor record(s); payout identifiers are configured.`
+        : `Nium authenticated and returned ${totalCorridors} sandbox corridor record(s); customer and wallet identifiers are still required for payouts.`,
+      createdBy,
+      metadata: {
+        provider: 'nium',
+        endpoint: `/v3/client/${config.clientHashId ? '[configured]' : '[missing]'}/supportedCorridors`,
+        total_corridors: totalCorridors,
+        customer_configured: Boolean(config.customerHashId),
+        wallet_configured: Boolean(config.walletHashId),
+      },
+    });
+    return { test };
+  } catch (error) {
+    const providerError = error instanceof NiumApiError ? error : null;
+    const test = await persistTest({
+      providerId,
+      environment,
+      testType: 'nium_read_only_corridor_connectivity',
+      status: 'FAILED',
+      readiness: providerError?.providerCode === 'NIUM_CREDENTIALS_NOT_CONFIGURED' ? 'NO_DATA' : 'DIAGNOSTIC',
+      responseTimeMs: Date.now() - started,
+      httpStatus: providerError?.httpStatus ?? null,
+      capabilityCount: 0,
+      responseSummary: 'Nium read-only sandbox connectivity test failed.',
+      errorCode: providerError?.providerCode ?? 'NIUM_CONNECTION_FAILED',
+      errorMessage: providerError?.message ?? (error instanceof Error ? error.message : String(error)),
+      createdBy,
+      metadata: { provider: 'nium', endpoint: '/api/v3/client/[configured]/supportedCorridors' },
+    });
+    return { test };
+  }
+}
+
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -476,6 +546,10 @@ serve(async (req: Request) => {
 
     if (providerId === 'airwallex') {
       return json(await runAirwallexTest(providerId, environment, user.id));
+    }
+
+    if (providerId === 'nium') {
+      return json(await runNiumTest(providerId, environment, user.id));
     }
 
     return json(await runUnsupportedProviderTest(providerId, environment, user.id));

@@ -985,6 +985,32 @@ Implemented; regulated provider onboarding pending
 
 ---
 
+## Decision ID
+D-016
+
+## Title
+Nium Sandbox Evidence and Payout Readiness Boundary
+
+## Date
+2026-08-10
+
+## Decision Owner
+Chief Technology Officer
+
+## Decision
+Nium corridor requirements and FX quotes may be displayed only when returned by authenticated sandbox APIs. Nium payout routes remain unavailable until a sandbox customer and wallet are securely configured. No client-side credential, fabricated reference, simulated paid status or unsigned webhook evidence is permitted.
+
+## Rationale
+This preserves transparency and idempotency while allowing genuine Nium evidence before full payout certification.
+
+## Status
+Implemented; payout certification pending Nium customer and wallet provisioning
+
+## Reference Documents
+- `../reports/NIUM_SANDBOX_PAYOUT_INTEGRATION_CHECKPOINT.md`
+
+---
+
 1. Add new decisions in ascending ID order.
 2. Never overwrite historical decisions; append updates through status and follow-up actions.
 3. Link every decision to authoritative governance and supporting evidence artifacts.

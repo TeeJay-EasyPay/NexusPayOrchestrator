@@ -1850,3 +1850,27 @@ Validation and release:
 - Android update: `019fe216-b275-7547-965e-4d869c7a9449`.
 - iOS update: `019fe216-b275-76ff-a6ae-1ed7d1d4df47`.
 - Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/a5870a04-b865-4431-899e-bd2fa9e32729`.
+
+## 2026-08-10 - Nium Sandbox Payout Integration
+
+Trigger:
+- Founder requested a second payout provider with the same evidence, security and recipient-field discipline as Airwallex.
+
+Completed:
+- Replaced the fabricated mobile Nium connector with a Supabase Edge Function adapter.
+- Added Nium V3 supported-corridor discovery and V2 exchange-rate retrieval.
+- Added dynamic Nium recipient fields and format guidance to Send.
+- Added explicit Airwallex/Nium selection and canonical Route Plan binding.
+- Added durable idempotent beneficiary/remittance orchestration and retrieval logic.
+- Added Nium Platform Administration connectivity testing and SANDBOX provenance.
+- Applied migrations `20260810000100` and `20260810000200` and deployed both affected Edge Functions.
+
+Evidence and validation:
+- Authenticated connection, MY/MYR requirements and GBP/MYR quote: PASS.
+- Guarded payout: correctly blocked with `NIUM_CUSTOMER_WALLET_NOT_CONFIGURED`.
+- No beneficiary, payout or webhook success is claimed.
+- TypeScript: PASS. ESLint: no errors. Android Expo export: PASS. Edge deployment bundling: PASS.
+
+Checkpoint:
+- `PARTIAL PASS` pending Nium sandbox customer, funded wallet and secure webhook certification.
+- Reports: `../reports/NIUM_SANDBOX_PAYOUT_INTEGRATION_CHECKPOINT.md` and `../reports/FOUNDER_BRIEFING_NIUM_SANDBOX_INTEGRATION.md`.

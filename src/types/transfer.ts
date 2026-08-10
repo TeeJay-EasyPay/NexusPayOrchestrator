@@ -19,6 +19,7 @@ export type RailType = "FIAT" | "CRYPTO" | "HYBRID";
 
 export type PayoutMethod = "BANK" | "MOBILE_WALLET";
 export type AirwallexTransferMethod = "LOCAL" | "SWIFT";
+export type PayoutProviderSelection = "AIRWALLEX_SANDBOX" | "NIUM_SANDBOX";
 
 export type FundingMethod = "OPEN_BANKING" | "CARD";
 export type AccountScope = "demo" | "personal";
@@ -90,6 +91,10 @@ export interface Recipient {
   airwallexTransferMethod?: AirwallexTransferMethod;
   airwallexBeneficiaryFields?: Record<string, string>;
   airwallexSchemaFetchedAt?: string;
+  payoutProviderId?: PayoutProviderSelection;
+  niumPayoutMethod?: "LOCAL";
+  niumBeneficiaryFields?: Record<string, string>;
+  niumSchemaFetchedAt?: string;
 
   mobileWalletProvider?: string;
   mobileNumber?: string;

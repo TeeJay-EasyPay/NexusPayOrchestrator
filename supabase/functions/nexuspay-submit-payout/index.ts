@@ -8,6 +8,16 @@
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import {
+  NiumApiError,
+  assertNiumPayoutConfig,
+  fetchNiumCorridors,
+  fetchNiumFxQuote,
+  mapNiumStatus,
+  niumCountryCode,
+  niumPayoutConfigured,
+  niumRequest,
+} from '../_shared/nium.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -1045,6 +1055,323 @@ function mockResult(body: Record<string, unknown>) {
   };
 }
 
+function niumField(path: string, label: string, required = true, options: { label: string; value: string }[] = []) {
+  const patterns: Record<string, string> = {
+    beneficiaryAccountNumber: '^[A-Za-z0-9]{4,34}$',
+    routingCodeValue1: '^[A-Z0-9]{8}([A-Z0-9]{3})?$',
+    beneficiaryPostcode: '^[A-Za-z0-9 -]{2,12}$',
+  };
+  return {
+    path,
+    required,
+    enabled: true,
+    label,
+    placeholder: label,
+    description: path === 'routingCodeValue1'
+      ? 'Nium corridor evidence requires a SWIFT/BIC routing code.'
+      : undefined,
+    type: options.length ? 'select' : 'text',
+    options,
+    pattern: patterns[path],
+    minLength: path === 'beneficiaryAddress' ? 2 : undefined,
+    maxLength: path === 'beneficiaryAddress' ? 255 : path === 'beneficiaryCity' ? 100 : undefined,
+  };
+}
+
+function niumMandatoryFields(requirements: unknown) {
+  const labels = Array.isArray(requirements) ? requirements.map((item) => String(item).toLowerCase()) : [];
+  const includes = (...terms: string[]) => labels.some((label) => terms.some((term) => label.includes(term)));
+  const fields = [
+    niumField('beneficiaryAccountNumber', includes('iban') ? 'IBAN / account number' : 'Bank account number'),
+    niumField('routingCodeValue1', 'BIC / SWIFT code'),
+  ];
+  if (includes('beneficiary address')) fields.push(niumField('beneficiaryAddress', 'Address'));
+  if (includes('beneficiary city')) fields.push(niumField('beneficiaryCity', 'City'));
+  if (includes('beneficiary postcode')) fields.push(niumField('beneficiaryPostcode', 'Postcode'));
+  if (includes('beneficiary identification value')) {
+    fields.push(niumField('beneficiaryIdentificationValue', 'Recipient identification number'));
+  }
+  if (includes('beneficiary identification type')) {
+    fields.push(niumField('beneficiaryIdentificationType', 'Recipient identification type', true, [
+      { label: 'National ID', value: 'NATIONAL_ID' },
+      { label: 'Passport', value: 'PASSPORT' },
+    ]));
+  }
+  return fields;
+}
+
+async function handleNiumBeneficiarySchema(body: Record<string, unknown>) {
+  const destinationCountry = niumCountryCode(safeString(body.destinationCountry));
+  const destinationCurrency = safeString(body.destinationCurrency).toUpperCase();
+  const corridors = await fetchNiumCorridors({
+    destinationCountry,
+    destinationCurrency,
+    payoutMethod: 'LOCAL',
+    beneficiaryAccountType: 'INDIVIDUAL',
+    size: 100,
+  });
+  const records = Array.isArray(corridors.content) ? corridors.content : [];
+  const corridor = records[0] ?? null;
+  if (!corridor) {
+    throw new NiumApiError(
+      'supported_corridors',
+      404,
+      'NIUM_CORRIDOR_NOT_AVAILABLE',
+      null,
+      'Select another payout provider or corridor.',
+      null,
+      `Nium returned no LOCAL ${destinationCurrency} payout corridor for ${destinationCountry}.`,
+    );
+  }
+  const fetchedAt = new Date().toISOString();
+  await buildServiceClient().from('partner_capabilities').update({
+    readiness_status: 'Validated', provenance: 'SANDBOX', last_validated_at: fetchedAt, updated_at: fetchedAt,
+  }).eq('provider_id', 'nium').eq('environment', 'sandbox').eq('capability_code', 'BENEFICIARY_SCHEMA');
+  return {
+    provider: 'Nium Sandbox',
+    provenance: 'SANDBOX',
+    source: 'Nium Supported Corridors V3 API',
+    payoutMethod: 'LOCAL',
+    destinationCountry,
+    destinationCurrency,
+    beneficiaryAccountType: 'INDIVIDUAL',
+    routingCodeType: safeString(corridor.routingCodeType, 'SWIFT'),
+    deliveryTAT: safeString(corridor.deliveryTAT, 'Unavailable'),
+    minimumAmount: optionalNumber(corridor.minimumAmount),
+    maximumAmount: optionalNumber(corridor.maximumAmount),
+    payoutConfigured: niumPayoutConfigured(),
+    fields: niumMandatoryFields(corridor.mandatoryDataRequirement),
+    fetchedAt,
+  };
+}
+
+async function handleNiumFxQuote(body: Record<string, unknown>) {
+  const sourceCurrency = safeString(body.sourceCurrency, 'GBP').toUpperCase();
+  const destinationCurrency = safeString(body.destinationCurrency).toUpperCase();
+  const sourceAmount = Number(body.sourceAmount ?? body.amount ?? 0);
+  if (!destinationCurrency || !Number.isFinite(sourceAmount) || sourceAmount <= 0) {
+    throw new NiumApiError('exchange_rate', 400, 'INVALID_QUOTE_INPUT', null, null, null, 'A positive source amount and destination currency are required.');
+  }
+  const quote = await fetchNiumFxQuote(sourceCurrency, destinationCurrency);
+  const rate = optionalNumber(quote.netExchangeRate) || optionalNumber(quote.exchangeRate);
+  if (!rate || rate <= 0) {
+    throw new NiumApiError('exchange_rate', 422, 'NIUM_RATE_UNAVAILABLE', null, null, null, 'Nium returned no usable sandbox exchange rate.');
+  }
+  const fetchedAt = new Date().toISOString();
+  await buildServiceClient().from('partner_capabilities').update({
+    readiness_status: 'Validated', provenance: 'SANDBOX', last_validated_at: fetchedAt, updated_at: fetchedAt,
+  }).eq('provider_id', 'nium').eq('environment', 'sandbox').eq('capability_code', 'FX_QUOTE');
+  return {
+    provider: 'Nium Sandbox',
+    provenance: 'SANDBOX',
+    source: 'Nium Exchange Rate V2 API',
+    quoteId: safeString(quote.quoteId),
+    sourceCurrency,
+    destinationCurrency,
+    sourceAmount,
+    destinationAmount: sourceAmount * rate,
+    exchangeRate: rate,
+    markupRate: optionalNumber(quote.markupRate),
+    expiryDate: safeString(quote.expiryDate),
+    payoutConfigured: niumPayoutConfigured(),
+    fetchedAt: new Date().toISOString(),
+  };
+}
+
+function niumJourney(key: string, label: string, description: string, providerStatus: string, occurredAt = new Date().toISOString()) {
+  return { key, label, description, status: 'DONE', provider: 'Nium Sandbox', provenance: 'SANDBOX', providerStatus, occurredAt };
+}
+
+function niumPayoutResult(intent: Record<string, unknown>, journey: Record<string, unknown>[]) {
+  const canonicalStatus = mapNiumStatus(intent.provider_status ?? intent.canonical_status);
+  return {
+    providerId: 'NIUM_SANDBOX',
+    providerName: 'Nium Sandbox',
+    payoutReference: `nium:${safeString(intent.provider_transfer_id, 'pending')}`,
+    payoutRail: 'BANK_ACCOUNT',
+    status: canonicalStatus,
+    amount: Number(intent.amount_beneficiary_receives ?? intent.transfer_amount ?? 0),
+    currency: safeString(intent.destination_currency),
+    country: safeString(intent.destination_country),
+    recipientName: safeString(intent.beneficiary_summary, 'Recipient').split(' - ')[0],
+    destinationLabel: safeString(intent.beneficiary_summary, 'Bank account'),
+    estimatedArrival: 'Nium sandbox delivery estimate recorded in route evidence',
+    createdAt: safeString(intent.created_at, new Date().toISOString()),
+    updatedAt: safeString(intent.updated_at, new Date().toISOString()),
+    sandbox: true,
+    providerMessage: canonicalStatus === 'PAID_OUT'
+      ? 'Nium reported the sandbox payout as PAID.'
+      : `Nium sandbox payout status: ${safeString(intent.provider_status, 'INITIATED')}.`,
+    providerRequestId: safeString(intent.provider_request_id),
+    providerStatus: safeString(intent.provider_status),
+    providerJourney: journey,
+  };
+}
+
+async function handleNiumCreate(body: Record<string, unknown>) {
+  const config = assertNiumPayoutConfig();
+  const service = buildServiceClient();
+  const transferId = safeString(body.transferId);
+  const recipient = asRecord(body.recipient);
+  const fields = asRecord(recipient.niumBeneficiaryFields);
+  const sourceCurrency = safeString(body.sourceCurrency, 'GBP').toUpperCase();
+  const destinationCurrency = safeString(body.destinationCurrency).toUpperCase();
+  const destinationCountry = niumCountryCode(safeString(body.country, safeString(recipient.country)));
+  const amount = Number(body.sourceAmount ?? body.amount ?? 0);
+  if (!transferId || !destinationCurrency || !Number.isFinite(amount) || amount <= 0) {
+    throw new NiumApiError('create_payout', 400, 'INVALID_PAYOUT_INPUT', null, null, null, 'Transfer, amount and destination currency are required.');
+  }
+  const providerRequestId = `npx-${transferId}`.slice(0, 100);
+  const beneficiarySummary = `${safeString(recipient.name, 'Recipient')} - ${maskAccount(safeString(fields.beneficiaryAccountNumber, safeString(recipient.accountNumber)))}`;
+  const { data: intent, error: intentError } = await service.from('provider_payout_intents').upsert({
+    transfer_id: transferId,
+    provider_id: 'nium',
+    environment: 'sandbox',
+    idempotency_key: providerRequestId,
+    provider_request_id: providerRequestId,
+    canonical_status: 'CREATED',
+    source_currency: sourceCurrency,
+    transfer_currency: sourceCurrency,
+    transfer_amount: amount,
+    destination_country: destinationCountry,
+    destination_currency: destinationCurrency,
+    beneficiary_summary: beneficiarySummary,
+    evidence: { providerJourney: [] },
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'transfer_id,provider_id,environment', ignoreDuplicates: true }).select('*').maybeSingle();
+  if (intentError) throw new Error(`Unable to create durable Nium payout intent: ${intentError.message}`);
+  const current = intent ?? (await service.from('provider_payout_intents').select('*').eq('transfer_id', transferId).eq('provider_id', 'nium').eq('environment', 'sandbox').single()).data;
+  if (!current) throw new Error('Unable to load durable Nium payout intent.');
+  const existingJourney = Array.isArray(asRecord(current.evidence).providerJourney)
+    ? asRecord(current.evidence).providerJourney as Record<string, unknown>[]
+    : [];
+  if (current.provider_transfer_id) return niumPayoutResult(current, existingJourney);
+  if (current.canonical_status === 'SUBMITTING') {
+    throw new NiumApiError('create_payout', 409, 'NIUM_OUTCOME_RECONCILIATION_REQUIRED', null, 'Reconcile the existing Nium request before retrying.', null, 'A Nium submission is already in progress; duplicate submission is blocked.');
+  }
+  const { data: claimed } = await service.from('provider_payout_intents').update({
+    canonical_status: 'SUBMITTING', updated_at: new Date().toISOString(),
+  }).eq('id', current.id).eq('canonical_status', 'CREATED').select('id').maybeSingle();
+  if (!claimed) throw new NiumApiError('create_payout', 409, 'NIUM_DUPLICATE_BLOCKED', null, null, null, 'Duplicate Nium payout submission was blocked.');
+
+  const beneficiaryPayload: Record<string, unknown> = {
+    beneficiaryName: safeString(recipient.name),
+    beneficiaryAccountType: 'Individual',
+    beneficiaryCountryCode: destinationCountry,
+    destinationCountry,
+    destinationCurrency,
+    payoutMethod: 'LOCAL',
+    beneficiaryAccountNumber: safeString(fields.beneficiaryAccountNumber, safeString(recipient.accountNumber)),
+    routingCodeType1: 'SWIFT',
+    routingCodeValue1: safeString(fields.routingCodeValue1, safeString(recipient.bankCode)).toUpperCase(),
+  };
+  for (const key of ['beneficiaryAddress', 'beneficiaryCity', 'beneficiaryPostcode', 'beneficiaryIdentificationType', 'beneficiaryIdentificationValue', 'beneficiaryEmail', 'beneficiaryDob']) {
+    const value = safeString(fields[key]);
+    if (value) beneficiaryPayload[key] = value;
+  }
+  try {
+    const beneficiary = await niumRequest<Record<string, unknown>>(
+      `/v2/client/${encodeURIComponent(config.clientHashId)}/customer/${encodeURIComponent(config.customerHashId)}/beneficiaries`,
+      'beneficiary_create',
+      { method: 'POST', body: JSON.stringify(beneficiaryPayload) },
+      config,
+    );
+    const beneficiaryId = safeString(beneficiary.beneficiaryHashId);
+    if (!beneficiaryId) throw new NiumApiError('beneficiary_create', 502, 'NIUM_BENEFICIARY_REFERENCE_MISSING', null, null, null, 'Nium did not return a beneficiary reference.');
+    const journey = [
+      niumJourney('nium_authenticated', 'Nium Sandbox authenticated', 'Nium accepted the secured server-side API request.', 'AUTHENTICATED'),
+      niumJourney('nium_beneficiary_created', 'Nium beneficiary validated and created', 'Nium validated the corridor-specific recipient details and returned a beneficiary reference.', 'BENEFICIARY_CREATED'),
+    ];
+    await service.from('provider_payout_intents').update({ provider_beneficiary_id: beneficiaryId, evidence: { providerJourney: journey }, updated_at: new Date().toISOString() }).eq('id', current.id);
+    const payout = await niumRequest<Record<string, unknown>>(
+      `/v2/client/${encodeURIComponent(config.clientHashId)}/customer/${encodeURIComponent(config.customerHashId)}/wallet/${encodeURIComponent(config.walletHashId)}/remittance`,
+      'payout_create',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          beneficiary: { id: beneficiaryId },
+          payout: { source_amount: amount, source_currency: sourceCurrency },
+          purposeCode: safeString(body.purposeCode, 'IR001'),
+          sourceOfFunds: safeString(body.sourceOfFunds, 'Business income'),
+          externalId: providerRequestId,
+        }),
+      },
+      config,
+    );
+    const systemReference = safeString(payout.system_reference_number, safeString(payout.systemReferenceNumber));
+    if (!systemReference) throw new NiumApiError('payout_create', 502, 'NIUM_PAYOUT_REFERENCE_MISSING', null, null, null, 'Nium did not return a payout reference.');
+    journey.push(niumJourney('nium_payout_submitted', 'Nium Sandbox payout submitted', 'Nium accepted the sandbox remittance and returned a system reference.', 'INITIATED'));
+    const now = new Date().toISOString();
+    const { data: updated } = await service.from('provider_payout_intents').update({
+      provider_transfer_id: systemReference,
+      canonical_status: 'INITIATED',
+      provider_status: 'INITIATED',
+      provider_beneficiary_id: beneficiaryId,
+      submitted_at: now,
+      evidence: { providerJourney: journey },
+      updated_at: now,
+    }).eq('id', current.id).select('*').single();
+    await service.from('provider_payout_evidence').insert({
+      payout_intent_id: current.id,
+      provider_id: 'nium',
+      environment: 'sandbox',
+      evidence_type: 'PAYOUT_SUBMITTED',
+      summary: 'Nium sandbox beneficiary and payout references recorded.',
+      payload: { providerRequestId, beneficiaryId, systemReference, status: 'INITIATED' },
+    });
+    return niumPayoutResult(updated, journey);
+  } catch (error) {
+    const now = new Date().toISOString();
+    const providerError = error instanceof NiumApiError ? error : null;
+    await service.from('provider_payout_intents').update({
+      canonical_status: 'FAILED',
+      provider_status: 'FAILED',
+      error_category: providerError?.providerCode ?? 'NIUM_UNKNOWN_ERROR',
+      retryable: false,
+      failed_at: now,
+      updated_at: now,
+    }).eq('id', current.id);
+    throw error;
+  }
+}
+
+async function handleNiumRetrieve(body: Record<string, unknown>) {
+  const config = assertNiumPayoutConfig();
+  const reference = safeString(body.payoutReference).replace(/^nium:/, '');
+  const service = buildServiceClient();
+  const { data: intent } = await service.from('provider_payout_intents').select('*').eq('provider_id', 'nium').eq('environment', 'sandbox').eq('provider_transfer_id', reference).single();
+  if (!intent) throw new NiumApiError('retrieve', 404, 'NIUM_PAYOUT_NOT_FOUND', null, null, null, 'Nium payout intent was not found.');
+  const audit = await niumRequest<unknown>(
+    `/v1/client/${encodeURIComponent(config.clientHashId)}/customer/${encodeURIComponent(config.customerHashId)}/wallet/${encodeURIComponent(config.walletHashId)}/remittance/${encodeURIComponent(reference)}/audit`,
+    'retrieve',
+    {},
+    config,
+  );
+  const records = Array.isArray(audit) ? audit : [audit];
+  const latest = asRecord(records[records.length - 1]);
+  const providerStatus = safeString(latest.status, safeString(intent.provider_status));
+  const canonicalStatus = mapNiumStatus(providerStatus);
+  const journey = Array.isArray(asRecord(intent.evidence).providerJourney)
+    ? [...asRecord(intent.evidence).providerJourney as Record<string, unknown>[]]
+    : [];
+  journey.push(niumJourney(
+    canonicalStatus === 'PAID_OUT' ? 'nium_payout_paid' : 'nium_payout_status',
+    canonicalStatus === 'PAID_OUT' ? 'Nium recipient payout completed' : 'Nium payout status retrieved',
+    canonicalStatus === 'PAID_OUT' ? 'Nium reported that the sandbox payout was sent to the beneficiary bank.' : 'Nium returned the current sandbox remittance status.',
+    providerStatus,
+  ));
+  const now = new Date().toISOString();
+  const { data: updated } = await service.from('provider_payout_intents').update({
+    canonical_status: canonicalStatus,
+    provider_status: providerStatus,
+    completed_at: canonicalStatus === 'PAID_OUT' ? now : intent.completed_at,
+    failed_at: canonicalStatus === 'FAILED' ? now : intent.failed_at,
+    evidence: { providerJourney: journey },
+    updated_at: now,
+  }).eq('id', intent.id).select('*').single();
+  return niumPayoutResult(updated, journey);
+}
+
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -1062,7 +1389,7 @@ serve(async (req: Request) => {
     const providerId = safeString(body.providerId).toLowerCase();
     const environment = safeString(body.environment, 'sandbox').toLowerCase();
     if (environment !== 'sandbox') {
-      return json({ error: 'Only Airwallex sandbox execution is enabled.' }, 400);
+      return json({ error: 'Only sandbox payout execution is enabled.' }, 400);
     }
 
     if (providerId === 'airwallex') {
@@ -1078,6 +1405,13 @@ serve(async (req: Request) => {
       return json(await handleAirwallexCreate(body));
     }
 
+    if (providerId === 'nium') {
+      if (safeString(body.operation) === 'beneficiary_schema') return json(await handleNiumBeneficiarySchema(body));
+      if (safeString(body.operation) === 'fx_quote') return json(await handleNiumFxQuote(body));
+      if (safeString(body.operation) === 'retrieve') return json(await handleNiumRetrieve(body));
+      return json(await handleNiumCreate(body));
+    }
+
     return json(mockResult(body));
   } catch (error) {
     if (error instanceof AirwallexApiError) {
@@ -1089,6 +1423,19 @@ serve(async (req: Request) => {
         providerName: 'Airwallex Sandbox',
         retryable: error.retryable,
         fieldSources: error.fieldSources,
+      }, error.httpStatus);
+    }
+    if (error instanceof NiumApiError) {
+      return json({
+        error: error.message,
+        code: error.providerCode,
+        operation: error.operation,
+        providerId: 'NIUM_SANDBOX',
+        providerName: 'Nium Sandbox',
+        retryable: error.retryable,
+        fieldSources: error.field ? [error.field] : [],
+        action: error.action,
+        pattern: error.pattern,
       }, error.httpStatus);
     }
     const message = error instanceof Error ? error.message : 'Internal server error';
