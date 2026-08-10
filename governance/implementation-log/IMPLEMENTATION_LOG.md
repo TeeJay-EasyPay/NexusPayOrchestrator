@@ -1928,6 +1928,14 @@ Validation:
 - Android Expo export: PASS.
 
 Release:
+- Implementation commit: `2736fb5768bca37cb5639bba79edd12978202649`.
+- OTA branch: `preview`.
+- Update group: `c0b5b5b2-55c0-4938-a7af-aec29993e245`.
+- Android update: `019fed7e-3b30-7da8-b00a-33e242577bf1`.
+- iOS update: `019fed7e-3b30-708f-aa3a-085d763ff3c5`.
+- Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/c0b5b5b2-55c0-4938-a7af-aec29993e245`.
+
+Release:
 - Implementation commit: `b51e4c3779d55d54d71548bf148a3b036d711c93`.
 - OTA branch: `preview`.
 - Update group: `0eda5223-e7fd-456e-b269-86d5b09228cb`.

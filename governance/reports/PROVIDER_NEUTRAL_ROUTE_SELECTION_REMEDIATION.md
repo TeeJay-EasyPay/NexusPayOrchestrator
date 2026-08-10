@@ -110,3 +110,5 @@ The route validator persisted three candidate plans and three transition events.
 ## Recipient Selection Addendum
 
 On 2026-08-10 the shared recipient form was updated so provider-returned option sets above eight entries render as a searchable, scrollable and alphabetically sorted dropdown. This resolves the excessive Thailand state/region button list and applies consistently to all countries and payout providers. Provider option values remain unchanged when submitted.
+
+Release update group: `c0b5b5b2-55c0-4938-a7af-aec29993e245` (`preview`).
