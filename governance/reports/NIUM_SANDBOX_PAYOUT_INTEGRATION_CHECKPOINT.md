@@ -63,3 +63,10 @@ Current Nium sandbox LOCAL/INDIVIDUAL evidence was returned for Philippines, Mal
 - Migrations `20260810000100` and `20260810000200`: APPLIED.
 - Edge deployment bundling: PASS for both affected functions.
 - Local Deno check: not run because Deno is not installed.
+
+## Release
+
+- Implementation commit: `b51e4c3779d55d54d71548bf148a3b036d711c93`.
+- Preview OTA update group: `0eda5223-e7fd-456e-b269-86d5b09228cb`.
+- Android update: `019fe99b-f68a-78c0-af8a-bd3ff00b3697`.
+- iOS update: `019fe99b-f68a-7c44-859c-53eb490dff45`.

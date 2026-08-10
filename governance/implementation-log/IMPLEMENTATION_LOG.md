@@ -1874,3 +1874,11 @@ Evidence and validation:
 Checkpoint:
 - `PARTIAL PASS` pending Nium sandbox customer, funded wallet and secure webhook certification.
 - Reports: `../reports/NIUM_SANDBOX_PAYOUT_INTEGRATION_CHECKPOINT.md` and `../reports/FOUNDER_BRIEFING_NIUM_SANDBOX_INTEGRATION.md`.
+
+Release:
+- Implementation commit: `b51e4c3779d55d54d71548bf148a3b036d711c93`.
+- OTA branch: `preview`.
+- Update group: `0eda5223-e7fd-456e-b269-86d5b09228cb`.
+- Android update: `019fe99b-f68a-78c0-af8a-bd3ff00b3697`.
+- iOS update: `019fe99b-f68a-7c44-859c-53eb490dff45`.
+- Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/0eda5223-e7fd-456e-b269-86d5b09228cb`.
