@@ -106,3 +106,7 @@ The route validator persisted three candidate plans and three transition events.
 - Android update: `019febf9-e82e-740c-be88-eaa0642e58f5`
 - iOS update: `019febf9-e82e-726f-a72e-d3a5cd1256c4`
 - Expo dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/a7e90131-27a8-4e08-9b68-4ca27f83a478`
+
+## Recipient Selection Addendum
+
+On 2026-08-10 the shared recipient form was updated so provider-returned option sets above eight entries render as a searchable, scrollable and alphabetically sorted dropdown. This resolves the excessive Thailand state/region button list and applies consistently to all countries and payout providers. Provider option values remain unchanged when submitted.

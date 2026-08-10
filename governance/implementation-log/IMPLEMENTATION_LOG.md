@@ -1910,6 +1910,23 @@ Release:
 - iOS update: `019febf9-e82e-726f-a72e-d3a5cd1256c4`.
 - Dashboard: `https://expo.dev/accounts/nexuspay/projects/NexusPayOrchestrator/updates/a7e90131-27a8-4e08-9b68-4ca27f83a478`.
 
+## 2026-08-10 - Recipient Region Dropdown Consistency
+
+Trigger:
+- Founder identified that Thailand's provider-returned state/region list rendered as dozens of inline buttons rather than an efficient selector.
+
+Completed:
+- Updated the shared provider-neutral recipient form so option sets above eight entries use a searchable modal dropdown.
+- Sorted dropdown labels alphabetically without changing the provider's underlying submitted values.
+- Kept compact option sets as inline controls.
+- Applied the behavior to every country and payout provider using the shared recipient form, not only Thailand.
+
+Validation:
+- TypeScript: PASS.
+- ESLint: no errors; existing warnings unchanged.
+- Provider-neutral recipient contract: PASS.
+- Android Expo export: PASS.
+
 Release:
 - Implementation commit: `b51e4c3779d55d54d71548bf148a3b036d711c93`.
 - OTA branch: `preview`.
