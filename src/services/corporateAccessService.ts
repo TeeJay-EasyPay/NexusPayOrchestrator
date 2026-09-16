@@ -25,7 +25,8 @@ export type CorporateRouteKey =
   | "settings"
   | "operations_command_centre"
   | "platform_health"
-  | "crypto_orchestration";
+  | "crypto_orchestration"
+  | "compliance";
 
 type Permission =
   | "configure_governance"
@@ -115,12 +116,13 @@ export function hasCorporatePermission(persona: PersonaOption | null | undefined
 export function canAccessCorporateRoute(persona: PersonaOption | null | undefined, route: CorporateRouteKey): boolean {
   const role = getCorporateRole(persona);
   if (!role) return false;
+  if (route === "compliance") return true;
   return ROLE_ROUTES[role].includes(route);
 }
 
 export function getCorporateRouteKeys(persona: PersonaOption | null | undefined): CorporateRouteKey[] {
   const role = getCorporateRole(persona);
-  return role ? ROLE_ROUTES[role] : [];
+  return role ? [...ROLE_ROUTES[role], "compliance"] : [];
 }
 
 export function getRoleLabel(role: CorporateRole | string | null | undefined): string {

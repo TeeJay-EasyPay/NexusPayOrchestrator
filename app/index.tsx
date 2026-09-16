@@ -1,15 +1,18 @@
 import { Feather } from "@expo/vector-icons";
+import { useIsFocused } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
 import Constants from "expo-constants";
 import { useRouter } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+    AppState,
     Pressable,
     ScrollView,
     useWindowDimensions,
     View,
 } from "react-native";
 
+import { CorporateHome } from "../src/components/corporate/CorporateHome";
 import { NexusAIToggleCard } from "../src/components/intelligence/NexusAIToggleCard";
 import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
@@ -310,10 +313,21 @@ export default function HomeScreen() {
   const wideLayout = width >= 760;
   const compactSummaryLayout = width < 560;
 
-  const { transfer, completedTransfers } = useTransfer();
+  const { transfer, completedTransfers, isLoadingTransfers } = useTransfer();
+  const [detailedHome, setDetailedHome] = useState(false);
   const { paymentMethods } = usePaymentMethods();
   const { selectedPersona } = usePersona();
   const corporateRole = getCorporateRole(selectedPersona);
+  const isFocused = useIsFocused();
+  const [appState, setAppState] = useState(AppState.currentState);
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", setAppState);
+    return () => subscription.remove();
+  }, []);
+  // The compact home does not display operational intelligence. Never fetch it
+  // there, on a covered route, or while the app is in the background.
+  const intelligenceVisible = isFocused && appState === "active"
+    && (!corporateRole || (corporateRole === "corporate_user" && detailedHome));
 
   const {
     loading: nexusAILoading,
@@ -332,6 +346,10 @@ export default function HomeScreen() {
     useState<DashboardSummaryResult | null>(null);
   const [dashboardAILoading, setDashboardAILoading] = useState(false);
   const [platformHealth, setPlatformHealth] = useState<PlatformHealthSnapshot | null>(null);
+  const healthOptions = useRef({ aiEnabled: homeAIEnabled, aiLoading: dashboardAILoading, aiSummary: dashboardSummary });
+  useEffect(() => {
+    healthOptions.current = { aiEnabled: homeAIEnabled, aiLoading: dashboardAILoading, aiSummary: dashboardSummary };
+  }, [homeAIEnabled, dashboardAILoading, dashboardSummary]);
 
   useEffect(() => {
     if (corporateRole && corporateRole !== "corporate_user") {
@@ -373,24 +391,18 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => {
+    if (!intelligenceVisible) return;
     loadDashboardData();
-
-    const interval = setInterval(() => {
-      loadDashboardData();
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, []);
+  }, [intelligenceVisible]);
 
   useEffect(() => {
+    if (!intelligenceVisible) return;
     let mounted = true;
 
     async function refreshHealth() {
       try {
         const snapshot = await loadPlatformHealthSnapshot({
-          aiEnabled: homeAIEnabled,
-          aiLoading: dashboardAILoading,
-          aiSummary: dashboardSummary,
+          ...healthOptions.current,
           realtimeStatus: "Diagnostic Mode",
         });
 
@@ -410,13 +422,11 @@ export default function HomeScreen() {
     }
 
     void refreshHealth();
-    const interval = setInterval(refreshHealth, 30000);
 
     return () => {
       mounted = false;
-      clearInterval(interval);
     };
-  }, [dashboardAILoading, dashboardSummary, homeAIEnabled]);
+  }, [intelligenceVisible]);
 
   async function loadDashboardData() {
     try {
@@ -475,7 +485,7 @@ export default function HomeScreen() {
   useEffect(() => {
     let active = true;
 
-    if (!homeAIEnabled) {
+    if (!intelligenceVisible || !homeAIEnabled) {
       setDashboardSummary(null);
       setDashboardAILoading(false);
       return () => {
@@ -539,6 +549,7 @@ export default function HomeScreen() {
       active = false;
     };
   }, [
+    intelligenceVisible,
     homeAIEnabled,
     settings?.sensitivity,
     activeTransfer,
@@ -578,10 +589,15 @@ export default function HomeScreen() {
     await Clipboard.setStringAsync(latestReference);
   }
 
+  if (corporateRole === "corporate_user" && !detailedHome) {
+    return <CorporateHome greeting={getGreeting()} active={activeTransfer} completed={completedTransfers} loading={isLoadingTransfers} fundingCount={connectedSourceCount} fundingReady={fundingReady} onResend={handleResend} onDetails={() => setDetailedHome(true)} />;
+  }
+
   return (
     <Screen>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={{ gap: spacing.md, paddingTop: 10, paddingBottom: 40 }}>
+          {corporateRole === "corporate_user" && detailedHome ? <Pressable accessibilityRole="button" onPress={() => setDetailedHome(false)} style={{ minHeight: 44, justifyContent: "center" }}><AppText color="#6ED3D8">Back to corporate home</AppText></Pressable> : null}
           <NexusAIToggleCard
             title="Nexus AI"
             description="Controls home dashboard intelligence, operational summaries and route guidance on this screen."

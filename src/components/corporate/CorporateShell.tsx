@@ -11,6 +11,7 @@ import {
   getCorporateRouteKeys,
   getRoleLabel,
 } from "../../services/corporateAccessService";
+import { complianceAreas, complianceRoute } from "../../services/complianceNavigation";
 import { useAccount } from "../../state/AccountContext";
 import { useAuth } from "../../state/AuthContext";
 import { usePersona } from "../../state/PersonaContext";
@@ -31,6 +32,7 @@ const MENU_ITEMS: MenuItem[] = [
   { key: "send_payments", label: "Send Payments", route: "/consumer/send", corporateUserRoute: "/send", icon: "send" },
   { key: "route_intelligence", label: "Route Intelligence", route: "/routes", icon: "navigation" },
   { key: "crypto_orchestration", label: "Crypto & Fiat Orchestration", route: "/crypto-orchestration", icon: "repeat" },
+  ...complianceAreas.map(area => ({ key: "compliance" as const, label: area.label, route: complianceRoute(area.id), icon: area.icon })),
   { key: "operations_command_centre", label: "Operations Command Centre", route: "/operations-v2", icon: "activity" },
   { key: "platform_health", label: "Platform Health", route: "/operations-v2", icon: "cpu" },
   { key: "live_intelligence_feeds", label: "Live Intelligence Feeds", route: "/live-intelligence-feeds", icon: "radio" },

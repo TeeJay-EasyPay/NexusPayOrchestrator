@@ -1,6 +1,7 @@
 import { router } from "expo-router";
 import { Alert, Pressable, ScrollView, View } from "react-native";
 
+import { ComplianceShortcuts } from "../src/components/consumer/ComplianceShortcuts";
 import { AppButton } from "../src/components/ui/AppButton";
 import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
@@ -335,40 +336,7 @@ export default function AccountScreen() {
             </View>
           </AppCard>
 
-          <AppCard>
-            <View style={{ gap: 12 }}>
-              <View style={{ gap: 4 }}>
-                <AppText variant="subheading" color={colors.textDarkPrimary}>
-                  Verification & compliance
-                </AppText>
-
-                <AppText variant="caption" color={colors.textDarkSecondary}>
-                  These controls remain in simulation until a KYC / AML provider is connected.
-                </AppText>
-              </View>
-
-              <SettingRow
-                title="Identity verification"
-                description="Passport, driving licence or national ID verification will be handled by a KYC provider."
-                status={isDemo ? "Corporate" : "Not started"}
-                tone="gold"
-              />
-
-              <SettingRow
-                title="AML screening"
-                description="Sanctions, PEP and adverse media screening will run before live transfer enablement."
-                status="Pending"
-                tone="grey"
-              />
-
-              <SettingRow
-                title="Transfer eligibility"
-                description="Transfers remain in simulation mode until verification and compliance checks pass."
-                status="Corporate mode"
-                tone="blue"
-              />
-            </View>
-          </AppCard>
+          <AppCard><ComplianceShortcuts /></AppCard>
 
           <AppCard>
             <View style={{ gap: 12 }}>

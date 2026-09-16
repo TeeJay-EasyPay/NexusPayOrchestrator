@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Modal, Pressable, ScrollView, StatusBar, StyleSheet, useWindowDimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { complianceAreas, complianceRoute } from "../../services/complianceNavigation";
 import { useAccount } from "../../state/AccountContext";
 import { useAuth } from "../../state/AuthContext";
 import { usePersona } from "../../state/PersonaContext";
@@ -255,6 +256,11 @@ export function ConsumerShell({
                       </Pressable>
                     </>
                   ) : null}
+                  {complianceAreas.filter(area => area.id !== "company" || isBusinessPersona || isCorporatePersona).map(area => (
+                    <Pressable key={area.id} onPress={() => { setMenuOpen(false); router.push(complianceRoute(area.id) as never); }} style={styles.dropdownItem}>
+                      <AppText style={styles.dropdownTitle}>{area.label}</AppText>
+                    </Pressable>
+                  ))}
                   <Pressable onPress={() => { setMenuOpen(false); router.push("/consumer/settings" as never); }} style={styles.dropdownItem}>
                     <AppText style={styles.dropdownTitle}>Settings</AppText>
                   </Pressable>

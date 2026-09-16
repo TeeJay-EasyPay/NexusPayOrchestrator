@@ -9,6 +9,8 @@ import {
     ConsumerShell,
     consumerColors,
 } from "../../src/components/consumer/ConsumerShell";
+import { ComplianceShortcuts } from "../../src/components/consumer/ComplianceShortcuts";
+import { IdentityVerification } from "../../src/components/consumer/IdentityVerification";
 import { AppText } from "../../src/components/ui/AppText";
 import {
     loadConsumerSettings,
@@ -139,22 +141,13 @@ export default function ConsumerProfileScreen() {
         <ConsumerAction label={saving ? "Saving..." : "Save profile"} icon="save" onPress={saveProfile} />
       </ConsumerCard>
 
+      {selectedPersona.personaGroup === "BUSINESS_ENTITY" ? <ConsumerCard><ComplianceShortcuts /></ConsumerCard> : null}
+
       <ConsumerCard>
-        <AppText color={consumerColors.text} style={{ fontWeight: "900", fontSize: 18 }}>
-          Verification
-        </AppText>
-        <AppText color={consumerColors.muted}>
-          Verification helps increase limits and keeps your transfers protected.
-        </AppText>
-        <View style={{ gap: 10 }}>
-          {selectedPersona.kind === "PARTICIPANT" ? (
-            <ConsumerPill label={`${selectedPersona.participantType ?? "Participant"} profile`} tone="blue" />
-          ) : null}
-          <ConsumerPill label="Identity checks pending" tone="gold" />
-          <ConsumerPill label="Security alerts enabled" tone="green" />
-          <ConsumerPill label="Data scoped to active persona" tone="blue" />
-        </View>
+        <IdentityVerification />
       </ConsumerCard>
+
+      <ConsumerAction label="Verification & security" icon="shield" onPress={() => router.push("/compliance" as never)} />
 
       <ConsumerAction label="Open settings" icon="settings" secondary onPress={() => router.push("/consumer/settings" as never)} />
     </ConsumerShell>

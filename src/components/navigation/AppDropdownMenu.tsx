@@ -1,8 +1,10 @@
 import { Feather } from "@expo/vector-icons";
-import { usePathname, useRouter } from "expo-router";
-import { useState } from "react";
+import { Image } from "expo-image";
+import { useLocalSearchParams, usePathname, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
 
+import { complianceAreas, complianceRoute } from "../../services/complianceNavigation";
 import { getCorporateRole, getRoleLabel, isCorporatePersona as checkCorporatePersona } from "../../services/corporateAccessService";
 import { useAuth } from "../../state/AuthContext";
 import { useDeviceUnlock } from "../../state/DeviceUnlockContext";
@@ -10,6 +12,8 @@ import { usePersona } from "../../state/PersonaContext";
 import { colors } from "../../theme";
 import { UserAccountBadge } from "../auth/UserAccountBadge";
 import { AppText } from "../ui/AppText";
+// Exact existing favicon bytes, embedded for reliable offline header rendering on Android.
+import headerLogo from "../../../assets/images/nexuspay-header-logo.json";
 
 const MENU_ITEMS = [
   {
@@ -68,13 +72,15 @@ const MENU_ITEMS = [
   },
 ] as const;
 
-export function AppDropdownMenu() {
+export function AppDropdownMenu({ branded = false, openSignal = 0 }: { branded?: boolean; openSignal?: number }) {
   const router = useRouter();
   const pathname = usePathname();
+  const { section } = useLocalSearchParams<{ section?: string }>();
   const { signOut } = useAuth();
   const { lockApp } = useDeviceUnlock();
   const { selectedPersona } = usePersona();
   const [isOpen, setIsOpen] = useState(false);
+  useEffect(() => { if (openSignal > 0) setIsOpen(true); }, [openSignal]);
   const { height } = useWindowDimensions();
 
   const isCorporatePersona = checkCorporatePersona(selectedPersona);
@@ -85,6 +91,7 @@ export function AppDropdownMenu() {
 
   const menuItems = [
     ...MENU_ITEMS,
+    ...complianceAreas.filter(area => area.id !== "company" || isCorporatePersona || selectedPersona.personaGroup === "BUSINESS_ENTITY" || selectedPersona.personaGroup === "PLATFORM_ADMINISTRATION").map(area => ({ label: area.label, description: area.description, route: complianceRoute(area.id), match: "/compliance" })),
     ...(isCorporatePersona && corporateRole === "batch_payments_processor"
       ? [
           {
@@ -149,7 +156,16 @@ export function AppDropdownMenu() {
           gap: 12,
         }}
       >
-        {useCorporateHeader ? (
+        {branded ? (
+          <>
+            <View style={{ flex: 1, flexDirection: "row", gap: 10, alignItems: "center" }}>
+              <Image source={headerLogo} style={{ width: 38, height: 38, borderRadius: 10 }} accessibilityLabel="NexusPay" />
+              <View style={{ flex: 1 }}><AppText color="#FFFFFF" style={{ fontSize: 22, fontWeight: "700" }}>NexusPay</AppText><AppText color="#B9C8D1" style={{ fontSize: 9, letterSpacing: 1.4 }}>CORPORATE WORKSPACE</AppText></View>
+            </View>
+            <Pressable accessibilityRole="button" accessibilityLabel="Notifications" onPress={() => router.push("/participant-notifications" as never)} style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}><Feather name="bell" size={22} color="white" /></Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Open corporate menu" onPress={() => setIsOpen(true)} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "#354A58", alignItems: "center", justifyContent: "center" }}><Feather name="menu" size={23} color="white" /></Pressable>
+          </>
+        ) : useCorporateHeader ? (
           <>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 12, flex: 1 }}>
               <View
@@ -271,7 +287,7 @@ export function AppDropdownMenu() {
               const isActive =
                 item.match === "/"
                   ? pathname === "/"
-                  : pathname.startsWith(item.match);
+                  : pathname.startsWith(item.match) && (item.match !== "/compliance" || item.route === `/compliance?section=${section}`);
 
               return (
                 <Pressable

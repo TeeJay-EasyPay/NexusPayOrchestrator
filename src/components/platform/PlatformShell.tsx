@@ -1,9 +1,10 @@
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Modal, Pressable, ScrollView, StatusBar, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { complianceAreas, complianceRoute } from "../../services/complianceNavigation";
 import { useAccount } from "../../state/AccountContext";
 import { useAuth } from "../../state/AuthContext";
 import { usePersona } from "../../state/PersonaContext";
@@ -20,7 +21,8 @@ export type PlatformRouteKey =
   | "audit"
   | "implementation_log"
   | "settings"
-  | "crypto_orchestration";
+  | "crypto_orchestration"
+  | "compliance";
 
 type MenuItem = {
   key: PlatformRouteKey;
@@ -35,6 +37,8 @@ const MENU_ITEMS: MenuItem[] = [
   { key: "corridors", label: "Corridor Management", route: "/platform-corridors", icon: "map" },
   { key: "providers", label: "Provider Configuration", route: "/platform-providers", icon: "server" },
   { key: "crypto_orchestration", label: "Crypto & Fiat Orchestration", route: "/crypto-orchestration", icon: "repeat" },
+  { key: "compliance", label: "Compliance overview", route: "/compliance", icon: "shield" },
+  ...complianceAreas.map(area => ({ key: "compliance" as const, label: area.label, route: complianceRoute(area.id), icon: area.icon })),
   { key: "health", label: "Platform Health", route: "/platform-health", icon: "activity" },
   { key: "environments", label: "Environment Management", route: "/platform-environments", icon: "layers" },
   { key: "audit", label: "System Audit", route: "/platform-audit", icon: "archive" },
@@ -54,6 +58,7 @@ export function PlatformShell({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const { section } = useLocalSearchParams<{ section?: string }>();
   const { clearAccountScope } = useAccount();
   const { signOut } = useAuth();
   const { selectedPersona } = usePersona();
@@ -123,12 +128,12 @@ export function PlatformShell({
               <AppText variant="caption" color="#6ED3D8" style={styles.eyebrow}>Platform navigation</AppText>
               {MENU_ITEMS.map((item) => (
                 <Pressable
-                  key={item.key}
+                  key={item.route}
                   onPress={() => {
                     setMenuOpen(false);
                     router.push(item.route as never);
                   }}
-                  style={[styles.menuItem, item.key === routeKey ? styles.activeMenuItem : null]}
+                  style={[styles.menuItem, item.key === routeKey && (item.key !== "compliance" || item.route === (section ? `/compliance?section=${section}` : "/compliance")) ? styles.activeMenuItem : null]}
                 >
                   <Feather name={item.icon} size={16} color="#0B3F4A" />
                   <AppText color="#0F2239" style={styles.menuText}>{item.label}</AppText>
