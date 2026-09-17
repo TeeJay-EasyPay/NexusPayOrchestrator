@@ -1,4 +1,4 @@
-import SNSMobileSDK from "@sumsub/react-native-mobilesdk-module";
+// Legacy runtime 1.0.0 has no native Sumsub SDK. Keep REST status checks available.
 
 import { supabase } from "../lib/supabase";
 
@@ -46,21 +46,8 @@ export function loadTransactionChecks(input: PersonaInput) {
   return invoke<{ checks: { transfer_id: string; status: string; review_answer: string | null; updated_at: string }[] }>({ operation: "transaction_status", ...input });
 }
 
-async function createAccessToken(input: PersonaInput) {
-  return invoke<{ token: string; expiresInSeconds: number }>({ operation: "access_token", ...input });
-}
-
-export async function launchIdentityVerification(input: PersonaInput) {
-  if (input.subjectType !== "INDIVIDUAL") throw new Error("A Sumsub company verification level must be configured before KYB can launch.");
-  const first = await createAccessToken(input);
-  const sdk = SNSMobileSDK.init(first.token, async () => (await createAccessToken(input)).token)
-    .withHandlers({ onStatusChanged: () => undefined })
-    .withLocale("en")
-    .withDebug(__DEV__)
-    .build();
-  const result = await sdk.launch();
-  if (!result.success) throw new Error(result.errorMsg || "Verification closed unexpectedly. Please retry.");
-  return result;
+export async function launchIdentityVerification(_input: PersonaInput): Promise<never> {
+  throw new Error("Identity capture requires the newer NexusPay app with the verification SDK. This visual update keeps your existing app compatible; verification status remains available.");
 }
 
 export function submitTransactionScreening(input: PersonaInput & { transferId: string; amount: number; currency: string; counterpartyId: string; counterpartyName: string }) {

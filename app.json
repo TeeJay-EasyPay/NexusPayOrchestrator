@@ -2,27 +2,16 @@
   "expo": {
     "name": "NexusPayOrchestrator",
     "slug": "NexusPayOrchestrator",
-    "version": "1.0.3",
+    "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "nexuspayorchestrator",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true,
-      "infoPlist": {
-        "NSCameraUsageDescription": "NexusPay uses the camera to capture identity documents and complete liveness verification.",
-        "NSMicrophoneUsageDescription": "NexusPay uses the microphone when a Sumsub verification step requires video.",
-        "NSPhotoLibraryUsageDescription": "NexusPay can use a selected photo when an identity document is uploaded.",
-        "NSLocationWhenInUseUsageDescription": "NexusPay may use location when required by the selected verification workflow."
-      }
+      "supportsTablet": true
     },
     "android": {
-      "versionCode": 4,
-      "permissions": [
-        "CAMERA",
-        "RECORD_AUDIO"
-      ],
       "adaptiveIcon": {
         "backgroundColor": "#07111F",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -50,8 +39,7 @@
           }
         }
       ],
-      "expo-secure-store",
-      "./plugins/withSumsubAndroid"
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,
@@ -63,7 +51,7 @@
         "projectId": "35f8cdd6-557f-493d-b065-52d6121f62d3"
       }
     },
-    "runtimeVersion": "1.0.1",
+    "runtimeVersion": "1.0.0",
     "updates": {
       "url": "https://u.expo.dev/35f8cdd6-557f-493d-b065-52d6121f62d3",
       "enabled": true,
