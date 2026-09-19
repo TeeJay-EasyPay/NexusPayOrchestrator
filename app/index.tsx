@@ -595,7 +595,7 @@ export default function HomeScreen() {
   }
 
   if (corporateRole === "corporate_user" && !detailedHome) {
-    return <CorporateHome greeting={getGreeting()} active={activeTransfer} completed={completedTransfers} loading={isLoadingTransfers} fundingCount={connectedSourceCount} fundingReady={fundingReady} onResend={handleResend} onDetails={() => setDetailedHome(true)} />;
+    return <CorporateHome greeting={getGreeting()} active={activeTransfer} completed={completedTransfers} loading={isLoadingTransfers} fundingCount={connectedSourceCount} fundingReady={fundingReady} onResend={handleResend} onDetails={() => setDetailedHome(true)} aiControl={<NexusAIToggleCard title="Nexus AI" description="Controls home dashboard intelligence, operational summaries and route guidance on this screen." enabled={homeAIEnabled} disabled={homeAIDisabled} loading={nexusAILoading} onToggle={toggleHomeAI} />} />;
   }
 
   return (

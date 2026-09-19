@@ -11,7 +11,8 @@ import { AppText } from "../ui/AppText";
 
 const ink = "#102332", muted = "#647486", teal = "#087F83";
 type Icon = keyof typeof Feather.glyphMap;
-export function CorporateHome({ greeting, active, completed, loading, fundingCount, fundingReady, onResend, onDetails }: {
+export function CorporateHome({ greeting, active, completed, loading, fundingCount, fundingReady, onResend, onDetails, aiControl }: {
+  aiControl?: React.ReactNode;
   greeting: string; active: Transfer | null; completed: Transfer[]; loading: boolean;
   fundingCount: number; fundingReady: boolean; onResend: (transfer: Transfer) => void; onDetails: () => void;
 }) {
@@ -32,6 +33,7 @@ export function CorporateHome({ greeting, active, completed, loading, fundingCou
     <StatusBar barStyle="light-content" backgroundColor="#102332" />
     <View style={s.header}><AppDropdownMenu branded /></View>
     <ScrollView nestedScrollEnabled ref={scroll} style={s.page} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+      {aiControl}
       <View style={{ gap: 5 }}><AppText color={ink} style={s.greeting}>{greeting.replace(/Morning|Afternoon|Evening/g, word => word.toLowerCase())}.</AppText><AppText color={muted} style={{ fontSize: 17 }}>Your payments, at a glance.</AppText></View>
       <View style={s.actions}><Action title="Send payment" icon="arrow-right" primary onPress={() => router.push("/send")} /><Action title="View payments" icon="file-text" onPress={viewPayments} /></View>
       <Pressable accessibilityRole="button" onPress={() => router.push("/payment-methods")} style={[s.card, s.row]}><IconBox icon="credit-card" /><View style={{ flex: 1, gap: 3 }}><AppText color={ink} style={s.label}>Funding sources</AppText><AppText color={muted}>{fundingCount} saved</AppText></View><Feather name="chevron-right" size={20} color={muted} /></Pressable>
