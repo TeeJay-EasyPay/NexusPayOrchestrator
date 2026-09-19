@@ -1,8 +1,9 @@
+import { useAppColors } from "../../theme/useAppColors";
 import { Feather } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, View } from "react-native";
 
-import { colors, spacing } from "../../theme";
+import { spacing } from "../../theme";
 import type { OperationsMissionStatus, OperationsStatusChip, OperationsStatusTone } from "../../utils/operationsCommandCentre";
 import { AppCard } from "../ui/AppCard";
 import { AppText } from "../ui/AppText";
@@ -28,6 +29,8 @@ function toneIcon(tone: OperationsStatusTone): React.ComponentProps<typeof Feath
 }
 
 function StatusChip({ chip }: { chip: OperationsStatusChip }) {
+  const colors = useAppColors();
+  const styles = createStyles(colors);
   const color = toneColor(chip.tone ?? "neutral");
   const icon = toneIcon(chip.tone ?? "neutral");
 
@@ -52,6 +55,8 @@ function StatusChip({ chip }: { chip: OperationsStatusChip }) {
 }
 
 export function MissionControlCard({ missionStatus, showDataSources = true }: Props) {
+  const colors = useAppColors();
+  const styles = createStyles(colors);
   const chips = missionStatus?.chips ?? [];
   const attentionSummary = missionStatus?.attentionSummary ?? "Awaiting operational telemetry";
 
@@ -87,7 +92,7 @@ export function MissionControlCard({ missionStatus, showDataSources = true }: Pr
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: typeof import("../../theme/colors").colors) => StyleSheet.create({
   card: {
     marginHorizontal: 16,
     marginBottom: 12,

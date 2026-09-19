@@ -1,3 +1,4 @@
+import { useAppColors } from "../src/theme/useAppColors";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { View } from "react-native";
@@ -7,9 +8,9 @@ import { AppCard } from "../src/components/ui/AppCard";
 import { AppText } from "../src/components/ui/AppText";
 import { Screen } from "../src/components/ui/Screen";
 import { getXrplTestnetStatus } from "../src/services/xrplTestnetService";
-import { colors } from "../src/theme";
 
 export default function XrplTestScreen() {
+  const colors = useAppColors();
   const [address, setAddress] = useState("");
   const [status, setStatus] = useState("Connecting...");
   const [networkEvidence, setNetworkEvidence] = useState<{

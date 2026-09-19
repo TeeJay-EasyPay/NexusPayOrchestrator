@@ -1,3 +1,4 @@
+import { useAppColors } from "../src/theme/useAppColors";
 import { router } from "expo-router";
 import { Alert, Pressable, ScrollView, View } from "react-native";
 
@@ -10,7 +11,6 @@ import { SavedPaymentMethod } from "../src/data/mockPaymentMethods";
 import { isCorporatePersona as checkCorporatePersona } from "../src/services/corporateAccessService";
 import { usePersona } from "../src/state/PersonaContext";
 import { usePaymentMethods } from "../src/state/PaymentMethodsContext";
-import { colors } from "../src/theme";
 
 function methodIcon(method: SavedPaymentMethod) {
   return method.type === "OPEN_BANKING" ? "🏦" : "💳";
@@ -37,6 +37,7 @@ function PaymentMethodManagementCard({
   isPrimary: boolean;
   onSetPrimary: () => void;
 }) {
+  const colors = useAppColors();
   const status = statusTone(method.status);
 
   return (
@@ -165,6 +166,7 @@ function PaymentMethodManagementCard({
 }
 
 export default function PaymentMethodsScreen() {
+  const colors = useAppColors();
   const { selectedPersona } = usePersona();
   const {
     paymentMethods,

@@ -1,3 +1,4 @@
+import { useAppColors } from "../../theme/useAppColors";
 import { Feather } from "@expo/vector-icons";
 import { useFocusEffect } from "expo-router";
 import React, { useCallback, useState } from "react";
@@ -42,6 +43,8 @@ function MetricTile({
   value: number;
   valueColor?: string;
 }) {
+  const colors = useAppColors();
+  const styles = createStyles(colors);
   return (
     <View style={styles.metricTile}>
       <AppText variant="caption" color={colors.textDarkMuted} style={styles.metricLabel}>
@@ -63,6 +66,8 @@ type Props = {
 };
 
 export function QATestCentreCard({ showDataSources = true }: Props) {
+  const colors = useAppColors();
+  const styles = createStyles(colors);
   const [summary, setSummary] = useState<QATestCentreSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -169,7 +174,7 @@ export function QATestCentreCard({ showDataSources = true }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: typeof import("../../theme/colors").colors) => StyleSheet.create({
   card: {
     marginHorizontal: 16,
     marginBottom: 12,

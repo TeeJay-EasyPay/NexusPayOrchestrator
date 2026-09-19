@@ -9,7 +9,7 @@ import { getCorporateRole, getRoleLabel, isCorporatePersona as checkCorporatePer
 import { useAuth } from "../../state/AuthContext";
 import { useDeviceUnlock } from "../../state/DeviceUnlockContext";
 import { usePersona } from "../../state/PersonaContext";
-import { colors } from "../../theme";
+import { useAppColors } from "../../theme/useAppColors";
 import { UserAccountBadge } from "../auth/UserAccountBadge";
 import { AppText } from "../ui/AppText";
 // Exact existing favicon bytes, embedded for reliable offline header rendering on Android.
@@ -73,6 +73,7 @@ const MENU_ITEMS = [
 ] as const;
 
 export function AppDropdownMenu({ branded = false, openSignal = 0 }: { branded?: boolean; openSignal?: number }) {
+  const colors = useAppColors();
   const router = useRouter();
   const pathname = usePathname();
   const { section } = useLocalSearchParams<{ section?: string }>();

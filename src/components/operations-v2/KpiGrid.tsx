@@ -1,8 +1,9 @@
+import { useAppColors } from "../../theme/useAppColors";
 import { Feather } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, View, useWindowDimensions } from "react-native";
 
-import { colors, spacing } from "../../theme";
+import { spacing } from "../../theme";
 import type { OperationsKpiItem } from "../../utils/operationsCommandCentre";
 import { DataProvenanceBadge } from "./DataProvenanceBadge";
 import { AppText } from "../ui/AppText";
@@ -25,6 +26,8 @@ function trendIcon(trend: OperationsKpiItem["trend"]): React.ComponentProps<type
 }
 
 function KpiCell({ item, cellWidth, showDataSources }: { item: OperationsKpiItem; cellWidth: number; showDataSources: boolean }) {
+  const colors = useAppColors();
+  const styles = createStyles(colors);
   const tc = trendColor(item.trend ?? "flat");
   const ti = trendIcon(item.trend ?? "flat");
 
@@ -56,6 +59,8 @@ function KpiCell({ item, cellWidth, showDataSources }: { item: OperationsKpiItem
 }
 
 export function KpiGrid({ kpis, showDataSources = true }: Props) {
+  const colors = useAppColors();
+  const styles = createStyles(colors);
   const { width } = useWindowDimensions();
 
   const cols = width >= 768 ? 4 : width >= 480 ? 3 : 2;
@@ -88,7 +93,7 @@ export function KpiGrid({ kpis, showDataSources = true }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: typeof import("../../theme/colors").colors) => StyleSheet.create({
   outer: {
     marginHorizontal: 16,
     marginBottom: 12,

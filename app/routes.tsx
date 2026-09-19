@@ -1,3 +1,4 @@
+import { useAppColors } from "../src/theme/useAppColors";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
@@ -58,6 +59,7 @@ function ScoreBar({ value }: { value: number }) {
 }
 
 function MiniStat({ label, value }: { label: string; value: string }) {
+  const colors = useAppColors();
   return (
     <View
       style={{
@@ -82,6 +84,7 @@ function MiniStat({ label, value }: { label: string; value: string }) {
 }
 
 function RouteBadge({ label, tone = "neutral" }: { label: string; tone?: "gold" | "green" | "neutral" }) {
+  const colors = useAppColors();
   const backgroundColor =
     tone === "green" ? "#DCFCE7" : tone === "gold" ? colors.goldSoft : "#F1F5F9";
 
@@ -122,6 +125,7 @@ function RouteOptionCard({
   showIntelligence: boolean;
   routeExplanation?: { data: RouteExplanationResult; source: "edge_function" | "fallback" };
 }) {
+  const colors = useAppColors();
   const isRecommended = route.routePlan?.eligible === true && route.routePlan.rank === 1;
   const isEligible = route.routePlan?.eligible !== false;
   const evidenceScore = route.routePlan ? route.routePlan.score.value : route.score;
@@ -353,6 +357,7 @@ function RouteOptionCard({
 }
 
 export default function RoutesScreen() {
+  const colors = useAppColors();
   const { transfer, setRoutes, selectRoute } = useTransfer();
   const { rlusdBalance } = useWallet();
   const {

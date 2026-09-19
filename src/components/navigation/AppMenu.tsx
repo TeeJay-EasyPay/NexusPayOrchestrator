@@ -1,7 +1,9 @@
+import { Feather } from "@expo/vector-icons";
+import { corporatePalette as palette } from "../../theme/useAppColors";
 import { usePathname, useRouter } from "expo-router";
 import { Pressable, ScrollView, View } from "react-native";
 
-import { getCorporateRole, isCorporatePersona as checkCorporatePersona } from "../../services/corporateAccessService";
+import { canAccessCorporateRoute, CorporateRouteKey, getCorporateRole, isCorporatePersona as checkCorporatePersona } from "../../services/corporateAccessService";
 import { usePersona } from "../../state/PersonaContext";
 import { colors } from "../../theme";
 import { AppText } from "../ui/AppText";
@@ -36,6 +38,21 @@ export function AppMenu() {
       : []),
   ] as const;
 
+  if (isCorporatePersona) {
+    const items: { label: string; route: string; key: CorporateRouteKey; icon: keyof typeof Feather.glyphMap }[] = [
+      { label: "Home", route: corporateRole === "corporate_user" ? "/" : "/corporate-dashboard", key: corporateRole === "corporate_user" ? "home_dashboard" : "dashboard", icon: "home" },
+      { label: "Send", route: corporateRole === "corporate_user" ? "/send" : "/consumer/send", key: "send_payments", icon: "send" },
+      { label: "Routes", route: "/routes", key: "route_intelligence", icon: "navigation" },
+      { label: "Track", route: "/track", key: "track_transfer", icon: "clock" },
+      { label: "Account", route: "/account", key: "account_profile", icon: "user" },
+      { label: "Payouts", route: "/corporate-payouts", key: "batch_payments", icon: "layers" },
+      { label: "Alerts", route: "/participant-notifications", key: "notifications", icon: "bell" },
+      { label: "Received", route: "/received-transfers", key: "received_transfers", icon: "download" },
+    ].filter(item => item.label !== "Payouts" || corporateRole === "batch_payments_processor") as typeof items;
+    return <View style={{ backgroundColor: "white", borderTopWidth: 1, borderColor: palette.border, paddingVertical: 8 }}><ScrollView horizontal showsHorizontalScrollIndicator contentContainerStyle={{ paddingHorizontal: 8, gap: 4, flexGrow: 1 }}>
+      {items.filter(item => canAccessCorporateRoute(selectedPersona, item.key)).map(item => { const active = item.route === "/" ? pathname === "/" : pathname.startsWith(item.route); return <Pressable key={item.label} accessibilityRole="button" accessibilityState={{ selected: active }} onPress={() => router.push(item.route as never)} style={{ minWidth: 64, minHeight: 54, flex: 1, paddingHorizontal: 8, alignItems: "center", justifyContent: "center", gap: 5, borderRadius: 12, backgroundColor: active ? palette.tint : "transparent" }}><Feather name={item.icon} size={21} color={active ? palette.teal : palette.muted} /><AppText style={{ fontSize: 11, fontWeight: active ? "800" : "600" }} color={active ? palette.teal : palette.muted}>{item.label}</AppText></Pressable>; })}
+    </ScrollView></View>;
+  }
   return (
     <View
       style={{

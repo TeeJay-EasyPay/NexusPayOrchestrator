@@ -1,3 +1,4 @@
+import { useAppColors } from "../src/theme/useAppColors";
 import { router } from "expo-router";
 import { Alert, Pressable, ScrollView, View } from "react-native";
 
@@ -9,7 +10,6 @@ import { Screen } from "../src/components/ui/Screen";
 import { writeAuditLog } from "../src/services/auditLog";
 import { useAuth } from "../src/state/AuthContext";
 import { usePaymentMethods } from "../src/state/PaymentMethodsContext";
-import { colors } from "../src/theme";
 
 function getInitials(email?: string | null) {
   if (!email) return "?";
@@ -49,6 +49,7 @@ function shortId(value?: string) {
 }
 
 function StatusBadge({ label, tone }: { label: string; tone: "green" | "gold" | "blue" | "grey" | "red" }) {
+  const colors = useAppColors();
   const styles = {
     green: { backgroundColor: "#DCFCE7", color: "#166534" },
     gold: { backgroundColor: colors.goldSoft, color: "#8A6218" },
@@ -107,6 +108,7 @@ function SettingRow({
   status: string;
   tone: "green" | "gold" | "blue" | "grey" | "red";
 }) {
+  const colors = useAppColors();
   return (
     <View
       style={{
@@ -143,6 +145,7 @@ function SettingRow({
 }
 
 function LimitCard({ label, value }: { label: string; value: string }) {
+  const colors = useAppColors();
   return (
     <View
       style={{
@@ -167,6 +170,7 @@ function LimitCard({ label, value }: { label: string; value: string }) {
 }
 
 export default function AccountScreen() {
+  const colors = useAppColors();
   const { session, demoAccessEnabled, signOut } = useAuth();
   const { primaryMethod, paymentMethods } = usePaymentMethods();
 

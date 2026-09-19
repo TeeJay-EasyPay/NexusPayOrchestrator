@@ -1,3 +1,5 @@
+import { Screen } from "../ui/Screen";
+import { corporatePalette } from "../../theme/useAppColors";
 import { Feather } from "@expo/vector-icons";
 import { usePathname, useRouter } from "expo-router";
 import { useState } from "react";
@@ -138,6 +140,7 @@ export function ConsumerShell({
     router.replace("/multi-account-preview" as never);
   }
 
+  if (isCorporatePersona) return <Screen><ScrollView contentContainerStyle={{ paddingVertical: 20, gap: 16 }}><View style={{ gap: 6 }}><AppText color={corporatePalette.teal} variant="caption">{eyebrow}</AppText><AppText color={corporatePalette.ink} variant="title">{title}</AppText><AppText color={corporatePalette.muted}>{subtitle}</AppText></View>{children}</ScrollView></Screen>;
   return (
     <SafeAreaView style={[styles.safe, isCorporatePersona && styles.corporateSafe]}>
       <StatusBar barStyle={isCorporatePersona ? "light-content" : "dark-content"} backgroundColor={shellTint.headerBackground} />
@@ -323,7 +326,9 @@ export function ConsumerShell({
 }
 
 export function ConsumerCard({ children, accent = false }: { children: React.ReactNode; accent?: boolean }) {
-  return <View style={[styles.card, accent && styles.cardAccent]}>{children}</View>;
+  const { selectedPersona } = usePersona();
+  const corporate = checkCorporatePersona(selectedPersona);
+  return <View style={[styles.card, accent && styles.cardAccent, corporate && { borderRadius: 16, borderColor: corporatePalette.border, backgroundColor: accent ? corporatePalette.tint : "white" }]}>{children}</View>;
 }
 
 export function ConsumerPill({ label, tone = "blue" }: { label: string; tone?: "blue" | "green" | "gold" | "red" }) {
@@ -354,10 +359,12 @@ export function ConsumerAction({
   onPress: () => void;
   secondary?: boolean;
 }) {
+  const { selectedPersona } = usePersona();
+  const corporate = checkCorporatePersona(selectedPersona);
   return (
-    <Pressable onPress={onPress} style={[styles.action, secondary && styles.actionSecondary]}>
-      <Feather name={icon} size={17} color={secondary ? consumerColors.blue : consumerColors.white} />
-      <AppText color={secondary ? consumerColors.blue : consumerColors.white} style={styles.actionText}>
+    <Pressable onPress={onPress} style={[styles.action, secondary && styles.actionSecondary, corporate && { backgroundColor: secondary ? "white" : corporatePalette.teal, borderColor: corporatePalette.teal }]}>
+      <Feather name={icon} size={17} color={secondary ? (corporate ? corporatePalette.teal : consumerColors.blue) : consumerColors.white} />
+      <AppText color={secondary ? (corporate ? corporatePalette.teal : consumerColors.blue) : consumerColors.white} style={styles.actionText}>
         {label}
       </AppText>
     </Pressable>

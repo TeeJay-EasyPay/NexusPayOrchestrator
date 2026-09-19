@@ -1,3 +1,5 @@
+import { AppDropdownMenu } from "../navigation/AppDropdownMenu";
+import { AppMenu } from "../navigation/AppMenu";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
@@ -90,8 +92,8 @@ export function CorporateShell({
 
   if (!allowed || !role) {
     return (
-      <SafeAreaView style={styles.safe}>
-        <StatusBar barStyle="light-content" backgroundColor="#07111F" />
+      <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
+        <StatusBar barStyle="light-content" backgroundColor="#102332" />
         <View style={styles.blocked}>
           <AppText variant="title" color={colors.white}>Restricted</AppText>
           <AppText variant="body" color="#C7D2E0" style={{ textAlign: "center" }}>
@@ -107,9 +109,9 @@ export function CorporateShell({
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="light-content" backgroundColor="#07111F" />
+      <StatusBar barStyle="light-content" backgroundColor="#102332" />
       <View style={styles.header}>
-        <View style={styles.identity}>
+        {role === "corporate_user" ? <View style={{ marginBottom: 16 }}><AppDropdownMenu branded /></View> : <View style={styles.identity}>
           <View style={styles.avatar}>
             <AppText color="#061625" style={styles.avatarText}>NP</AppText>
           </View>
@@ -125,8 +127,9 @@ export function CorporateShell({
           </Pressable>
         </View>
 
+        }
         <View style={styles.hero}>
-          <AppText variant="caption" color="#6ED3D8" style={styles.eyebrow}>{getRoleLabel(role)}</AppText>
+          <AppText variant="caption" color="#FFFFFF" style={styles.eyebrow}>{getRoleLabel(role)}</AppText>
           <AppText variant="title" color={colors.white} style={styles.title}>{title}</AppText>
           <AppText variant="body" color="#D7E4F1" style={styles.subtitle}>{subtitle}</AppText>
         </View>
@@ -136,12 +139,13 @@ export function CorporateShell({
         {children}
       </ScrollView>
 
+      <SafeAreaView edges={["bottom"]} style={{ backgroundColor: "white" }}><AppMenu /></SafeAreaView>
       <Modal transparent animationType="fade" visible={menuOpen} onRequestClose={() => setMenuOpen(false)}>
         <View style={styles.modal}>
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setMenuOpen(false)} />
           <View style={styles.drawer}>
             <ScrollView contentContainerStyle={styles.drawerContent}>
-              <AppText variant="caption" color="#6ED3D8" style={styles.eyebrow}>Corporate navigation</AppText>
+              <AppText variant="caption" color="#087F83" style={styles.eyebrow}>Corporate navigation</AppText>
               {menuItems.map((item) => (
                 <Pressable
                   key={`${item.key}-${item.route}`}
@@ -187,13 +191,13 @@ export function CorporateCard({ children }: { children: React.ReactNode }) {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: "#07111F",
+    backgroundColor: "#102332",
   },
   header: {
     paddingHorizontal: 18,
     paddingTop: 12,
     paddingBottom: 14,
-    backgroundColor: "#07111F",
+    backgroundColor: "#102332",
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255,255,255,0.10)",
   },
@@ -233,7 +237,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.14)",
-    backgroundColor: "#0B3F4A",
+    backgroundColor: "#087F83",
     padding: 14,
   },
   title: {
@@ -246,7 +250,7 @@ const styles = StyleSheet.create({
   },
   body: {
     flex: 1,
-    backgroundColor: "#07111F",
+    backgroundColor: "#F6F5F1",
   },
   content: {
     padding: 16,
@@ -255,7 +259,7 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 10,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: "#DDE6EE",
     padding: 14,

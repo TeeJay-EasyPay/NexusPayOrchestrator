@@ -1,8 +1,9 @@
+import { useAppColors } from "../../theme/useAppColors";
 import { Feather } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, View } from "react-native";
 
-import { colors, spacing } from "../../theme";
+import { spacing } from "../../theme";
 import type { OperationsCorridorRow, OperationsPressure } from "../../utils/operationsCommandCentre";
 import { AppCard } from "../ui/AppCard";
 import { AppText } from "../ui/AppText";
@@ -34,6 +35,8 @@ function pressureColor(pressure: OperationsPressure): string {
 }
 
 function ScoreBar({ value, color }: { value: number; color: string }) {
+  const colors = useAppColors();
+  const styles = createStyles(colors);
   const safe = Math.max(0, Math.min(100, value ?? 0));
   return (
     <View style={styles.barTrack}>
@@ -43,6 +46,8 @@ function ScoreBar({ value, color }: { value: number; color: string }) {
 }
 
 function CorridorRow({ row }: { row: OperationsCorridorRow }) {
+  const colors = useAppColors();
+  const styles = createStyles(colors);
   const sc = statusColor(row.status ?? "AT_RISK");
   const pc = pressureColor(row.pressure ?? "LOW");
   const trendPositive = (row.trend ?? 0) >= 0;
@@ -104,6 +109,8 @@ function CorridorRow({ row }: { row: OperationsCorridorRow }) {
 }
 
 export function CorridorHealthCard({ corridorRows, showDataSources = true }: Props) {
+  const colors = useAppColors();
+  const styles = createStyles(colors);
   const rows = Array.isArray(corridorRows) ? corridorRows : [];
 
   return (
@@ -130,7 +137,7 @@ export function CorridorHealthCard({ corridorRows, showDataSources = true }: Pro
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: typeof import("../../theme/colors").colors) => StyleSheet.create({
   card: {
     marginHorizontal: 16,
     marginBottom: 12,
