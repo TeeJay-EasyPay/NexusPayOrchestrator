@@ -224,6 +224,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let isMounted = true;
+    let profileTimer: ReturnType<typeof setTimeout> | undefined;
 
     async function initialiseSecureEntry() {
       authBootstrapInProgressRef.current = true;
@@ -393,7 +394,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       if (authBootstrapInProgressRef.current) {
         logStartupInfo({
           event: "auth-state-suppressed-during-bootstrap",
@@ -458,13 +459,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setStartupPhase(nextPhase);
       setLoading(false);
 
+      if (profileTimer) clearTimeout(profileTimer);
       if (nextSession) {
-        await upsertProfile(nextSession);
+        // Auth listeners run under the client lock. Defer database access until it releases.
+        profileTimer = setTimeout(() => {
+          if (isMounted) void upsertProfile(nextSession);
+        }, 0);
       }
     });
 
     return () => {
       isMounted = false;
+      if (profileTimer) clearTimeout(profileTimer);
       resetInProgressRef.current = false;
       subscription.unsubscribe();
     };

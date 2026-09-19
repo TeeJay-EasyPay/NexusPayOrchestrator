@@ -144,6 +144,8 @@ export default function MultiAccountPreviewScreen() {
       }
 
       router.replace("/consumer" as never);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Unable to open this persona. Please retry.");
     } finally {
       setBusyTarget(null);
     }
