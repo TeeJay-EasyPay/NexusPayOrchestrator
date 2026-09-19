@@ -1,3 +1,4 @@
+import { useAppColors } from "../src/theme/useAppColors";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Linking, Pressable, ScrollView, View } from "react-native";
@@ -95,6 +96,7 @@ function metadataLines(metadata?: Record<string, unknown>) {
 }
 
 function ProgressBar({ value }: { value: number }) {
+  const colors = useAppColors();
   const safeValue = Math.max(0, Math.min(100, value));
 
   return (
@@ -140,6 +142,7 @@ function HeroMetric({ label, value }: { label: string; value: string }) {
 }
 
 function DetailMetric({ label, value }: { label: string; value: string }) {
+  const colors = useAppColors();
   return (
     <View
       style={{
@@ -164,6 +167,7 @@ function DetailMetric({ label, value }: { label: string; value: string }) {
 }
 
 export default function TrackScreen() {
+  const colors = useAppColors();
   const { transfer, startTransfer, completeTransfer } = useTransfer();
   const { debitGbp, refreshXrpBalance } = useWallet();
   const {

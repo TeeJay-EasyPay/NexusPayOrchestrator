@@ -1,3 +1,4 @@
+import { useAppColors } from "../../theme/useAppColors";
 import { Feather } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, View } from "react-native";
@@ -34,6 +35,8 @@ function statusIcon(status: ServiceStatus): React.ComponentProps<typeof Feather>
 }
 
 function ServiceRow({ item }: { item: OperationsServiceHealth }) {
+  const colors = useAppColors();
+  const styles = createStyles(colors);
   const color = statusColor(item.status ?? "NO_DATA");
   const icon = statusIcon(item.status ?? "NO_DATA");
 
@@ -69,6 +72,8 @@ function overallHealth(services: OperationsServiceHealth[]): { color: string; la
 }
 
 export function OperationalHealthCard({ serviceHealth, showDataSources = true }: Props) {
+  const colors = useAppColors();
+  const styles = createStyles(colors);
   const services = Array.isArray(serviceHealth) ? serviceHealth : [];
   const { color, label } = overallHealth(services);
 
@@ -127,7 +132,7 @@ export function OperationalHealthCard({ serviceHealth, showDataSources = true }:
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: typeof import("../../theme/colors").colors) => StyleSheet.create({
   card: {
     marginHorizontal: 16,
     marginBottom: 12,

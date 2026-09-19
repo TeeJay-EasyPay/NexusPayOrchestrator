@@ -1,7 +1,7 @@
+import { useAppColors } from "../../theme/useAppColors";
 import React from "react";
 import { StyleSheet, View } from "react-native";
 
-import { colors } from "../../theme";
 import type { DataProvenanceClassification } from "../../utils/operationsCommandCentre";
 import { AppText } from "../ui/AppText";
 
@@ -26,6 +26,8 @@ const PROVENANCE_COLORS: Record<DataProvenanceClassification, string> = {
 };
 
 export function DataProvenanceBadge({ classification }: Props) {
+  const colors = useAppColors();
+  const styles = createStyles(colors);
   const color = PROVENANCE_COLORS[classification] ?? colors.textDarkMuted;
 
   return (
@@ -37,7 +39,7 @@ export function DataProvenanceBadge({ classification }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: typeof import("../../theme/colors").colors) => StyleSheet.create({
   badge: {
     borderRadius: 7,
     borderWidth: 1,

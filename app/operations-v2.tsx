@@ -1,3 +1,4 @@
+import { useAppColors } from "../src/theme/useAppColors";
 import React from "react";
 import {
   ActivityIndicator,
@@ -24,9 +25,10 @@ import { Screen } from "../src/components/ui/Screen";
 import { useOperationsCommandCentre } from "../src/hooks/useOperationsCommandCentre";
 import { isCorporatePersona } from "../src/services/corporateAccessService";
 import { usePersona } from "../src/state/PersonaContext";
-import { colors } from "../src/theme";
 
 export default function OperationsV2Screen() {
+  const colors = useAppColors();
+  const styles = createStyles(colors);
   const state = useOperationsCommandCentre();
   const { selectedPersona } = usePersona();
   const corporate = isCorporatePersona(selectedPersona);
@@ -182,7 +184,7 @@ export default function OperationsV2Screen() {
   return <Screen>{content}</Screen>;
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: typeof import("../src/theme/colors").colors) => StyleSheet.create({
   scroll: {
     flex: 1,
     backgroundColor: colors.background,

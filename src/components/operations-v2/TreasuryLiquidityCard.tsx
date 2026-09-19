@@ -1,9 +1,10 @@
+import { useAppColors } from "../../theme/useAppColors";
 import { Feather } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, View } from "react-native";
 
 import type { LiveIntelligenceFeeds } from "../../services/liveIntelligenceFeedService";
-import { colors, spacing } from "../../theme";
+import { spacing } from "../../theme";
 import type { OperationsTreasurySummary } from "../../utils/operationsCommandCentre";
 import { AppCard } from "../ui/AppCard";
 import { AppText } from "../ui/AppText";
@@ -23,6 +24,8 @@ function pressureColor(pressure: string): string {
 }
 
 function UtilisationBar({ value, color }: { value: number; color: string }) {
+  const colors = useAppColors();
+  const styles = createStyles(colors);
   const safe = Math.max(0, Math.min(100, value ?? 0));
   return (
     <View style={styles.barTrack}>
@@ -42,6 +45,8 @@ function MetricRow({
   color?: string;
   provenance?: React.ComponentProps<typeof DataProvenanceBadge>["classification"];
 }) {
+  const colors = useAppColors();
+  const styles = createStyles(colors);
   return (
     <View style={styles.metricRow}>
       <AppText variant="caption" color={colors.textDarkMuted} style={styles.metricLabel}>
@@ -58,6 +63,8 @@ function MetricRow({
 }
 
 export function TreasuryLiquidityCard({ treasurySummary, feedData, showDataSources = true }: Props) {
+  const colors = useAppColors();
+  const styles = createStyles(colors);
   const utilization = treasurySummary?.utilization ?? 0;
   const available = treasurySummary?.availableCapacity ?? 0;
   const pressure = treasurySummary?.pressure ?? "LOW";
@@ -138,7 +145,7 @@ export function TreasuryLiquidityCard({ treasurySummary, feedData, showDataSourc
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: typeof import("../../theme/colors").colors) => StyleSheet.create({
   card: {
     marginHorizontal: 16,
     marginBottom: 12,

@@ -1,3 +1,4 @@
+import { useAppColors } from "../../theme/useAppColors";
 /**
  * ProviderSandboxCard — Operations V2
  * External Rail Readiness Sprint — 2026-06-16
@@ -25,7 +26,7 @@ import {
   OrchestrationResult,
   runMockOrchestration,
 } from "../../services/mockOrchestrationRunner";
-import { colors, spacing } from "../../theme";
+import { spacing } from "../../theme";
 import { AppCard } from "../ui/AppCard";
 import { AppText } from "../ui/AppText";
 import { DataProvenanceBadge } from "./DataProvenanceBadge";
@@ -49,6 +50,8 @@ function generateTestId(): string {
 // ─── Provider Registry Summary ────────────────────────────────────────────────
 
 function RegistrySummary() {
+  const colors = useAppColors();
+  const styles = createStyles(colors);
   const providers = listAllProviders();
   const collection = providers.filter((p) => p.type === "collection");
   const payout = providers.filter((p) => p.type === "payout");
@@ -99,6 +102,8 @@ function TimelineRow({
   isError: boolean;
   isLast: boolean;
 }) {
+  const colors = useAppColors();
+  const styles = createStyles(colors);
   const dotColor = isError ? colors.danger : colors.success;
   const time = new Date(timestamp).toLocaleTimeString([], {
     hour: "2-digit",
@@ -127,6 +132,8 @@ function TimelineRow({
 // ─── Result Summary ───────────────────────────────────────────────────────────
 
 function ResultSummary({ result }: { result: OrchestrationResult }) {
+  const colors = useAppColors();
+  const styles = createStyles(colors);
   const isSuccess = result.finalState === "COMPLETED";
   const statusColor = isSuccess ? colors.success : colors.danger;
   const statusIcon: React.ComponentProps<typeof Feather>["name"] = isSuccess
@@ -191,6 +198,8 @@ type Props = {
 };
 
 export function ProviderSandboxCard({ showDataSources = true }: Props) {
+  const colors = useAppColors();
+  const styles = createStyles(colors);
   const [selectedCorridor, setSelectedCorridor] = useState(0);
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<OrchestrationResult | null>(null);
@@ -318,7 +327,7 @@ export function ProviderSandboxCard({ showDataSources = true }: Props) {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const createStyles = (colors: typeof import("../../theme/colors").colors) => StyleSheet.create({
   card: {
     marginHorizontal: 16,
     marginBottom: 12,

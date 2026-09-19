@@ -3,8 +3,8 @@ import { useRouter } from "expo-router";
 import { useRef, useState } from "react";
 import { Pressable, ScrollView, StatusBar, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { canAccessCorporateRoute } from "../../services/corporateAccessService";
-import { usePersona } from "../../state/PersonaContext";
+import { AppMenu } from "../navigation/AppMenu";
+
 import { Transfer } from "../../types/transfer";
 import { AppDropdownMenu } from "../navigation/AppDropdownMenu";
 import { AppText } from "../ui/AppText";
@@ -16,12 +16,9 @@ export function CorporateHome({ greeting, active, completed, loading, fundingCou
   fundingCount: number; fundingReady: boolean; onResend: (transfer: Transfer) => void; onDetails: () => void;
 }) {
   const router = useRouter();
-  const { selectedPersona } = usePersona();
-  const [menuSignal, setMenuSignal] = useState(0);
   const [showAll, setShowAll] = useState(false);
   const scroll = useRef<ScrollView>(null);
   const recentY = useRef(0);
-  const reportsAllowed = canAccessCorporateRoute(selectedPersona, "reports");
   const failed = active?.status === "FAILED";
   const draft = active && ["CREATED", "ROUTES_FETCHED", "ROUTE_SELECTED", "FUNDING_SELECTED", "FUNDING_AUTHORISED"].includes(active.status);
   const attention = [
@@ -30,17 +27,11 @@ export function CorporateHome({ greeting, active, completed, loading, fundingCou
   ];
   const payments = [...(active ? [active] : []), ...completed.filter(item => item.id !== active?.id)];
   const viewPayments = () => { setShowAll(true); scroll.current?.scrollTo({ y: recentY.current, animated: true }); };
-  const nav: { label: string; icon: Icon; action: () => void; disabled?: boolean }[] = [
-    { label: "Home", icon: "home", action: () => scroll.current?.scrollTo({ y: 0, animated: true }) },
-    { label: "Payments", icon: "repeat", action: viewPayments },
-    { label: "Compliance", icon: "shield", action: () => router.push("/compliance" as never) },
-    { label: "Reports", icon: "bar-chart-2", action: () => router.push("/corporate-reports" as never), disabled: !reportsAllowed },
-    { label: "More", icon: "more-horizontal", action: () => setMenuSignal(n => n + 1) },
-  ];
+
   return <SafeAreaView style={s.safe} edges={["top", "left", "right"]}>
     <StatusBar barStyle="light-content" backgroundColor="#102332" />
-    <View style={s.header}><AppDropdownMenu branded openSignal={menuSignal} /></View>
-    <ScrollView ref={scroll} style={s.page} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+    <View style={s.header}><AppDropdownMenu branded /></View>
+    <ScrollView nestedScrollEnabled ref={scroll} style={s.page} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
       <View style={{ gap: 5 }}><AppText color={ink} style={s.greeting}>{greeting.replace(/Morning|Afternoon|Evening/g, word => word.toLowerCase())}.</AppText><AppText color={muted} style={{ fontSize: 17 }}>Your payments, at a glance.</AppText></View>
       <View style={s.actions}><Action title="Send payment" icon="arrow-right" primary onPress={() => router.push("/send")} /><Action title="View payments" icon="file-text" onPress={viewPayments} /></View>
       <Pressable accessibilityRole="button" onPress={() => router.push("/payment-methods")} style={[s.card, s.row]}><IconBox icon="credit-card" /><View style={{ flex: 1, gap: 3 }}><AppText color={ink} style={s.label}>Funding sources</AppText><AppText color={muted}>{fundingCount} saved</AppText></View><Feather name="chevron-right" size={20} color={muted} /></Pressable>
@@ -49,16 +40,16 @@ export function CorporateHome({ greeting, active, completed, loading, fundingCou
       <Pressable accessibilityRole="button" onPress={() => router.push("/compliance" as never)} style={s.compliance}><Feather name="shield" size={18} color={teal} /><AppText color={teal} style={{ flex: 1, fontSize: 14, fontWeight: "700" }}>Company verification & compliance</AppText><Feather name="chevron-right" size={18} color={teal} /></Pressable>
       <View style={[s.card, { flexDirection: "row" }]}><View style={s.metric}><AppText color={muted} style={s.small}>Open transfers</AppText><AppText color={ink} style={s.number}>{active && !failed ? 1 : 0}</AppText></View><View style={[s.metric, { borderLeftWidth: 1, borderLeftColor: "#E1E5E8" }]}><AppText color={muted} style={s.small}>Recorded completed</AppText><AppText color={ink} style={s.number}>{loading ? "—" : completed.length}</AppText></View></View>
       <View onLayout={event => { recentY.current = event.nativeEvent.layout.y; }} style={s.sectionTitle}><AppText color={ink} style={[s.section, { flex: 1 }]}>Recent payments</AppText><Pressable accessibilityRole="button" onPress={() => setShowAll(value => !value)} style={s.link}><AppText color={teal} style={{ fontWeight: "700" }}>{showAll ? "Show less" : "View all"}</AppText></Pressable></View>
-      <View style={s.card}>{payments.length ? payments.slice(0, showAll ? payments.length : 3).map((item, index) => {
+      <View style={s.card}><ScrollView nestedScrollEnabled style={{ maxHeight: showAll ? 520 : 320 }} accessibilityLabel="Recent payments" showsVerticalScrollIndicator>{payments.length ? payments.map((item, index) => {
         const done = item.status === "COMPLETED";
         const name = item.recipient.name || [item.recipient.firstName, item.recipient.surname].filter(Boolean).join(" ") || "Recipient";
         const initials = name.split(/\s+/).slice(0, 2).map(part => part[0]).join("").toUpperCase();
         const status = done ? "Completed" : item.status.replace(/_/g, " ").toLowerCase();
         return <View key={item.id} style={[s.payment, index > 0 && s.divider]}><View style={s.row}><View style={s.initials}><AppText color={ink} style={{ fontWeight: "800" }}>{initials}</AppText></View><View style={{ flex: 1, gap: 4 }}><AppText color={ink} style={s.label}>{name}</AppText><AppText color={muted} style={s.small}>{new Date(item.createdAt).toLocaleDateString(undefined, { day: "numeric", month: "short" })} · {item.recipient.payoutMethod === "BANK" ? "Bank transfer" : "Mobile wallet"}</AppText></View></View><View style={s.paymentDetails}><AppText color={ink} style={s.label}>{new Intl.NumberFormat(undefined, { style: "currency", currency: item.senderCurrency }).format(item.senderAmount)}</AppText><View style={[s.status, { backgroundColor: done ? "#DDF6EB" : "#EDF2F8" }]}><AppText color={done ? "#086D56" : muted} style={{ fontSize: 12, textTransform: "capitalize" }}>{status}</AppText></View><Pressable accessibilityRole="button" accessibilityLabel={done ? `Resend payment to ${name}` : `Track payment to ${name}`} onPress={() => done ? onResend(item) : router.push("/track")} style={s.link}><AppText color={teal} style={{ fontWeight: "700", fontSize: 12 }}>{done ? "Resend" : "Track"}</AppText></Pressable></View></View>;
-      }) : <View style={{ padding: 20, gap: 6 }}><AppText color={ink} style={s.label}>{loading ? "Loading payments…" : "No recent payments"}</AppText><AppText color={muted} style={s.small}>Your transfer activity will appear here.</AppText></View>}</View>
+      }) : <View style={{ padding: 20, gap: 6 }}><AppText color={ink} style={s.label}>{loading ? "Loading payments…" : "No recent payments"}</AppText><AppText color={muted} style={s.small}>Your transfer activity will appear here.</AppText></View>}</ScrollView></View>
       <Pressable accessibilityRole="button" onPress={onDetails} style={s.compliance}><Feather name="grid" size={17} color={muted} /><AppText color={muted} style={{ flex: 1, fontSize: 13 }}>Open detailed dashboard</AppText><Feather name="chevron-right" size={18} color={muted} /></Pressable>
     </ScrollView>
-    <SafeAreaView edges={["bottom"]} style={s.bottom}><View style={s.tabs}>{nav.map((item, i) => <Pressable key={item.label} accessibilityRole="button" accessibilityLabel={item.disabled ? `${item.label}, unavailable for this role` : item.label} accessibilityState={{ disabled: item.disabled }} disabled={item.disabled} onPress={item.action} style={[s.tab, item.disabled && { opacity: 0.5 }]}><Feather name={item.icon} size={22} color={i === 0 ? teal : muted} /><AppText color={i === 0 ? teal : muted} style={{ fontSize: 10, fontWeight: i === 0 ? "800" : "500" }}>{item.label}{item.disabled ? " 🔒" : ""}</AppText></Pressable>)}</View></SafeAreaView>
+    <SafeAreaView edges={["bottom"]} style={s.bottom}><AppMenu /></SafeAreaView>
   </SafeAreaView>;
 }
 function IconBox({ icon, amber = false }: { icon: Icon; amber?: boolean }) { return <View style={[s.icon, amber && { backgroundColor: "#FFF0D5" }]}><Feather name={icon} size={22} color={amber ? "#A6640B" : ink} /></View>; }

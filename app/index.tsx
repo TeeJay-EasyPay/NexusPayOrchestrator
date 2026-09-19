@@ -1,3 +1,4 @@
+import { useAppColors } from "../src/theme/useAppColors";
 import { Feather } from "@expo/vector-icons";
 import { useIsFocused } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
@@ -36,7 +37,7 @@ import { logStartupWarn } from "../src/services/startupLogger";
 import { usePaymentMethods } from "../src/state/PaymentMethodsContext";
 import { usePersona } from "../src/state/PersonaContext";
 import { useTransfer } from "../src/state/TransferContext";
-import { colors, spacing } from "../src/theme";
+import { spacing } from "../src/theme";
 import { Transfer } from "../src/types/transfer";
 import { DataProvenanceBadge } from "../src/components/operations-v2/DataProvenanceBadge";
 
@@ -162,6 +163,7 @@ function BalanceAction({
   label: string;
   onPress: () => void;
 }) {
+  const colors = useAppColors();
   return (
     <Pressable
       onPress={onPress}
@@ -240,6 +242,7 @@ function getHealthColor(status: PlatformHealthItem["status"]) {
 }
 
 function HealthStatusBadge({ item }: { item: PlatformHealthItem | null }) {
+  const colors = useAppColors();
   const label = item?.label.replace(" Health", " Status") ?? "Status";
   const status = item?.status ?? "NO_DATA";
   const color = getHealthColor(status);
@@ -279,6 +282,7 @@ function QuickTile({
   label: string;
   onPress: () => void;
 }) {
+  const colors = useAppColors();
   return (
     <Pressable
       onPress={onPress}
@@ -308,6 +312,7 @@ function QuickTile({
 }
 
 export default function HomeScreen() {
+  const colors = useAppColors();
   const router = useRouter();
   const { width } = useWindowDimensions();
   const wideLayout = width >= 760;
@@ -597,7 +602,7 @@ export default function HomeScreen() {
     <Screen>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={{ gap: spacing.md, paddingTop: 10, paddingBottom: 40 }}>
-          {corporateRole === "corporate_user" && detailedHome ? <Pressable accessibilityRole="button" onPress={() => setDetailedHome(false)} style={{ minHeight: 44, justifyContent: "center" }}><AppText color="#6ED3D8">Back to corporate home</AppText></Pressable> : null}
+          {corporateRole === "corporate_user" && detailedHome ? <Pressable accessibilityRole="button" onPress={() => setDetailedHome(false)} style={{ minHeight: 44, justifyContent: "center" }}><AppText color={colors.gold}>Back to corporate home</AppText></Pressable> : null}
           <NexusAIToggleCard
             title="Nexus AI"
             description="Controls home dashboard intelligence, operational summaries and route guidance on this screen."

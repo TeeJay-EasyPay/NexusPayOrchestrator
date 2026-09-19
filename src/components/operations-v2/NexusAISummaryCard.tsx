@@ -1,9 +1,10 @@
+import { useAppColors } from "../../theme/useAppColors";
 import { Feather } from "@expo/vector-icons";
 import React from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 
 import type { IntelligenceReportResult } from "../../services/nexusAIService";
-import { colors, spacing } from "../../theme";
+import { spacing } from "../../theme";
 import type {
     OperationsCorridorRow,
     OperationsKpiItem,
@@ -124,6 +125,8 @@ function buildFallbackSummary(props: {
 }
 
 function FindingItem({ text, index }: { text: string; index: number }) {
+  const colors = useAppColors();
+  const styles = createStyles(colors);
   return (
     <View style={styles.findingRow}>
       <View style={styles.findingIndex}>
@@ -150,6 +153,8 @@ export function NexusAISummaryCard({
   criticalAlertCount,
   showDataSources = true,
 }: Props) {
+  const colors = useAppColors();
+  const styles = createStyles(colors);
   if (nexusAILoading) {
     return (
       <AppCard style={styles.card}>
@@ -311,7 +316,7 @@ export function NexusAISummaryCard({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: typeof import("../../theme/colors").colors) => StyleSheet.create({
   card: {
     marginHorizontal: 16,
     marginBottom: 12,

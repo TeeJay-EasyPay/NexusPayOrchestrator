@@ -1,3 +1,4 @@
+import { useAppColors } from "../src/theme/useAppColors";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, TextInput, View } from "react-native";
@@ -30,7 +31,6 @@ import {
 } from "../src/services/recipientService";
 import { useTransfer } from "../src/state/TransferContext";
 import { useWallet } from "../src/state/WalletContext";
-import { colors } from "../src/theme";
 import { SavedRecipient } from "../src/types/recipient";
 import { PayoutMethod, Recipient, RouteQuote } from "../src/types/transfer";
 
@@ -59,6 +59,7 @@ function InputField({
   keyboardType?: "default" | "decimal-pad" | "number-pad" | "phone-pad";
   large?: boolean;
 }) {
+  const colors = useAppColors();
   return (
     <TextInput
       value={value}
@@ -89,6 +90,7 @@ function SelectorChip({
   selected: boolean;
   onPress: () => void;
 }) {
+  const colors = useAppColors();
   return (
     <Pressable
       onPress={onPress}
@@ -120,6 +122,7 @@ function SelectorChip({
 }
 
 function InfoPill({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
+  const colors = useAppColors();
   return (
     <View
       style={{
@@ -157,6 +160,7 @@ function CanonicalRoutePreviewCard({
   loading: boolean;
   error: string | null;
 }) {
+  const colors = useAppColors();
   const plan = route?.routePlan;
   const fx = plan?.economics.fxRate;
   const recipient = plan?.economics.estimatedRecipientAmount;
@@ -223,6 +227,7 @@ function CanonicalRoutePreviewCard({
 }
 
 export default function SendScreen() {
+  const colors = useAppColors();
   const params = useLocalSearchParams();
   const { gbpBalance, rlusdBalance } = useWallet();
   const { createTransfer } = useTransfer();
@@ -836,7 +841,7 @@ export default function SendScreen() {
             })}
           >
             <AppText
-              color="#07111F"
+              color={colors.background}
               style={{ fontSize: 18, fontWeight: "900" }}
             >
               Find best routes →

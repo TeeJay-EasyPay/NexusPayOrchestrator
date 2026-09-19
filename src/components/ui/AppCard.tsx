@@ -1,3 +1,6 @@
+import { usePersona } from "../../state/PersonaContext";
+import { isCorporatePersona } from "../../services/corporateAccessService";
+import { corporatePalette } from "../../theme/useAppColors";
 import React from "react";
 import { StyleSheet, View, ViewStyle } from "react-native";
 import { spacing } from "../../theme";
@@ -8,7 +11,9 @@ type AppCardProps = {
 };
 
 export function AppCard({ children, style }: AppCardProps) {
-  return <View style={[styles.card, style]}>{children}</View>;
+  const { selectedPersona } = usePersona();
+  const corporate = isCorporatePersona(selectedPersona);
+  return <View style={[styles.card, corporate && { borderRadius: 16, borderColor: corporatePalette.border, shadowOpacity: 0.04, shadowRadius: 6, elevation: 1 }, style]}>{children}</View>;
 }
 
 const styles = StyleSheet.create({

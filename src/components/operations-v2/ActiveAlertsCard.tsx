@@ -1,9 +1,10 @@
+import { useAppColors } from "../../theme/useAppColors";
 import { Feather } from "@expo/vector-icons";
 import React from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 
 import type { RouteOperationalEventRow } from "../../services/routeOperationalEventService";
-import { colors, spacing } from "../../theme";
+import { spacing } from "../../theme";
 import type { OperationsAlertFilter } from "../../utils/operationsCommandCentre";
 import { getAlertColor, mapEventToAlertFilter } from "../../utils/operationsCommandCentre";
 import { AppCard } from "../ui/AppCard";
@@ -37,6 +38,8 @@ function formatTime(iso: string): string {
 }
 
 function AlertRow({ event }: { event: RouteOperationalEventRow }) {
+  const colors = useAppColors();
+  const styles = createStyles(colors);
   const alertLevel = mapEventToAlertFilter(event);
   const color = getAlertColor(alertLevel);
   const icon = severityIcon(alertLevel);
@@ -69,6 +72,8 @@ function AlertRow({ event }: { event: RouteOperationalEventRow }) {
 }
 
 export function ActiveAlertsCard({ events, severityFilter, setSeverityFilter, showDataSources = true }: Props) {
+  const colors = useAppColors();
+  const styles = createStyles(colors);
   const safeEvents = Array.isArray(events) ? events : [];
 
   const filtered = safeEvents.filter((event) => {
@@ -141,7 +146,7 @@ export function ActiveAlertsCard({ events, severityFilter, setSeverityFilter, sh
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: typeof import("../../theme/colors").colors) => StyleSheet.create({
   card: {
     marginHorizontal: 16,
     marginBottom: 12,

@@ -1,8 +1,8 @@
+import { useAppColors } from "../../theme/useAppColors";
 import { Feather } from "@expo/vector-icons";
 import React from "react";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 
-import { colors } from "../../theme";
 import { AppText } from "../ui/AppText";
 
 type Props = {
@@ -31,6 +31,8 @@ function connectivityTone(status: string): { color: string; label: string } {
 }
 
 export function OperationsHeader({ realtimeStatus, lastUpdatedAt, refreshing, onRefresh }: Props) {
+  const colors = useAppColors();
+  const styles = createStyles(colors);
   const { color, label } = connectivityTone(realtimeStatus ?? "");
   const subtitle =
     label === "Diagnostic Mode"
@@ -79,7 +81,7 @@ export function OperationsHeader({ realtimeStatus, lastUpdatedAt, refreshing, on
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: typeof import("../../theme/colors").colors) => StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "flex-start",

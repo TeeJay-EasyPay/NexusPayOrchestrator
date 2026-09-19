@@ -1,3 +1,4 @@
+import { useAppColors } from "../src/theme/useAppColors";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
@@ -11,7 +12,6 @@ import { SavedPaymentMethod } from "../src/data/mockPaymentMethods";
 import { authoriseOpenBankingPayment } from "../src/services/openBankingPaymentFlowService";
 import { usePaymentMethods } from "../src/state/PaymentMethodsContext";
 import { useTransfer } from "../src/state/TransferContext";
-import { colors } from "../src/theme";
 import { FundingMethod } from "../src/types/transfer";
 
 function mapPaymentMethodToFundingMethod(method: SavedPaymentMethod): FundingMethod {
@@ -45,6 +45,7 @@ function PaymentMethodOption({
   isPrimary: boolean;
   onPress: () => void;
 }) {
+  const colors = useAppColors();
   const meta = methodMeta(method);
   const noteText =
     method.type === "OPEN_BANKING"
@@ -134,6 +135,7 @@ function PaymentMethodOption({
 }
 
 export default function FundingScreen() {
+  const colors = useAppColors();
   const { transfer, setFundingMethod, setFundingStatus, setOpenBankingFlow } = useTransfer();
   const {
     paymentMethods,

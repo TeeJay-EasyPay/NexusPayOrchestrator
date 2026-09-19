@@ -1,3 +1,4 @@
+import { useAppColors } from "../../theme/useAppColors";
 import React from "react";
 import {
   Pressable,
@@ -6,7 +7,7 @@ import {
   Text,
   ViewStyle,
 } from "react-native";
-import { colors, spacing } from "../../theme";
+import { spacing } from "../../theme";
 
 type AppButtonProps = PressableProps & {
   title: string;
@@ -20,6 +21,7 @@ export function AppButton({
   style,
   ...props
 }: AppButtonProps) {
+  const colors = useAppColors();
   const isPrimary = variant === "primary";
 
   return (

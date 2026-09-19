@@ -1,8 +1,9 @@
+import { useAppColors } from "../../theme/useAppColors";
 import { Feather } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, View } from "react-native";
 
-import { colors, spacing } from "../../theme";
+import { spacing } from "../../theme";
 import type { OperationsCorridorRow, OperationsTransferRow } from "../../utils/operationsCommandCentre";
 import { AppCard } from "../ui/AppCard";
 import { AppText } from "../ui/AppText";
@@ -21,6 +22,8 @@ function progressColor(progress: number): string {
 }
 
 function TransferItem({ row }: { row: OperationsTransferRow }) {
+  const colors = useAppColors();
+  const styles = createStyles(colors);
   const pc = progressColor(row.progress ?? 0);
 
   return (
@@ -61,6 +64,8 @@ function TransferItem({ row }: { row: OperationsTransferRow }) {
 }
 
 function CorridorSummaryRow({ row }: { row: OperationsCorridorRow }) {
+  const colors = useAppColors();
+  const styles = createStyles(colors);
   const sc = row.status === "HEALTHY" ? "#16A34A" : row.status === "DEGRADED" ? "#D97706" : "#DC2626";
   return (
     <View style={styles.corridorSummary}>
@@ -76,6 +81,8 @@ function CorridorSummaryRow({ row }: { row: OperationsCorridorRow }) {
 }
 
 export function GlobalFlowCard({ activeTransfers, corridorRows, showDataSources = true }: Props) {
+  const colors = useAppColors();
+  const styles = createStyles(colors);
   const safeTransfers = Array.isArray(activeTransfers) ? activeTransfers : [];
   const safeCorridors = Array.isArray(corridorRows) ? corridorRows : [];
 
@@ -130,7 +137,7 @@ export function GlobalFlowCard({ activeTransfers, corridorRows, showDataSources 
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: typeof import("../../theme/colors").colors) => StyleSheet.create({
   card: {
     marginHorizontal: 16,
     marginBottom: 12,
