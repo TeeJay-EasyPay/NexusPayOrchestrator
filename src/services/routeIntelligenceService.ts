@@ -77,7 +77,8 @@ function unavailable<T>(value: T, source: string, reason: string, observedAt = n
 function isFresh(timestamp?: string | null) {
   if (!timestamp) return false;
   const parsed = Date.parse(timestamp);
-  return Number.isFinite(parsed) && Date.now() - parsed <= EVIDENCE_MAX_AGE_MS;
+  const age = Date.now() - parsed;
+  return Number.isFinite(parsed) && age >= 0 && age <= EVIDENCE_MAX_AGE_MS;
 }
 
 function normalizeProvenance(value: string): RouteDataProvenance {
@@ -195,7 +196,8 @@ function capabilityEvidence(
   const completed = providerId === "airwallex" ? executions.find((row) => {
     const payout = row.snapshot?.payout;
     return row.state === "COMPLETED"
-      && (payout?.providerId === "AIRWALLEX_SANDBOX" || payout?.providerName === "Airwallex Sandbox");
+      && (payout?.providerId === "AIRWALLEX_SANDBOX" || payout?.providerName === "Airwallex Sandbox")
+      && isFresh(row.completed_at);
   }) : null;
   if (completed) {
     return evidence<boolean | null>(
@@ -212,7 +214,9 @@ function capabilityEvidence(
     null,
     `partner_capabilities.${capabilityCode}`,
     capability?.readiness_status
-      ? `${providerId === "airwallex" ? "Airwallex" : "Yapily"} capability status is ${capability.readiness_status}.`
+      ? `${providerId === "airwallex" ? "Airwallex" : "Yapily"} ${capabilityCode.toLowerCase().replace(/_/g, " ")} ${capability.readiness_status === "Validated"
+        ? `evidence is stale or has an invalid timestamp (recorded: ${capability.last_validated_at ?? "missing"}). Fresh provider-issued sandbox capability evidence is required; a connection test alone cannot renew it.`
+        : `capability status is ${capability.readiness_status}.`}`
       : `No validated ${providerId === "airwallex" ? "Airwallex" : "Yapily"} capability evidence is available.`,
     capability?.last_validated_at ?? observedAt,
   );
@@ -394,9 +398,12 @@ export async function generateCanonicalRouteQuotes(input: RouteGenerationInput):
         "UNAVAILABLE",
         usesOpenBanking ? "Yapily payment capability" : "card funding adapter",
         usesOpenBanking
-          ? paymentInitiationCapability.reason
-            ?? institutionCapability.reason
-            ?? "Yapily did not return a selectable institution in the latest sandbox test."
+          ? [
+              yapilyConnectionStatus.value !== "AVAILABLE" ? yapilyConnectionStatus.reason : null,
+              institutionCapability.value !== true ? institutionCapability.reason : null,
+              paymentInitiationCapability.value !== true ? paymentInitiationCapability.reason : null,
+              (yapilyTest?.institution_count ?? 0) <= 0 ? "Yapily did not return a selectable institution in the latest sandbox test." : null,
+            ].filter(Boolean).join(" ")
           : "No evidence-backed card collection adapter is implemented.",
         yapilyTest?.tested_at ?? generatedAt,
       );
@@ -416,6 +423,7 @@ export async function generateCanonicalRouteQuotes(input: RouteGenerationInput):
     generatedAt,
   );
   const certifiedCorridor = routeEvidence.corridors.find((row) =>
+    row.provider_id === "airwallex" &&
     row.source_country === "United Kingdom" &&
     row.destination_country === input.destinationCountry &&
     row.source_currency === sourceCurrency &&

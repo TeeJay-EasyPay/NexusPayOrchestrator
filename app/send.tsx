@@ -205,7 +205,7 @@ function CanonicalRoutePreviewCard({
             </View>
 
             <View style={{ padding: 15, borderRadius: 8, backgroundColor: plan.eligible ? colors.goldSoft : "#F1F5F9", borderWidth: 1, borderColor: plan.eligible ? "#F1D99B" : "#CBD5E1", gap: 5 }}>
-              <AppText variant="caption" color={colors.textDarkMuted}>Estimated recipient amount</AppText>
+              <AppText variant="caption" color={colors.textDarkMuted}>{plan.eligible ? "Estimated recipient amount" : "Indicative quote · route blocked"}</AppText>
               <AppText variant="title" color={colors.textDarkPrimary}>
                 {recipient?.value == null ? "Unavailable" : `${formatCurrency(recipient.value)} ${currency ?? ""}`}
               </AppText>
